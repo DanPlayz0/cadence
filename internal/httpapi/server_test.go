@@ -32,3 +32,16 @@ func TestPublicURL(t *testing.T) {
 		}
 	}
 }
+
+func TestPasswordRequirements(t *testing.T) {
+	for _, password := range []string{"abc", "音楽家", strings.Repeat("a", 72), strings.Repeat("音", 24)} {
+		if !validPassword(password) {
+			t.Fatalf("valid password rejected: %q", password)
+		}
+	}
+	for _, password := range []string{"", "ab", "音楽", strings.Repeat("a", 73), strings.Repeat("音", 25), "ab\xff"} {
+		if validPassword(password) {
+			t.Fatalf("invalid password accepted: %q", password)
+		}
+	}
+}

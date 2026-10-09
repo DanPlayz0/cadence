@@ -6,10 +6,10 @@ See [the validation record](docs/VALIDATION.md) for tested behavior, benchmarks,
 
 ## Run with Docker
 
-1. Run `node scripts/setup-env.mjs` to create `.env` with two independent cryptographically random secrets. The script fills missing or placeholder secrets and preserves existing configured values. Alternatively, copy `.env.example` to `.env` and supply your own secrets.
+1. Run `node scripts/setup-env.mjs` to create `.env` with a cryptographically random database password. The script fills a missing or placeholder password and preserves existing configured values. Alternatively, copy `.env.example` to `.env` and supply your own database password.
 2. Set `MUSIC_PATH` in `.env` to an existing absolute music-folder path. Keep `.env` private; it is excluded from Git.
 3. Run `docker compose up -d --build`.
-4. Open http://localhost:8080 and enter the setup token to create the administrator account (12–72 byte password).
+4. Open http://localhost:8080 and create the administrator account (at least 3 characters, up to 72 bytes per password). Setup is available only until the first account is created.
 5. Open **Instance settings → Library** and run a scan. Automatic incremental scans also run at startup and hourly by default.
 
 Linux containers run as UID/GID 10001; the mounted music directory must be readable/traversable by that user. Cadence never writes into that mount. For more roots, add read-only bind mounts and set `MUSIC_ROOTS=/music;/more-music` on the app service. Keep roots non-overlapping.
@@ -43,7 +43,6 @@ Requires Go 1.26.9+, Node 22.16+, PostgreSQL 17+, FFmpeg and FFprobe on PATH. Go
 ```powershell
 # Terminal 1: use an existing local PostgreSQL database
 $env:DATABASE_URL='postgres://cadence:password@localhost:5432/cadence?sslmode=disable'
-$env:SETUP_TOKEN='a-long-local-development-token'
 $env:MUSIC_ROOTS='C:\Music'
 $env:PUBLIC_URL='http://localhost:5173'
 go run ./cmd/cadence

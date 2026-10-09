@@ -7,7 +7,7 @@ const template = fileURLToPath(new URL('../.env.example', import.meta.url));
 let contents = readFileSync(existsSync(target) ? target : template, 'utf8');
 let generated = 0;
 
-for (const key of ['POSTGRES_PASSWORD', 'SETUP_TOKEN']) {
+for (const key of ['POSTGRES_PASSWORD']) {
   const pattern = new RegExp(`^${key}=(.*)$`, 'm');
   const match = contents.match(pattern);
   const value = match?.[1].trim();

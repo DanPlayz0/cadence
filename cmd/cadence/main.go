@@ -46,10 +46,6 @@ func run() error {
 	if dbURL == "" {
 		return fmt.Errorf("DATABASE_URL is required (PostgreSQL)")
 	}
-	setup := os.Getenv("SETUP_TOKEN")
-	if len(setup) < 16 {
-		return fmt.Errorf("SETUP_TOKEN must contain at least 16 characters")
-	}
 	public := strings.TrimRight(os.Getenv("PUBLIC_URL"), "/")
 	if err := httpapi.ValidatePublicURL(public); err != nil {
 		return err
@@ -79,7 +75,7 @@ func run() error {
 	}
 	enricher := &library.Enricher{Repo: repo, ArtDir: art, UserAgent: os.Getenv("METADATA_USER_AGENT")}
 	scanner := &library.Scanner{Repo: repo, Roots: roots, ArtDir: art, Enricher: enricher, Context: ctx}
-	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, SetupToken: setup, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://")}}
+	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://")}}
 	server := &http.Server{Addr: env("LISTEN_ADDR", ":8080"), Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	go func() {
 		ticker := time.NewTicker(time.Duration(number("SCAN_INTERVAL_MINUTES", 60)) * time.Minute)

@@ -169,7 +169,7 @@ func TestScannerAndHTTP(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	app := &httpapi.Server{Repo: r, Scanner: scanner, Cache: cache, Config: httpapi.Config{Roots: []string{root}, ArtDir: scanner.ArtDir, SetupToken: "integration-test-token", PublicURL: "http://example.test", WebDir: "../../web/dist"}}
+	app := &httpapi.Server{Repo: r, Scanner: scanner, Cache: cache, Config: httpapi.Config{Roots: []string{root}, ArtDir: scanner.ArtDir, PublicURL: "http://example.test", WebDir: "../../web/dist"}}
 	handler := app.Handler()
 	makeSession := func(u domain.User, token string) {
 		hash := sha256.Sum256([]byte(token))
@@ -297,7 +297,7 @@ func TestScannerAndHTTP(t *testing.T) {
 
 func TestSetupAndLogin(t *testing.T) {
 	r, _ := fixture(t)
-	app := &httpapi.Server{Repo: r, Config: httpapi.Config{SetupToken: "a-valid-setup-token", PublicURL: "http://example.test"}}
+	app := &httpapi.Server{Repo: r, Config: httpapi.Config{PublicURL: "http://example.test"}}
 	h := app.Handler()
 	post := func(path, body string) *httptest.ResponseRecorder {
 		w := httptest.NewRecorder()
@@ -306,11 +306,11 @@ func TestSetupAndLogin(t *testing.T) {
 		h.ServeHTTP(w, req)
 		return w
 	}
-	w := post("/api/v1/setup", `{"name":"owner","password":"a-strong-password","setupToken":"wrong"}`)
-	if w.Code != 403 {
+	w := post("/api/v1/setup", `{"name":"owner","password":"ab"}`)
+	if w.Code != 400 {
 		t.Fatal(w.Code)
 	}
-	w = post("/api/v1/setup", `{"name":"owner","password":"a-strong-password","setupToken":"a-valid-setup-token"}`)
+	w = post("/api/v1/setup", `{"name":"owner","password":"abc"}`)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
 	}
@@ -321,7 +321,23 @@ func TestSetupAndLogin(t *testing.T) {
 	if session.CSRF == "" || !w.Result().Cookies()[0].HttpOnly {
 		t.Fatal("invalid authentication response")
 	}
-	w = post("/api/v1/setup", `{"name":"other","password":"a-strong-password","setupToken":"a-valid-setup-token"}`)
+	cookie := w.Result().Cookies()[0]
+	for _, tc := range []struct {
+		password string
+		status   int
+	}{{"ab", 400}, {"音楽", 400}, {"音楽家", 201}} {
+		w := httptest.NewRecorder()
+		body, _ := json.Marshal(map[string]string{"name": "invited", "password": tc.password})
+		req := httptest.NewRequest("POST", "/api/v1/admin/users", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-CSRF-Token", session.CSRF)
+		req.AddCookie(cookie)
+		h.ServeHTTP(w, req)
+		if w.Code != tc.status {
+			t.Fatal("invited password validation", w.Code, w.Body.String())
+		}
+	}
+	w = post("/api/v1/setup", `{"name":"other","password":"abc"}`)
 	if w.Code != 409 {
 		t.Fatal("second setup allowed")
 	}
@@ -329,7 +345,7 @@ func TestSetupAndLogin(t *testing.T) {
 	if w.Code != 401 {
 		t.Fatal("wrong password allowed")
 	}
-	w = post("/api/v1/login", `{"name":"owner","password":"a-strong-password"}`)
+	w = post("/api/v1/login", `{"name":"owner","password":"abc"}`)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
 	}

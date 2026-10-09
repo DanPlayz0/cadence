@@ -222,7 +222,7 @@ export function Admin({ report }: { report: (s: string) => void }) {
                   name="password"
                   type="password"
                   required
-                  minLength={12}
+                  minLength={3}
                   maxLength={72}
                   autoComplete="new-password"
                 />

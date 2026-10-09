@@ -300,7 +300,6 @@ function App() {
       const s = await api<Session>(setup ? "/setup" : "/login", "POST", {
         name: f.get("name"),
         password: f.get("password"),
-        ...(setup ? { setupToken: f.get("setupToken") } : {}),
       });
       setSession(s);
       updateSession(s);
@@ -360,17 +359,6 @@ function App() {
               : "Sign in and pick up where you left off."}
           </p>
           <form onSubmit={auth}>
-            {setup && (
-              <label>
-                Setup token
-                <input
-                  name="setupToken"
-                  type="password"
-                  required
-                  autoComplete="off"
-                />
-              </label>
-            )}
             <label>
               Username
               <input
@@ -386,7 +374,7 @@ function App() {
                 name="password"
                 type="password"
                 required
-                minLength={setup ? 12 : 1}
+                minLength={setup ? 3 : 1}
                 maxLength={72}
                 autoComplete={setup ? "new-password" : "current-password"}
               />

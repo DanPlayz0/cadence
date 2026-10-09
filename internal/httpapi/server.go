@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"cadence/internal/domain"
 	"cadence/internal/library"
@@ -29,9 +30,9 @@ import (
 )
 
 type Config struct {
-	PublicURL, SetupToken, WebDir, ArtDir string
-	SecureCookie                          bool
-	Roots                                 []string
+	PublicURL, WebDir, ArtDir string
+	SecureCookie              bool
+	Roots                     []string
 }
 type Server struct {
 	Repo    domain.Repository
@@ -421,9 +422,12 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 }
 
 type credentials struct {
-	Name       string `json:"name"`
-	Password   string `json:"password"`
-	SetupToken string `json:"setupToken,omitempty"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+func validPassword(password string) bool {
+	return utf8.ValidString(password) && utf8.RuneCountInString(password) >= 3 && len(password) <= 72
 }
 
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
@@ -435,12 +439,8 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if !same(v.SetupToken, s.Config.SetupToken) || s.Config.SetupToken == "" {
-		write(w, 403, map[string]string{"error": "Invalid setup token"})
-		return
-	}
-	if !validName(v.Name) || len(v.Password) < 12 || len(v.Password) > 72 {
-		write(w, 400, map[string]string{"error": "Use a name and a password of 12–72 bytes"})
+	if !validName(v.Name) || !validPassword(v.Password) {
+		write(w, 400, map[string]string{"error": "Use a name and a password of at least 3 characters, up to 72 bytes"})
 		return
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(v.Password), bcrypt.DefaultCost)
@@ -537,8 +537,8 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if !validName(v.Name) || len(v.Password) < 12 || len(v.Password) > 72 {
-		write(w, 400, map[string]string{"error": "Use a name and password of 12–72 bytes"})
+	if !validName(v.Name) || !validPassword(v.Password) {
+		write(w, 400, map[string]string{"error": "Use a name and a password of at least 3 characters, up to 72 bytes"})
 		return
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(v.Password), bcrypt.DefaultCost)
