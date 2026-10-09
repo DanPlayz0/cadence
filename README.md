@@ -6,8 +6,8 @@ See [the validation record](docs/VALIDATION.md) for tested behavior, benchmarks,
 
 ## Run with Docker
 
-1. Copy `.env.example` to `.env`.
-2. Set `MUSIC_PATH` to an existing absolute music-folder path. Set two distinct random secrets for `POSTGRES_PASSWORD` (URL-safe hex recommended) and `SETUP_TOKEN`.
+1. Run `node scripts/setup-env.mjs` to create `.env` with two independent cryptographically random secrets. The script fills missing or placeholder secrets and preserves existing configured values. Alternatively, copy `.env.example` to `.env` and supply your own secrets.
+2. Set `MUSIC_PATH` in `.env` to an existing absolute music-folder path. Keep `.env` private; it is excluded from Git.
 3. Run `docker compose up -d --build`.
 4. Open http://localhost:8080 and enter the setup token to create the administrator account (12–72 byte password).
 5. Open **Instance settings → Library** and run a scan. Automatic incremental scans also run at startup and hourly by default.
