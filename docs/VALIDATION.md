@@ -157,3 +157,9 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 - Go tests and vet passed. The full Go race suite passed with a separate disposable PostgreSQL database, including real FFmpeg/FFprobe selection tests, complete-track skipping with both full flag values, unknown/blank fields, missing/deleted/directory artwork, lookup-error safety, and effective accepted metadata retrieval. Existing scanner, API permissions, and override-preservation integration tests passed.
 - Frontend build/TypeScript, all 18 tests, formatting/diff checks, and OpenAPI validation (41 paths) passed. Chromium API-fixture checks at desktop/phone widths verified flag payloads, mutually exclusive full/missing-only UI selection, and no runtime errors or page overflow. The phone layout was visually reviewed.
 - External enrichment providers and the user's live music library were not scanned. Missing-only retries can remain eligible when source metadata/artwork is still unavailable; enabling enrichment remains a separate setting. Browser checks used isolated fixtures.
+
+## Screen-centered player (2026-10-09)
+
+- Balanced the desktop player columns so transport/seek controls center on the screen independently of track details and audio settings. Tablet transport uses the centered grid column; phone controls retain their existing stacked layout.
+- Production build/TypeScript, formatting, and diff checks passed. Chromium API/media fixtures at 1920, 1440, 1280, 1101, 1100, 900, 701, 390, and 320px confirmed transport center within one pixel of screen center, both with and without the queue, plus reachable utility controls and no runtime errors or horizontal page overflow. The desktop screenshot was visually reviewed.
+- Cross-browser and physical-device checks were not run. This change affects CSS layout only.
