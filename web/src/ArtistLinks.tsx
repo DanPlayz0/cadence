@@ -6,9 +6,11 @@ import { routeURL } from "./navigation";
 export function ArtistLinks({
   credit,
   onNavigate,
+  single = false,
 }: {
   credit: string;
   onNavigate: (name: string) => void;
+  single?: boolean;
 }) {
   return (
     <span className="artist-links">
@@ -36,6 +38,7 @@ export function ArtistLinks({
           </a>
         </Fragment>
       ))}
+      {single && <span className="single-label"> · Single</span>}
     </span>
   );
 }

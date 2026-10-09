@@ -245,7 +245,11 @@ export function MiniPlayer({
         </div>
         <div>
           <strong title={track.title}>{track.title}</strong>
-          <ArtistLinks credit={track.artist} onNavigate={onArtist} />
+          <ArtistLinks
+            credit={track.artist}
+            onNavigate={onArtist}
+            single={!track.album}
+          />
         </div>
       </div>
       <div className="mini-player-controls">

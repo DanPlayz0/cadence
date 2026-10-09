@@ -72,7 +72,12 @@ type ScanOptions struct {
 }
 
 func MissingMetadata(t domain.Track) bool {
-	for _, value := range []string{t.Title, t.Artist, t.Album, t.AlbumArtist} {
+	t.NormalizeAlbum()
+	values := []string{t.Title, t.Artist}
+	if !t.Single {
+		values = append(values, t.AlbumArtist)
+	}
+	for _, value := range values {
 		value = strings.TrimSpace(value)
 		if value == "" || strings.EqualFold(value, "Unknown artist") || strings.EqualFold(value, "Unknown album") {
 			return true
@@ -320,9 +325,6 @@ func Probe(ctx context.Context, path, mime string) (domain.Track, map[string]str
 	}
 	if t.Album == "" {
 		t.Album = filenameAlbum
-		if t.Album == "" {
-			t.Album = filepath.Base(filepath.Dir(path))
-		}
 	}
 	if t.AlbumArtist == "" {
 		t.AlbumArtist = tags["albumartist"]
@@ -343,6 +345,7 @@ func Probe(ctx context.Context, path, mime string) (domain.Track, map[string]str
 	t.Disc, _ = strconv.Atoi(strings.Split(tags["disc"], "/")[0])
 	t.Duration, _ = strconv.ParseFloat(p.Format.Duration, 64)
 	t.AlbumID = Hash(filepath.ToSlash(filepath.Dir(path)) + "\x00" + t.AlbumArtist + "\x00" + t.Album)[:32]
+	t.NormalizeAlbum()
 	return t, tags, nil
 }
 func (s *Scanner) art(ctx context.Context, path string, _ map[string]string, modified int64) string {

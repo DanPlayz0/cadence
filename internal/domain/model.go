@@ -4,6 +4,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -43,9 +44,10 @@ type Track struct {
 	ID          string  `json:"id"`
 	Title       string  `json:"title"`
 	Artist      string  `json:"artist"`
-	AlbumArtist string  `json:"albumArtist"`
-	Album       string  `json:"album"`
-	AlbumID     string  `json:"albumId"`
+	AlbumArtist string  `json:"albumArtist,omitempty"`
+	Album       string  `json:"album,omitempty"`
+	AlbumID     string  `json:"albumId,omitempty"`
+	Single      bool    `json:"single"`
 	Number      int     `json:"number"`
 	Disc        int     `json:"disc"`
 	Year        string  `json:"year"`
@@ -61,6 +63,15 @@ type Track struct {
 	Modified    int64   `json:"-"`
 	Root        string  `json:"-"`
 }
+
+// NormalizeAlbum keeps singles distinct from albums without inventing album metadata.
+func (t *Track) NormalizeAlbum() {
+	t.Single = strings.TrimSpace(t.Album) == "" || strings.EqualFold(strings.TrimSpace(t.Album), "Unknown album")
+	if t.Single {
+		t.Album, t.AlbumID, t.AlbumArtist = "", "", ""
+	}
+}
+
 type Page struct {
 	Items  []Track `json:"items"`
 	Total  int64   `json:"total"`

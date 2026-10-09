@@ -161,7 +161,7 @@ export function TrackMetadataEditor({
             >
               <strong>{track.title}</strong>
               <span>
-                {track.artist} · {track.album}
+                {track.artist} · {track.album || "Single"}
               </span>
             </button>
           ))
@@ -232,6 +232,9 @@ export function TrackMetadataEditor({
                 {fields[field]}
                 <input
                   value={draft[field]}
+                  placeholder={
+                    field === "album" ? "No album — Single" : undefined
+                  }
                   disabled={busy}
                   required={
                     field === "title" ||

@@ -46,6 +46,9 @@ func TestProbeFallback(t *testing.T) {
 	if track.Title != "01-音" || track.Artist != "Unknown artist" || track.Duration <= 0 {
 		t.Fatalf("fallback: %+v", track)
 	}
+	if !track.Single || track.Album != "" || track.AlbumID != "" || track.AlbumArtist != "" {
+		t.Fatalf("untagged song must be a single: %+v", track)
+	}
 }
 
 func TestVorbisStreamTags(t *testing.T) {

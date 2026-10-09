@@ -786,6 +786,14 @@ main {
 .artist-albums {
   margin-bottom: 32px;
 }
+.track-row .single-label {
+  display: none;
+}
+@media (max-width: 700px) {
+  .track-row .single-label {
+    display: inline;
+  }
+}
 .album-card {
   display: flex;
   flex-direction: column;

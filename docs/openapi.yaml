@@ -3582,10 +3582,16 @@ components:
           type: string
         albumArtist:
           type: string
+          description: Omitted for singles.
         album:
           type: string
+          description: Omitted when the song has no album.
         albumId:
           type: string
+          description: Omitted for singles.
+        single:
+          type: boolean
+          description: True when the song has no album metadata.
         year:
           type: string
         genre:

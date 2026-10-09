@@ -283,6 +283,7 @@ func readTrack(row pgx.Row) (domain.Track, error) {
 	var t domain.Track
 	err := row.Scan(&t.ID, &t.Title, &t.Artist, &t.AlbumArtist, &t.Album, &t.AlbumID, &t.Number, &t.Disc, &t.Year, &t.Genre, &t.Duration, &t.Codec, &t.MIME, &t.Path, &t.ArtPath, &t.Size, &t.Modified, &t.Root)
 	t.Artwork = t.ArtPath != ""
+	t.NormalizeAlbum()
 	return t, mapped(err)
 }
 func (s *Store) Track(ctx context.Context, user, id string) (domain.Track, error) {
@@ -380,7 +381,7 @@ func (s *Store) Tracks(ctx context.Context, user string, q domain.Query) (domain
 	return p, lr.Err()
 }
 func (s *Store) Albums(ctx context.Context, user, search, artist string, limit, offset int) ([]domain.Album, error) {
-	rows, err := s.pool.Query(ctx, `SELECT t.album_id,min(coalesce(t.overrides->>'album',t.album)),min(coalesce(t.overrides->>'albumArtist',t.album_artist)),count(*),coalesce(min(t.id) FILTER (WHERE coalesce(t.overrides->>'artwork',t.art_path)<>''),'') FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) AND ($3='' OR artist_names(coalesce(t.overrides->>'artist',t.artist)) @> ARRAY[$3]::text[]) GROUP BY t.album_id ORDER BY lower(min(coalesce(t.overrides->>'album',t.album))),t.album_id LIMIT $4 OFFSET $5`, user, search, artist, limit, offset)
+	rows, err := s.pool.Query(ctx, `SELECT t.album_id,min(coalesce(t.overrides->>'album',t.album)),min(coalesce(t.overrides->>'albumArtist',t.album_artist)),count(*),coalesce(min(t.id) FILTER (WHERE coalesce(t.overrides->>'artwork',t.art_path)<>''),'') FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) AND btrim(coalesce(t.overrides->>'album',t.album))<>'' AND lower(btrim(coalesce(t.overrides->>'album',t.album)))<>'unknown album' AND ($3='' OR artist_names(coalesce(t.overrides->>'artist',t.artist)) @> ARRAY[$3]::text[]) GROUP BY t.album_id ORDER BY lower(min(coalesce(t.overrides->>'album',t.album))),t.album_id LIMIT $4 OFFSET $5`, user, search, artist, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -412,6 +413,7 @@ func (s *Store) Artists(ctx context.Context, user, search string, limit, offset 
 	return out, rows.Err()
 }
 func (s *Store) UpsertTrack(ctx context.Context, t domain.Track, scan string) (string, error) {
+	t.NormalizeAlbum()
 	var id string
 	err := s.pool.QueryRow(ctx, `INSERT INTO tracks(id,path,root,size,modified,seen,title,artist,album_artist,album,album_id,number,disc,year,genre,duration,codec,mime,art_path) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) ON CONFLICT(path) DO UPDATE SET root=excluded.root,size=excluded.size,modified=excluded.modified,seen=excluded.seen,available=true,title=excluded.title,artist=excluded.artist,album_artist=excluded.album_artist,album=excluded.album,album_id=excluded.album_id,number=excluded.number,disc=excluded.disc,year=excluded.year,genre=excluded.genre,duration=excluded.duration,codec=excluded.codec,mime=excluded.mime,art_path=excluded.art_path RETURNING id`, ID(), t.Path, t.Root, t.Size, t.Modified, scan, t.Title, t.Artist, t.AlbumArtist, t.Album, t.AlbumID, t.Number, t.Disc, t.Year, t.Genre, t.Duration, t.Codec, t.MIME, t.ArtPath).Scan(&id)
 	return id, err

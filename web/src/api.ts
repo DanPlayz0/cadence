@@ -12,9 +12,10 @@ export type Track = {
   id: string;
   title: string;
   artist: string;
-  albumArtist: string;
-  album: string;
-  albumId: string;
+  albumArtist?: string;
+  album?: string;
+  albumId?: string;
+  single?: boolean;
   number: number;
   disc: number;
   year: string;

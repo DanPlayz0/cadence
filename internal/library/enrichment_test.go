@@ -50,7 +50,14 @@ func TestEnrichmentOnlySuggests(t *testing.T) {
 }
 func TestEnrichmentNeedsIdentification(t *testing.T) {
 	e := &Enricher{}
-	if err := e.Suggest(context.Background(), domain.Track{}, nil); err == nil {
+	if err := e.Suggest(context.Background(), domain.Track{Album: "Album"}, nil); err == nil {
 		t.Fatal("anonymous lookup allowed")
+	}
+}
+
+func TestSingleSkipsAlbumEnrichment(t *testing.T) {
+	e := &Enricher{}
+	if err := e.Suggest(context.Background(), domain.Track{Title: "Single", Artist: "Artist"}, nil); err != nil {
+		t.Fatal("single should not attempt a release lookup", err)
 	}
 }

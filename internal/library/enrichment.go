@@ -67,6 +67,10 @@ func (e *Enricher) get(ctx context.Context, uri string) (*http.Response, error) 
 	return client.Do(r)
 }
 func (e *Enricher) Suggest(ctx context.Context, t domain.Track, tags map[string]string) error {
+	t.NormalizeAlbum()
+	if t.Single {
+		return nil
+	}
 	if e.UserAgent == "" {
 		return fmt.Errorf("set METADATA_USER_AGENT with project/contact information before enabling enrichment")
 	}

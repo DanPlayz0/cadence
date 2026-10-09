@@ -1382,7 +1382,11 @@ function App() {
                     >
                       {t.title}
                     </button>
-                    <ArtistLinks credit={t.artist} onNavigate={browseArtist} />
+                    <ArtistLinks
+                      credit={t.artist}
+                      onNavigate={browseArtist}
+                      single={!t.album}
+                    />
                   </div>
                   <button
                     aria-label="Move up"
@@ -1428,13 +1432,14 @@ function App() {
             <>
               <Artwork
                 id={player.current.id}
-                label={player.current.album}
+                label={player.current.album || player.current.title}
                 has={player.current.artwork}
               />
               <div>
                 <strong>{player.current.title}</strong>
                 <ArtistLinks
                   credit={player.current.artist}
+                  single={!player.current.album}
                   onNavigate={browseArtist}
                 />
               </div>
@@ -1661,16 +1666,24 @@ function TrackList({
                   )}
                 </button>
                 <div className="track-title">
-                  <Artwork id={t.id} label={t.album} has={t.artwork} />
+                  <Artwork
+                    id={t.id}
+                    label={t.album || t.title}
+                    has={t.artwork}
+                  />
                   <div>
                     <button onClick={() => onPlay(i)}>{t.title}</button>
                     <span>
-                      <ArtistLinks credit={t.artist} onNavigate={onArtist} />
+                      <ArtistLinks
+                        credit={t.artist}
+                        onNavigate={onArtist}
+                        single={!t.album}
+                      />
                       {cached(t.id) && <Check size={12} className="cached" />}
                     </span>
                   </div>
                 </div>
-                <span className="track-album">{t.album}</span>
+                <span className="track-album">{t.album || "Single"}</span>
                 <span className="track-duration">{duration(t.duration)}</span>
                 <TrackActions
                   track={t}

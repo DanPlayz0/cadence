@@ -73,7 +73,12 @@ func TestMissingMetadata(t *testing.T) {
 	if MissingMetadata(complete) {
 		t.Fatal("optional year/genre/numbers must not make a track incomplete")
 	}
-	for _, field := range []string{"title", "artist", "album", "albumArtist", "artwork", "unknown", "deleted", "directory"} {
+	single := complete
+	single.Album, single.AlbumArtist = "", ""
+	if MissingMetadata(single) {
+		t.Fatal("singles do not require album metadata")
+	}
+	for _, field := range []string{"title", "artist", "albumArtist", "artwork", "unknown", "deleted", "directory"} {
 		t.Run(field, func(t *testing.T) {
 			track := complete
 			switch field {

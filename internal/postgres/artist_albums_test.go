@@ -20,6 +20,7 @@ func TestArtistAlbums(t *testing.T) {
 		{Path: "/music/c.mp3", AlbumID: "b", Album: "Second", Artist: "Example", AlbumArtist: "Example"},
 		{Path: "/music/d.mp3", AlbumID: "c", Album: "Third", Artist: "Example tribute", AlbumArtist: "Example tribute"},
 		{Path: "/music/e.mp3", AlbumID: "d", Album: "Fourth", Artist: "Original", AlbumArtist: "Original"},
+		{Path: "/music/single.mp3", Artist: "Example", AlbumID: "invented", AlbumArtist: "Example"},
 	}
 	ids := []string{}
 	for _, track := range tracks {
@@ -30,6 +31,10 @@ func TestArtistAlbums(t *testing.T) {
 			t.Fatal(e)
 		}
 		ids = append(ids, id)
+	}
+	single, err := repo.Track(ctx, user.ID, ids[5])
+	if err != nil || !single.Single || single.AlbumID != "" || single.Album != "" {
+		t.Fatalf("single metadata %+v %v", single, err)
 	}
 	if _, err = conn.Exec(ctx, `UPDATE tracks SET overrides='{"artist":"Example"}' WHERE id=$1`, ids[4]); err != nil {
 		t.Fatal(err)
@@ -65,5 +70,16 @@ func TestArtistAlbums(t *testing.T) {
 	albums, err = repo.Albums(ctx, user.ID, "", "Example", 100, 0)
 	if err != nil || len(albums) != 1 || albums[0].ID != "d" {
 		t.Fatalf("permissions/availability %+v %v", albums, err)
+	}
+	if _, err = conn.Exec(ctx, `UPDATE tracks SET overrides='{"album":""}' WHERE id=$1`, ids[4]); err != nil {
+		t.Fatal(err)
+	}
+	cleared, err := repo.Track(ctx, user.ID, ids[4])
+	if err != nil || !cleared.Single || cleared.AlbumID != "" {
+		t.Fatalf("cleared album %+v %v", cleared, err)
+	}
+	albums, err = repo.Albums(ctx, user.ID, "", "Example", 100, 0)
+	if err != nil || len(albums) != 0 {
+		t.Fatalf("cleared album still listed %+v %v", albums, err)
 	}
 }
