@@ -53,6 +53,7 @@ import { canMoveQueueItem } from "./queue";
 import { LyricsPanel } from "./LyricsPanel";
 import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import { usePlaybackResume } from "./usePlaybackResume";
+import { ArtistLinks } from "./ArtistLinks";
 import "./style.css";
 
 function Artwork({
@@ -248,6 +249,11 @@ function App() {
     },
     [navigate],
   );
+  const browseArtist = (artist: string) => {
+    navigate({ view: "artist", artist });
+    setOffset(0);
+    setQueueOpen(false);
+  };
   useEffect(() => {
     if (session && !session.user.admin && view === "admin")
       navigate({ view: "home" }, true);
@@ -858,6 +864,7 @@ function App() {
                   </label>
                 </div>
                 <TrackList
+                  onArtist={browseArtist}
                   tracks={tracks}
                   currentId={player.current?.id}
                   playing={player.playing}
@@ -941,6 +948,10 @@ function App() {
         )}
       </main>
       <MiniPlayer
+        onArtist={(name) => {
+          browseArtist(name);
+          window.focus();
+        }}
         player={player}
         target={miniPlayer.target}
         onClose={miniPlayer.close}
@@ -1020,6 +1031,7 @@ function App() {
               aria-labelledby="lyrics-tab"
             >
               <LyricsPanel
+                onArtist={browseArtist}
                 track={player.current}
                 position={player.position}
                 onSeek={player.seek}
@@ -1033,13 +1045,15 @@ function App() {
                   key={`${t.id}:${i}`}
                   className={`queue-track ${i === player.index ? "current" : ""}`}
                 >
-                  <button
-                    className="queue-title"
-                    onClick={() => player.play(player.queue, i)}
-                  >
-                    {t.title}
-                    <small>{t.artist}</small>
-                  </button>
+                  <div className="queue-credit">
+                    <button
+                      className="queue-title"
+                      onClick={() => player.play(player.queue, i)}
+                    >
+                      {t.title}
+                    </button>
+                    <ArtistLinks credit={t.artist} onNavigate={browseArtist} />
+                  </div>
                   <button
                     aria-label="Move up"
                     disabled={
@@ -1089,7 +1103,10 @@ function App() {
               />
               <div>
                 <strong>{player.current.title}</strong>
-                <span>{player.current.artist}</span>
+                <ArtistLinks
+                  credit={player.current.artist}
+                  onNavigate={browseArtist}
+                />
               </div>
               {player.cached(player.current.id) && (
                 <span title="Available in this session" className="cached">
@@ -1229,6 +1246,7 @@ function TrackList({
   playing,
   cached,
   onPlay,
+  onArtist,
   onLike,
   onQueue,
   onAdd,
@@ -1239,6 +1257,7 @@ function TrackList({
   playing: boolean;
   cached: (id: string) => boolean;
   onPlay: (i: number) => void;
+  onArtist: (name: string) => void;
   onLike: (t: Track) => void;
   onQueue: (t: Track) => void;
   onAdd: (t: Track) => void;
@@ -1312,7 +1331,7 @@ function TrackList({
                   <div>
                     <button onClick={() => onPlay(i)}>{t.title}</button>
                     <span>
-                      {t.artist}
+                      <ArtistLinks credit={t.artist} onNavigate={onArtist} />
                       {cached(t.id) && <Check size={12} className="cached" />}
                     </span>
                   </div>

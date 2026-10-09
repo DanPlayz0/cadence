@@ -5,6 +5,7 @@ import { Music2, Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
 import { cover, duration } from "./api";
 import type { usePlayer } from "./player";
 import { VolumeControl } from "./PlaybackControls";
+import { ArtistLinks } from "./ArtistLinks";
 
 type Player = ReturnType<typeof usePlayer>;
 type PiP = {
@@ -182,10 +183,12 @@ export function MiniPlayer({
   player,
   target,
   onClose,
+  onArtist,
 }: {
   player: Player;
   target: Window | null;
   onClose: () => void;
+  onArtist: (name: string) => void;
 }) {
   const [failedCover, setFailedCover] = useState("");
   if (!target || !player.current) return null;
@@ -212,7 +215,7 @@ export function MiniPlayer({
         </div>
         <div>
           <strong title={track.title}>{track.title}</strong>
-          <span title={track.artist}>{track.artist || "Unknown artist"}</span>
+          <ArtistLinks credit={track.artist} onNavigate={onArtist} />
         </div>
       </div>
       <div className="mini-player-controls">

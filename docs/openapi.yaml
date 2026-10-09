@@ -1053,6 +1053,7 @@ paths:
             type: string
         - name: artist
           in: query
+          description: Exact individual performer name within comma-separated artist credits, including accepted metadata overrides.
           schema:
             type: string
         - name: playlist

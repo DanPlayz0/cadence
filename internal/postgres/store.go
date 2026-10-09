@@ -36,6 +36,9 @@ var metadataNumbersMigration string
 //go:embed 006_playback.sql
 var playbackMigration string
 
+//go:embed 007_artist_credits.sql
+var artistCreditsMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -140,6 +143,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(6)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=7)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, artistCreditsMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(7)"); err != nil {
 			return err
 		}
 	}
@@ -289,7 +303,7 @@ func filter(q domain.Query) (string, []any, string) {
 		add("t.album_id=$%d", q.Album)
 	}
 	if q.Artist != "" {
-		add("coalesce(t.overrides->>'artist',t.artist)=$%d", q.Artist)
+		add("artist_names(coalesce(t.overrides->>'artist',t.artist)) @> ARRAY[$%d]::text[]", q.Artist)
 	}
 	if q.Collection == "likes" {
 		w += " AND EXISTS(SELECT 1 FROM likes l WHERE l.track_id=t.id AND l.user_id=$1)"
@@ -368,7 +382,7 @@ func (s *Store) Albums(ctx context.Context, user, search string, limit, offset i
 	return out, rows.Err()
 }
 func (s *Store) Artists(ctx context.Context, user, search string, limit, offset int) ([]domain.Artist, error) {
-	rows, err := s.pool.Query(ctx, `SELECT coalesce(t.overrides->>'artist',t.artist),count(*) FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) GROUP BY 1 ORDER BY lower(coalesce(t.overrides->>'artist',t.artist)),coalesce(t.overrides->>'artist',t.artist) LIMIT $3 OFFSET $4`, user, search, limit, offset)
+	rows, err := s.pool.Query(ctx, `SELECT a.name,count(*) FROM tracks t CROSS JOIN LATERAL unnest(artist_names(coalesce(t.overrides->>'artist',t.artist))) AS a(name) WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) GROUP BY a.name ORDER BY lower(a.name),a.name LIMIT $3 OFFSET $4`, user, search, limit, offset)
 	if err != nil {
 		return nil, err
 	}

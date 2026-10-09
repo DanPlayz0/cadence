@@ -2,17 +2,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, APIError, type Track } from "./api";
 import { activeLyric, parseLRC, type Lyrics } from "./lyrics";
+import { ArtistLinks } from "./ArtistLinks";
 
 export function LyricsPanel({
   track,
   position,
   onSeek,
   onExpired,
+  onArtist,
 }: {
   track?: Track;
   position: number;
   onSeek: (time: number) => void;
   onExpired: () => void;
+  onArtist: (name: string) => void;
 }) {
   const [data, setData] = useState<{ id: string; lyrics: Lyrics } | null>(null);
   const [error, setError] = useState("");
@@ -74,7 +77,7 @@ export function LyricsPanel({
     <div className="lyrics-panel">
       <div className="lyrics-heading">
         <strong>{track.title}</strong>
-        <span>{track.artist}</span>
+        <ArtistLinks credit={track.artist} onNavigate={onArtist} />
       </div>
       <p className="lyrics-source">
         Lyrics from{" "}
