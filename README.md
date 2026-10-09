@@ -16,6 +16,7 @@ Linux containers run as UID/GID 10001; the mounted music directory must be reada
 
 ## Listening and administration
 
+- Open your avatar for profile details, listening settings, the play queue, and sign-out. Administrators also find **Instance settings** here. Volume and playback quality changes apply immediately in the current tab.
 - Browse albums/artists, search words in tags, like songs, create personal playlists, and edit the play queue. **Play loaded songs** queues the currently fetched tracks; use Load more for larger collections.
 - Auto plays original supported audio and falls back to MP3 320 kbps on unsupported formats/playback errors. High and Saver explicitly convert to 320/128 kbps. Seeking in converted audio works once conversion finishes; initial conversion can take time. FFmpeg workers and disk cache are bounded by configuration.
 - A play is recorded after 30 seconds or half the track, whichever is shorter. Recently played complete audio is fetched opportunistically into a 256 MiB memory cache. Cached tracks can play through connection loss in the open tab. This is **not durable offline downloading**: reloading/closing the page clears the cache. No new server views load while disconnected.

@@ -14,14 +14,12 @@ import {
   Heart,
   Home,
   ListMusic,
-  LogOut,
   Music2,
   Pause,
   Play,
   Plus,
   Repeat,
   Search,
-  Settings,
   Shuffle,
   SkipBack,
   SkipForward,
@@ -45,6 +43,7 @@ import {
 } from "./api";
 import { usePlayer } from "./player";
 import { Admin } from "./Admin";
+import { AccountMenu } from "./AccountMenu";
 import "./style.css";
 
 function Artwork({
@@ -88,6 +87,12 @@ function App() {
   const [setup, setSetup] = useState(false);
   const [error, setError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 4000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   const expire = useCallback(() => {
     setSession(null);
     updateSession(null);
@@ -287,6 +292,9 @@ function App() {
       setAlbums([]);
       setArtists([]);
       setPlaylists([]);
+      browse("home");
+      setQueueOpen(false);
+      setNotice("");
     } catch (e) {
       setError((e as Error).message);
     }
@@ -476,6 +484,7 @@ function App() {
                 setPlaylistName("");
                 setAddingPlaylist(false);
                 await refreshPlaylists();
+                setNotice("Playlist created.");
               } catch (e) {
                 setError((e as Error).message);
               }
@@ -510,14 +519,6 @@ function App() {
           )}
         </nav>
         <div className="sidebar-bottom">
-          {session.user.admin && (
-            <button onClick={() => browse("admin")}>
-              <Settings size={17} /> Instance settings
-            </button>
-          )}
-          <button onClick={() => void logout()}>
-            <LogOut size={17} /> Sign out
-          </button>
           <div className="instance">
             <span className={player.offline ? "status offline" : "status"} />
             {player.offline ? "Offline session" : "Connected to your instance"}
@@ -553,13 +554,31 @@ function App() {
               </button>
             )}
           </div>
-          <div
-            className="user-avatar"
-            title={`${session.user.displayName} (@${session.user.username})`}
-          >
-            {session.user.displayName.slice(0, 1).toUpperCase()}
-          </div>
+          <AccountMenu
+            user={session.user}
+            quality={player.quality}
+            volume={player.volume}
+            offline={player.offline}
+            onQuality={player.changeQuality}
+            onVolume={player.setVolume}
+            onAdmin={() => browse("admin")}
+            onQueue={() => setQueueOpen(true)}
+            onLogout={logout}
+          />
         </header>
+        {notice && (
+          <div className="toast success" role="status">
+            <span>
+              <Check size={16} /> {notice}
+            </span>
+            <button
+              aria-label="Dismiss notification"
+              onClick={() => setNotice("")}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
         {error && (
           <div className="toast" role="alert">
             {error}
@@ -610,6 +629,7 @@ function App() {
                       setPlaylistName("");
                       setAddingPlaylist(false);
                       await refreshPlaylists();
+                      setNotice("Playlist created.");
                     } catch (e) {
                       setError((e as Error).message);
                     }
@@ -712,8 +732,17 @@ function App() {
                     className="subtle"
                     onClick={async () => {
                       try {
+                        if (
+                          !window.confirm(
+                            `Delete “${playlist.name}”? Your songs will stay in the library.`,
+                          )
+                        )
+                          return;
                         await api(`/playlists/${playlist.id}`, "DELETE");
                         await refreshPlaylists();
+                        setNotice(
+                          "Playlist deleted. Your songs are still in the library.",
+                        );
                         browse("home");
                       } catch (e) {
                         setError((e as Error).message);
@@ -743,8 +772,8 @@ function App() {
                         label={a.title}
                         has={!!a.coverId}
                       />
-                      <span className="album-play">
-                        <Play fill="currentColor" size={20} />
+                      <span className="album-play" aria-hidden="true">
+                        <ChevronRight size={20} />
                       </span>
                     </div>
                     <strong>{a.title}</strong>
@@ -795,7 +824,10 @@ function App() {
                   cached={player.cached}
                   onPlay={(i) => player.play(tracks, i)}
                   onLike={(t) => void like(t)}
-                  onQueue={player.enqueue}
+                  onQueue={(track) => {
+                    player.enqueue(track);
+                    setNotice(`Added “${track.title}” to the queue.`);
+                  }}
                   onAdd={async (t) => {
                     if (!targetPlaylist) {
                       setError("Choose a playlist above the track list.");
@@ -805,6 +837,9 @@ function App() {
                       await api(`/playlists/${targetPlaylist}/tracks`, "POST", {
                         trackId: t.id,
                       });
+                      setNotice(
+                        `Added “${t.title}” to ${playlists.find((p) => p.id === targetPlaylist)?.name || "playlist"}.`,
+                      );
                     } catch (e) {
                       setError((e as Error).message);
                     }
@@ -866,7 +901,7 @@ function App() {
         )}
       </main>
       {queueOpen && (
-        <aside className="queue-panel">
+        <aside className="queue-panel" id="play-queue" aria-label="Play queue">
           <div className="row">
             <h2>Play queue</h2>
             <button
@@ -942,6 +977,7 @@ function App() {
           <div className="controls">
             <button
               title="Shuffle"
+              aria-pressed={player.shuffle}
               className={player.shuffle ? "enabled" : ""}
               onClick={() => player.setShuffle((v) => !v)}
             >
@@ -949,6 +985,7 @@ function App() {
             </button>
             <button
               aria-label="Previous track"
+              disabled={!player.queue.length}
               onClick={() => player.next(true)}
             >
               <SkipBack size={20} fill="currentColor" />
@@ -956,6 +993,7 @@ function App() {
             <button
               className="play-button"
               aria-label={player.playing ? "Pause" : "Play"}
+              disabled={!player.current}
               onClick={player.toggle}
             >
               {player.playing ? (
@@ -964,11 +1002,16 @@ function App() {
                 <Play size={21} fill="currentColor" />
               )}
             </button>
-            <button aria-label="Next track" onClick={() => player.next()}>
+            <button
+              aria-label="Next track"
+              disabled={!player.queue.length}
+              onClick={() => player.next()}
+            >
               <SkipForward size={20} fill="currentColor" />
             </button>
             <button
               title={`Repeat: ${player.repeat}`}
+              aria-label={`Repeat: ${player.repeat}`}
               className={player.repeat !== "off" ? "enabled" : ""}
               onClick={() =>
                 player.setRepeat((v) =>
@@ -984,6 +1027,7 @@ function App() {
             <span>{duration(player.position)}</span>
             <input
               aria-label="Seek"
+              disabled={!player.current || !player.length}
               type="range"
               min={0}
               max={player.length || 1}
@@ -1009,6 +1053,9 @@ function App() {
           </select>
           <button
             title={`Queue · Session cache ${(player.cacheBytes / 1048576).toFixed(0)} MB`}
+            aria-label="Play queue"
+            aria-expanded={queueOpen}
+            aria-controls="play-queue"
             className={queueOpen ? "enabled" : ""}
             onClick={() => setQueueOpen((v) => !v)}
           >
@@ -1130,6 +1177,7 @@ function TrackList({
                 >
                   <button
                     title={t.liked ? "Unlike" : "Like"}
+                    aria-pressed={t.liked}
                     className={t.liked ? "enabled" : ""}
                     onClick={() => onLike(t)}
                   >

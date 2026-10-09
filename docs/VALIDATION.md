@@ -12,6 +12,13 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - In-app Chromium browser checks: first-run setup, original and 128 kbps converted playback, keyboard seeking, quality switching while paused with position preserved, mobile playlist creation, playlist membership, likes, rescans, and navigation. Cached audio played successfully after the Go server was stopped; the client displayed Offline session.
 - Responsive views checked at 390 × 844 and 1280 × 800. Screenshots use generated sine-wave test fixtures, not a real music collection.
 
+## Account and interaction update (2026-10-09)
+
+- `npm test`: all three existing cache tests passed. `npm run build`: TypeScript checking and production Vite build passed. The project has no configured lint command; modified frontend files were checked with Prettier.
+- Headless Chromium checks with isolated API fixtures passed at 1280 × 844, 900 × 844, and 390 × 844: avatar toggling, keyboard opening and arrow navigation, Escape and outside-click dismissal, profile details, dialog focus restoration and modal keyboard containment, immediate quality/volume changes, queue access, queue and playlist-add feedback, administrator navigation, hidden administration for listener accounts, and sign-out returning to sign-in.
+- Desktop and mobile profile, listening-settings, and account-menu screenshots were visually inspected. Checks ran with reduced motion enabled and found no horizontal page overflow or browser runtime errors.
+- Browser API responses were fixtures. These checks do not revalidate live backend logout, authorization enforcement, streaming, or transcoding. Profile editing and durable preference storage were not added. Temporary scripts and screenshots remain in ignored `.local/`.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.
