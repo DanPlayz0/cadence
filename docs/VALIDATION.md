@@ -188,3 +188,8 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 
 - Queue title buttons now fill their constrained text column and truncate with an ellipsis; full titles remain available on hover. Artist credits also truncate, action buttons retain their width, and the queue scrolls vertically without horizontal scrolling.
 - Frontend build/TypeScript and diff checks passed. Chromium fixtures with long unbroken song titles and artist credits at 1440, 1280, 900, 390, and 320px verified minimum/maximum panel sizes, actual content width matching the container, text truncation, reachable controls, preserved vertical scrolling, and no page overflow/runtime errors. Other browsers and physical devices were not tested.
+
+## Scrollbar theme (2026-10-09)
+
+- Shared thin scrollbars now use muted green-gray thumbs with transparent tracks/corners, plus WebKit fallback styling. The app declares a dark native control color scheme; forced-colors mode retains system scrollbar colors. Removed the song list's separate scrollbar colors for consistent styling.
+- Frontend build/TypeScript, formatting, and diff checks passed. Chromium fixtures verified computed scrollbar colors/width in document, main, song-list, and queue containers and automatic scrollbar colors in forced-colors mode; the desktop screenshot was visually reviewed. Firefox/Safari and physical devices were not tested.

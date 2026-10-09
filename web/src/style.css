@@ -15,6 +15,33 @@
   --muted: #a4aa9f;
   --line: #2b2e28;
   --surface: #1b1d19;
+  color-scheme: dark;
+  --scrollbar-thumb: #50564a;
+  --scrollbar-thumb-hover: #747d68;
+}
+@media (forced-colors: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  /* Fallback for browsers that use the WebKit scrollbar selectors. */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
 }
 .song-actions {
   display: flex;
@@ -919,8 +946,6 @@ main {
   height: min(58vh, 700px);
   overflow: auto;
   margin-top: 8px;
-  scrollbar-color: #414739 transparent;
-  scrollbar-width: thin;
 }
 .track-row {
   border-radius: 6px;
