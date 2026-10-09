@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, APIError, cover, stream, Track } from "./api";
 import { volumeGain } from "./volume";
 import { completeBlob, SessionCache } from "./cache";
+import { canMoveQueueItem } from "./queue";
 export type Quality = "auto" | "high" | "saver";
 type Resume = {
   position: number;
@@ -392,7 +393,8 @@ export function usePlayer(
   function move(idx: number, direction: number) {
     const q = [...state.current.queue];
     const target = idx + direction;
-    if (target < 0 || target >= q.length) return;
+    if (!canMoveQueueItem(idx, direction, state.current.index, q.length))
+      return;
     [q[idx], q[target]] = [q[target], q[idx]];
     const i = state.current.index;
     setQueue(q);

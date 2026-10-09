@@ -47,6 +47,7 @@ import { AccountMenu } from "./AccountMenu";
 import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
 import { useNavigation } from "./useNavigation";
+import { canMoveQueueItem } from "./queue";
 import "./style.css";
 
 function Artwork({
@@ -959,10 +960,22 @@ function App() {
                 {t.title}
                 <small>{t.artist}</small>
               </button>
-              <button aria-label="Move up" onClick={() => player.move(i, -1)}>
+              <button
+                aria-label="Move up"
+                disabled={
+                  !canMoveQueueItem(i, -1, player.index, player.queue.length)
+                }
+                onClick={() => player.move(i, -1)}
+              >
                 <ArrowUp size={14} />
               </button>
-              <button aria-label="Move down" onClick={() => player.move(i, 1)}>
+              <button
+                aria-label="Move down"
+                disabled={
+                  !canMoveQueueItem(i, 1, player.index, player.queue.length)
+                }
+                onClick={() => player.move(i, 1)}
+              >
                 <ArrowDown size={14} />
               </button>
               <button
