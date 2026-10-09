@@ -980,7 +980,7 @@ function App() {
             )}
             {selectedArtist && (
               <ArtistAlbums
-                key={selectedArtist}
+                key={`albums:${selectedArtist}`}
                 artist={selectedArtist}
                 onExpired={expire}
                 onAlbum={(albumId) => {
