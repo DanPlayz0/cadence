@@ -63,22 +63,39 @@ export function useMiniPlayer(player: Player, userID: string | undefined) {
   const open = useCallback(
     async (automatic = false) => {
       const current = latest.current;
-      if (!pip || !current.userID || !current.player.current || pending.current)
-        return;
+      if (!current.userID || !current.player.current || pending.current) return;
       if (
         automatic &&
-        (!current.enabled ||
+        (!supported ||
+          !current.enabled ||
           !current.player.playing ||
           !document.hidden ||
           dismissed.current)
       )
         return;
-      if (active.current) return;
+      if (active.current && !active.current.window.closed) {
+        if (!automatic) active.current.window.focus();
+        return;
+      }
       pending.current = true;
       setError("");
       try {
         // Called directly by a click or Media Session's activation-bearing callback.
-        const mini = await pip.requestWindow({ width: 360, height: 280 });
+        // Open the HTTP/browser fallback synchronously to preserve click activation.
+        const mini =
+          supported && pip
+            ? await pip.requestWindow({ width: 360, height: 280 })
+            : window.open(
+                "",
+                "cadence-mini-player",
+                "popup,width=360,height=280",
+              );
+        if (!mini) {
+          setError(
+            "The mini player popout was blocked. Allow popups for this site and try again.",
+          );
+          return;
+        }
         const now = latest.current;
         if (
           now.userID !== current.userID ||
@@ -90,6 +107,8 @@ export function useMiniPlayer(player: Player, userID: string | undefined) {
           return;
         }
         mini.document.title = "Cadence mini player";
+        mini.document.head.replaceChildren();
+        mini.document.body.replaceChildren();
         for (const style of document.querySelectorAll(
           'style, link[rel="stylesheet"]',
         )) {
@@ -114,13 +133,15 @@ export function useMiniPlayer(player: Player, userID: string | undefined) {
       } catch {
         if (!automatic && latest.current.userID === current.userID)
           setError(
-            "Could not open the mini player. Check this site's picture-in-picture permission in your browser.",
+            supported
+              ? "Could not open the mini player. Check this site's picture-in-picture permission in your browser."
+              : "Could not open the mini player popout. Allow popups for this site and try again.",
           );
       } finally {
         pending.current = false;
       }
     },
-    [pip],
+    [pip, supported],
   );
 
   useEffect(() => {
@@ -131,7 +152,11 @@ export function useMiniPlayer(player: Player, userID: string | undefined) {
       }
     };
     document.addEventListener("visibilitychange", visible);
-    return () => document.removeEventListener("visibilitychange", visible);
+    window.addEventListener("pagehide", close);
+    return () => {
+      document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("pagehide", close);
+    };
   }, [close]);
   useEffect(() => {
     if (
@@ -169,6 +194,11 @@ export function useMiniPlayer(player: Player, userID: string | undefined) {
 
   return {
     supported,
+    popoutHelp: !window.isSecureContext
+      ? "This HTTP address uses a regular popout window. Native always-on-top and automatic picture-in-picture require HTTPS or localhost."
+      : !supported
+        ? "This browser uses a regular popout window because native Document picture-in-picture is unavailable."
+        : "",
     enabled,
     setEnabled,
     open,

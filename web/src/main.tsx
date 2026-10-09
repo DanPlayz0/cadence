@@ -1409,16 +1409,14 @@ function App() {
           </div>
         </div>
         <div className="player-extras">
-          {miniPlayer.supported && (
-            <button
-              aria-label="Open mini player"
-              title={miniPlayer.error || "Open mini player"}
-              disabled={!player.current}
-              onClick={() => void miniPlayer.open()}
-            >
-              <PictureInPicture2 size={18} />
-            </button>
-          )}
+          <button
+            aria-label="Open mini player"
+            title={miniPlayer.error || "Open mini player"}
+            disabled={!player.current}
+            onClick={() => void miniPlayer.open()}
+          >
+            <PictureInPicture2 size={18} />
+          </button>
           {player.offline && <WifiOff size={17} />}
           <QualitySelect
             value={player.quality}

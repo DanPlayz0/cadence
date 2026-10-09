@@ -202,7 +202,7 @@ export function AccountMenu({
                 description={
                   miniPlayer.supported
                     ? "Keep controls visible when you switch tabs while music plays. Your browser must allow automatic picture-in-picture for this site. Saved in this browser."
-                    : "This browser does not support floating Document picture-in-picture controls. System media controls are still available."
+                    : miniPlayer.popoutHelp
                 }
                 checked={miniPlayer.enabled}
                 disabled={!miniPlayer.supported}
@@ -210,15 +210,13 @@ export function AccountMenu({
                   miniPlayer.setEnabled(event.target.checked)
                 }
               />
-              {miniPlayer.supported && (
-                <Button
-                  variant="ghost"
-                  disabled={!hasTrack}
-                  onClick={() => void miniPlayer.open()}
-                >
-                  Open mini player
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                disabled={!hasTrack}
+                onClick={() => void miniPlayer.open()}
+              >
+                Open mini player
+              </Button>
               {miniPlayer.error && <p role="alert">{miniPlayer.error}</p>}
               <p className="muted">
                 Changes apply immediately in this tab. High and Saver require a
