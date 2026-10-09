@@ -24,7 +24,6 @@ import {
   SkipBack,
   SkipForward,
   Users,
-  Volume2,
   WifiOff,
   X,
 } from "lucide-react";
@@ -44,6 +43,8 @@ import {
 import { usePlayer } from "./player";
 import { Admin } from "./Admin";
 import { AccountMenu } from "./AccountMenu";
+import { QualitySelect, VolumeControl } from "./PlaybackControls";
+import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
 import "./style.css";
 
 function Artwork({
@@ -140,7 +141,6 @@ function App() {
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [selectedArtist, setSelectedArtist] = useState("");
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [playlistName, setPlaylistName] = useState("");
   const [addingPlaylist, setAddingPlaylist] = useState(false);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -150,6 +150,15 @@ function App() {
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+  const queuePanel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!queueOpen) return;
+    const previous = document.activeElement;
+    queuePanel.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    return () => {
+      if (previous instanceof HTMLElement) previous.focus();
+    };
+  }, [queueOpen]);
   const [reload, setReload] = useState(0);
   const request = useRef(0);
   const mainElement = useRef<HTMLElement>(null);
@@ -419,7 +428,7 @@ function App() {
       </div>
     );
   return (
-    <div className="app">
+    <div className={`app ${queueOpen ? "queue-open" : ""}`}>
       <aside className="sidebar">
         <div className="brand">
           <Headphones /> cadence<span className="dot">.</span>
@@ -469,40 +478,11 @@ function App() {
           PLAYLISTS
           <button
             title="Create playlist"
-            onClick={() => setAddingPlaylist((v) => !v)}
+            onClick={() => setAddingPlaylist(true)}
           >
             <Plus size={17} />
           </button>
         </div>
-        {addingPlaylist && (
-          <form
-            className="playlist-form"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                await api("/playlists", "POST", { name: playlistName });
-                setPlaylistName("");
-                setAddingPlaylist(false);
-                await refreshPlaylists();
-                setNotice("Playlist created.");
-              } catch (e) {
-                setError((e as Error).message);
-              }
-            }}
-          >
-            <input
-              aria-label="Playlist name"
-              placeholder="Playlist name"
-              value={playlistName}
-              onChange={(e) => setPlaylistName(e.target.value)}
-              required
-              maxLength={120}
-            />
-            <button title="Save playlist">
-              <Check size={16} />
-            </button>
-          </form>
-        )}
         <nav className="playlist-nav">
           {playlists.map((p) => (
             <button
@@ -510,7 +490,7 @@ function App() {
               className={view === `playlist:${p.id}` ? "active" : ""}
               onClick={() => browse(`playlist:${p.id}`)}
             >
-              <ListMusic />
+              <PlaylistIcon name={p.icon} />
               {p.name}
             </button>
           ))}
@@ -619,44 +599,13 @@ function App() {
                 ))}
                 <option value="__new">Create playlist…</option>
               </select>
-              {addingPlaylist && (
-                <form
-                  className="row"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    try {
-                      await api("/playlists", "POST", { name: playlistName });
-                      setPlaylistName("");
-                      setAddingPlaylist(false);
-                      await refreshPlaylists();
-                      setNotice("Playlist created.");
-                    } catch (e) {
-                      setError((e as Error).message);
-                    }
-                  }}
-                >
-                  <input
-                    aria-label="Mobile playlist name"
-                    placeholder="Playlist name"
-                    value={playlistName}
-                    onChange={(e) => setPlaylistName(e.target.value)}
-                    required
-                    maxLength={120}
-                  />
-                  <button title="Create mobile playlist">
-                    <Check size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Cancel playlist"
-                    onClick={() => setAddingPlaylist(false)}
-                  >
-                    <X size={16} />
-                  </button>
-                </form>
-              )}
             </div>
             <div className="page-heading">
+              {playlist && (
+                <div className="playlist-cover">
+                  <PlaylistIcon name={playlist.icon} size={48} />
+                </div>
+              )}
               {selectedAlbum && (
                 <Artwork
                   id={selectedAlbum.coverId}
@@ -900,8 +849,29 @@ function App() {
           </section>
         )}
       </main>
+      <PlaylistDialog
+        open={addingPlaylist}
+        onClose={() => setAddingPlaylist(false)}
+        onCreate={async (name, icon) => {
+          const created = await api<Playlist>("/playlists", "POST", {
+            name,
+            icon,
+          });
+          await refreshPlaylists();
+          browse(`playlist:${created.id}`);
+          setNotice(`Created “${created.name}”.`);
+        }}
+      />
       {queueOpen && (
-        <aside className="queue-panel" id="play-queue" aria-label="Play queue">
+        <aside
+          className="queue-panel"
+          ref={queuePanel}
+          id="play-queue"
+          aria-label="Play queue"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setQueueOpen(false);
+          }}
+        >
           <div className="row">
             <h2>Play queue</h2>
             <button
@@ -1040,17 +1010,11 @@ function App() {
         </div>
         <div className="player-extras">
           {player.offline && <WifiOff size={17} />}
-          <select
-            aria-label="Playback quality"
+          <QualitySelect
             value={player.quality}
-            onChange={(e) =>
-              player.changeQuality(e.target.value as "auto" | "high" | "saver")
-            }
-          >
-            <option value="auto">Auto</option>
-            <option value="high">High · 320k</option>
-            <option value="saver">Saver · 128k</option>
-          </select>
+            onChange={player.changeQuality}
+            compact
+          />
           <button
             title={`Queue · Session cache ${(player.cacheBytes / 1048576).toFixed(0)} MB`}
             aria-label="Play queue"
@@ -1061,16 +1025,7 @@ function App() {
           >
             <ListMusic size={20} />
           </button>
-          <Volume2 size={18} />
-          <input
-            aria-label="Volume"
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={player.volume}
-            onChange={(e) => player.setVolume(Number(e.target.value))}
-          />
+          <VolumeControl value={player.volume} onChange={player.setVolume} />
         </div>
       </footer>
     </div>

@@ -45,3 +45,13 @@ func TestPasswordRequirements(t *testing.T) {
 		}
 	}
 }
+
+func TestRejectInvalidPlaylistIcon(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api/v1/playlists", strings.NewReader(`{"name":"Mix","icon":"unknown"}`))
+	r.Header.Set("Content-Type", "application/json")
+	(&Server{}).createPlaylist(w, r)
+	if w.Code != 400 || !strings.Contains(w.Body.String(), "Invalid playlist icon") {
+		t.Fatalf("unexpected icon validation response: %d %s", w.Code, w.Body.String())
+	}
+}

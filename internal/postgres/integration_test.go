@@ -68,6 +68,82 @@ func fixture(t testing.TB) (*postgres.Store, *pgx.Conn) {
 func TestRepositoryContract(t *testing.T) {
 	repositorytest.Run(t, func(t *testing.T) domain.Repository { r, _ := fixture(t); return r })
 }
+
+func TestPlaylistIconUpgrade(t *testing.T) {
+	r, c := fixture(t)
+	ctx := context.Background()
+	u, e := r.CreateUser(ctx, domain.User{Username: "listener", DisplayName: "Listener", Password: "unused"}, true)
+	if e != nil {
+		t.Fatal(e)
+	}
+	pl, e := r.CreatePlaylist(ctx, u.ID, "Existing mix", "")
+	if e != nil || pl.Icon != "music" {
+		t.Fatal("default icon missing", e)
+	}
+	// Recreate the pre-icon schema inside this test's isolated namespace.
+	if _, e = c.Exec(ctx, "ALTER TABLE playlists DROP COLUMN icon; DELETE FROM schema_migrations WHERE version=3"); e != nil {
+		t.Fatal(e)
+	}
+	var schema string
+	if e = c.QueryRow(ctx, "SELECT current_schema()").Scan(&schema); e != nil {
+		t.Fatal(e)
+	}
+	uri, _ := url.Parse(os.Getenv("TEST_DATABASE_URL"))
+	q := uri.Query()
+	q.Set("search_path", schema)
+	uri.RawQuery = q.Encode()
+	upgraded, e := postgres.Open(ctx, uri.String())
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer upgraded.Close()
+	playlists, e := upgraded.Playlists(ctx, u.ID)
+	if e != nil || len(playlists) != 1 || playlists[0].ID != pl.ID || playlists[0].Icon != "music" {
+		t.Fatal("existing playlist not preserved with default icon", e)
+	}
+}
+
+func TestPlaylistIconAPI(t *testing.T) {
+	r, _ := fixture(t)
+	ctx := context.Background()
+	u, e := r.CreateUser(ctx, domain.User{Username: "listener", Password: "unused"}, true)
+	if e != nil {
+		t.Fatal(e)
+	}
+	hash := sha256.Sum256([]byte("playlist-token"))
+	if e = r.SaveSession(ctx, hex.EncodeToString(hash[:]), u.ID, "playlist-csrf", time.Now().Add(time.Hour)); e != nil {
+		t.Fatal(e)
+	}
+	handler := (&httpapi.Server{Repo: r, Config: httpapi.Config{PublicURL: "http://example.test"}}).Handler()
+	for _, tc := range []struct {
+		body, icon string
+		status     int
+	}{
+		{`{"name":"Default"}`, "music", 201},
+		{`{"name":"Night","icon":"moon"}`, "moon", 201},
+		{`{"name":"Invalid","icon":"unknown"}`, "", 400},
+	} {
+		req := httptest.NewRequest("POST", "/api/v1/playlists", strings.NewReader(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-CSRF-Token", "playlist-csrf")
+		req.AddCookie(&http.Cookie{Name: "cadence_session", Value: "playlist-token"})
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+		if w.Code != tc.status {
+			t.Fatalf("want %d got %d: %s", tc.status, w.Code, w.Body.String())
+		}
+		if tc.status == 201 {
+			var p domain.Playlist
+			if e = json.Unmarshal(w.Body.Bytes(), &p); e != nil || p.Icon != tc.icon {
+				t.Fatal("unexpected playlist icon", e)
+			}
+		}
+	}
+	playlists, e := r.Playlists(ctx, u.ID)
+	if e != nil || len(playlists) != 2 {
+		t.Fatal("invalid playlist persisted or creation failed", e)
+	}
+}
 func requireTools(t *testing.T) {
 	for _, name := range []string{"ffmpeg", "ffprobe"} {
 		if _, e := exec.LookPath(name); e != nil {
@@ -458,7 +534,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 2 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 3 {
 		t.Fatal("migration reapplied", e)
 	}
 }

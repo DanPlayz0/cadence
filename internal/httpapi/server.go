@@ -513,6 +513,7 @@ func (s *Server) tracks(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) createPlaylist(w http.ResponseWriter, r *http.Request) {
 	var v struct {
+		Icon string `json:"icon"`
 		Name string `json:"name"`
 	}
 	if !decode(w, r, &v) {
@@ -522,7 +523,11 @@ func (s *Server) createPlaylist(w http.ResponseWriter, r *http.Request) {
 		write(w, 400, map[string]string{"error": "Invalid name"})
 		return
 	}
-	p, e := s.Repo.CreatePlaylist(r.Context(), current(r).User.ID, strings.TrimSpace(v.Name))
+	if !domain.ValidPlaylistIcon(v.Icon) {
+		write(w, 400, map[string]string{"error": "Invalid playlist icon"})
+		return
+	}
+	p, e := s.Repo.CreatePlaylist(r.Context(), current(r).User.ID, strings.TrimSpace(v.Name), v.Icon)
 	if e != nil {
 		failure(w, e)
 		return

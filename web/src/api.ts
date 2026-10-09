@@ -31,7 +31,7 @@ export type Album = {
   coverId: string;
 };
 export type Artist = { name: string; tracks: number };
-export type Playlist = { id: string; name: string };
+export type Playlist = { id: string; name: string; icon: string };
 export type Page = {
   items: Track[];
   total: number;

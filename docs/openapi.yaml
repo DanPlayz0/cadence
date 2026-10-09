@@ -919,6 +919,11 @@ paths:
               properties:
                 name:
                   type: string
+                icon:
+                  type: string
+                  default: music
+                  enum: ["", music, heart, headphones, disc, sparkles, moon]
+                  description: Optional built-in playlist icon; omitted or empty uses music.
   /playlists/{id}:
     delete:
       summary: Delete own playlist
@@ -2610,6 +2615,9 @@ components:
     Playlist:
       type: object
       properties:
+        icon:
+          type: string
+          enum: [music, heart, headphones, disc, sparkles, moon]
         id:
           type: string
         name:

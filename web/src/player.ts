@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, APIError, cover, stream, Track } from "./api";
+import { volumeGain } from "./volume";
 import { completeBlob, SessionCache } from "./cache";
 export type Quality = "auto" | "high" | "saver";
 type Resume = {
@@ -324,7 +325,7 @@ export function usePlayer(
     };
   }, [cacheTrack, start, next]);
   useEffect(() => {
-    audio.current.volume = volume;
+    audio.current.volume = volumeGain(volume);
   }, [volume]);
   useEffect(() => {
     const online = () => {

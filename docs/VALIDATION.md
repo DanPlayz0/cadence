@@ -19,6 +19,13 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Desktop and mobile profile, listening-settings, and account-menu screenshots were visually inspected. Checks ran with reduced motion enabled and found no horizontal page overflow or browser runtime errors.
 - Browser API responses were fixtures. These checks do not revalidate live backend logout, authorization enforcement, streaming, or transcoding. Profile editing and durable preference storage were not added. Temporary scripts and screenshots remain in ignored `.local/`.
 
+## Playback controls and playlist dialog update (2026-10-09)
+
+- Frontend: five tests passed, including dB/gain conversion, mute, full gain, and equal gain ratios for equal slider steps. TypeScript checking, production Vite build, and Prettier checks passed. No additional UI dependency was introduced.
+- Go tests passed with race detection against a separate disposable PostgreSQL database. Go vet and the OpenAPI checker passed. Added tests cover playlist icon validation, API defaults and rejection, persistence, and upgrading existing playlists with a default icon. Scanner/HTTP integration checks also passed.
+- Chromium fixture checks passed at 1280 × 844, 900 × 844, and 390 × 844: actual audio-element gain, volume popup, mute/unmute, keyboard quality selection, nested Escape dismissal, playlist icon/name selection, failed-save recovery, creation and reload, independently scrolling queue, and narrow-screen queue layout. No horizontal page overflow or browser runtime errors occurred. Dialogs, dropdowns, popups, and desktop/mobile queue layouts were visually reviewed.
+- UI checks used isolated API fixtures; backend playlist checks used real PostgreSQL. Cross-browser and physical-device listening checks remain outside this update. Temporary browser scripts, screenshots, and test data stay in ignored `.local/`.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.

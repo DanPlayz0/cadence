@@ -90,8 +90,13 @@ func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 		if track.Title != "Changed source" {
 			t.Fatal("reset did not expose extracted metadata")
 		}
-		pl, e := r.CreatePlaylist(ctx, listener.ID, "Private mix")
+		pl, e := r.CreatePlaylist(ctx, listener.ID, "Private mix", "moon")
 		must(t, e)
+		owned, e := r.Playlists(ctx, listener.ID)
+		must(t, e)
+		if len(owned) != 1 || owned[0].Icon != "moon" {
+			t.Fatal("playlist icon was not persisted")
+		}
 		must(t, r.AddPlaylistTrack(ctx, listener.ID, pl.ID, id))
 		must(t, r.AddPlaylistTrack(ctx, listener.ID, pl.ID, id)) // Duplicate additions are idempotent.
 		must(t, r.AddPlaylistTrack(ctx, listener.ID, pl.ID, id2))

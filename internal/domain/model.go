@@ -67,6 +67,7 @@ type Artist struct {
 	Tracks int    `json:"tracks"`
 }
 type Playlist struct {
+	Icon string `json:"icon"`
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
@@ -127,7 +128,7 @@ type LibraryRepository interface {
 }
 type PersonalRepository interface {
 	Playlists(context.Context, string) ([]Playlist, error)
-	CreatePlaylist(context.Context, string, string) (Playlist, error)
+	CreatePlaylist(context.Context, string, string, string) (Playlist, error)
 	DeletePlaylist(context.Context, string, string) error
 	AddPlaylistTrack(context.Context, string, string, string) error
 	RemovePlaylistTrack(context.Context, string, string, string) error

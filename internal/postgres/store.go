@@ -24,6 +24,9 @@ var schema string
 //go:embed 002_user_names.sql
 var userNamesMigration string
 
+//go:embed 003_playlist_icons.sql
+var playlistIconsMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -84,6 +87,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(2)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=3)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, playlistIconsMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(3)"); err != nil {
 			return err
 		}
 	}
@@ -381,7 +395,7 @@ func (s *Store) Scans(ctx context.Context) ([]domain.Scan, error) {
 }
 
 func (s *Store) Playlists(ctx context.Context, user string) ([]domain.Playlist, error) {
-	rows, err := s.pool.Query(ctx, "SELECT id,name FROM playlists WHERE user_id=$1 ORDER BY name,id", user)
+	rows, err := s.pool.Query(ctx, "SELECT id,name,icon FROM playlists WHERE user_id=$1 ORDER BY name,id", user)
 	if err != nil {
 		return nil, err
 	}
@@ -389,16 +403,19 @@ func (s *Store) Playlists(ctx context.Context, user string) ([]domain.Playlist, 
 	out := []domain.Playlist{}
 	for rows.Next() {
 		var p domain.Playlist
-		if err = rows.Scan(&p.ID, &p.Name); err != nil {
+		if err = rows.Scan(&p.ID, &p.Name, &p.Icon); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
 	}
 	return out, rows.Err()
 }
-func (s *Store) CreatePlaylist(ctx context.Context, user, name string) (domain.Playlist, error) {
-	p := domain.Playlist{ID: ID(), Name: name}
-	_, err := s.pool.Exec(ctx, "INSERT INTO playlists VALUES($1,$2,$3)", p.ID, user, name)
+func (s *Store) CreatePlaylist(ctx context.Context, user, name, icon string) (domain.Playlist, error) {
+	if icon == "" {
+		icon = "music"
+	}
+	p := domain.Playlist{ID: ID(), Name: name, Icon: icon}
+	_, err := s.pool.Exec(ctx, "INSERT INTO playlists(id,user_id,name,icon) VALUES($1,$2,$3,$4)", p.ID, user, name, icon)
 	return p, err
 }
 func (s *Store) DeletePlaylist(ctx context.Context, user, id string) error {

@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import type { User } from "./api";
 
-type Quality = "auto" | "high" | "saver";
+import type { Quality } from "./player";
+import { QualitySelect, VolumeControl } from "./PlaybackControls";
+import { volumeLabel } from "./volume";
 
 export function AccountMenu({
   user,
@@ -215,28 +217,14 @@ export function AccountMenu({
           </>
         ) : (
           <div className="listening-settings">
-            <label>
-              Playback quality
-              <select
-                value={quality}
-                onChange={(event) => onQuality(event.target.value as Quality)}
-              >
-                <option value="auto">Auto · original when supported</option>
-                <option value="high">High · MP3 320 kbps</option>
-                <option value="saver">Saver · MP3 128 kbps</option>
-              </select>
-            </label>
-            <label>
-              Volume · {Math.round(volume * 100)}%
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={(event) => onVolume(Number(event.target.value))}
-              />
-            </label>
+            <div className="setting-field">
+              <span>Playback quality</span>
+              <QualitySelect value={quality} onChange={onQuality} />
+            </div>
+            <div className="setting-field volume-setting">
+              <span>Volume · {volumeLabel(volume)}</span>
+              <VolumeControl value={volume} onChange={onVolume} />
+            </div>
             <p className="muted">
               Changes apply immediately in this tab. High and Saver require a
               server connection for conversion.
