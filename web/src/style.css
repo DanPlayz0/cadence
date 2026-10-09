@@ -15,6 +15,94 @@
   --line: #2b2e28;
   --surface: #1b1d19;
 }
+.song-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.song-actions button {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+.song-actions button:hover {
+  background: var(--line);
+  color: #fff;
+}
+.song-actions .enabled {
+  color: var(--accent);
+}
+.song-action-menu {
+  position: fixed;
+  z-index: 30;
+  width: 240px;
+  padding: 6px;
+  border: 1px solid #45483f;
+  border-radius: 12px;
+  background: #242720;
+  box-shadow: 0 12px 36px #0008;
+}
+.song-action-menu button {
+  width: 100%;
+  padding: 12px 10px;
+  min-height: 44px;
+  justify-content: flex-start;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.song-action-menu button:hover,
+.song-action-menu button:focus {
+  background: #353a2e;
+}
+.picker-search {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+}
+.picker-search input {
+  width: 100%;
+}
+.playlist-options {
+  display: grid;
+  gap: 4px;
+  max-height: 280px;
+  overflow: auto;
+  margin: 20px 0;
+}
+.playlist-options > button {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px;
+  text-align: left;
+  justify-content: flex-start;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.playlist-options > button:hover {
+  background: var(--line);
+}
+.playlist-options > button span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .song-actions .song-like {
+    display: none;
+  }
+  .track-header,
+  .track-row {
+    grid-template-columns: 24px minmax(0, 1fr) 42px 44px !important;
+  }
+  .track-header > span:last-child {
+    display: block !important;
+  }
+  .song-actions button {
+    width: 44px;
+    height: 44px;
+  }
+}
 * {
   box-sizing: border-box;
 }

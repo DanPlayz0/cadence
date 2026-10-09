@@ -54,6 +54,8 @@ import { LyricsPanel } from "./LyricsPanel";
 import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import { usePlaybackResume } from "./usePlaybackResume";
 import { ArtistLinks } from "./ArtistLinks";
+import { TrackActions } from "./TrackActions";
+import { PlaylistPicker } from "./PlaylistPicker";
 import "./style.css";
 
 function Artwork({
@@ -239,7 +241,8 @@ function App() {
   useEffect(() => {
     mainElement.current?.scrollTo({ top: 0 });
   }, [view, selectedAlbumId, selectedArtist, debounced]);
-  const [targetPlaylist, setTargetPlaylist] = useState("");
+  const [addingTrack, setAddingTrack] = useState<Track | null>(null);
+  const playlistReturnTrack = useRef<Track | null>(null);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 250);
     return () => clearTimeout(t);
@@ -916,22 +919,6 @@ function App() {
               </div>
             ) : (
               <>
-                <div className="track-toolbar">
-                  <label>
-                    Add songs to{" "}
-                    <select
-                      value={targetPlaylist}
-                      onChange={(e) => setTargetPlaylist(e.target.value)}
-                    >
-                      <option value="">Choose playlist</option>
-                      {playlists.map((p) => (
-                        <option value={p.id} key={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
                 <TrackList
                   onArtist={browseArtist}
                   tracks={tracks}
@@ -944,22 +931,7 @@ function App() {
                     player.enqueue(track);
                     setNotice(`Added “${track.title}” to the queue.`);
                   }}
-                  onAdd={async (t) => {
-                    if (!targetPlaylist) {
-                      setError("Choose a playlist above the track list.");
-                      return;
-                    }
-                    try {
-                      await api(`/playlists/${targetPlaylist}/tracks`, "POST", {
-                        trackId: t.id,
-                      });
-                      setNotice(
-                        `Added “${t.title}” to ${playlists.find((p) => p.id === targetPlaylist)?.name || "playlist"}.`,
-                      );
-                    } catch (e) {
-                      setError((e as Error).message);
-                    }
-                  }}
+                  onAdd={setAddingTrack}
                   onRemove={
                     playlist
                       ? async (t) => {
@@ -1029,16 +1001,43 @@ function App() {
         target={miniPlayer.target}
         onClose={miniPlayer.close}
       />
+      {addingTrack && (
+        <PlaylistPicker
+          key={addingTrack.id}
+          track={addingTrack}
+          playlists={playlists}
+          onClose={() => setAddingTrack(null)}
+          onCreate={() => {
+            playlistReturnTrack.current = addingTrack;
+            setAddingTrack(null);
+            setAddingPlaylist(true);
+          }}
+          onAdd={async (destination) => {
+            await api(`/playlists/${destination.id}/tracks`, "POST", {
+              trackId: addingTrack.id,
+            });
+            if (view === `playlist:${destination.id}`)
+              setReload((value) => value + 1);
+            setNotice(`Added “${addingTrack.title}” to ${destination.name}.`);
+          }}
+        />
+      )}
       <PlaylistDialog
         open={addingPlaylist}
-        onClose={() => setAddingPlaylist(false)}
+        onClose={() => {
+          setAddingPlaylist(false);
+          if (playlistReturnTrack.current) {
+            setAddingTrack(playlistReturnTrack.current);
+            playlistReturnTrack.current = null;
+          }
+        }}
         onCreate={async (name, icon) => {
           const created = await api<Playlist>("/playlists", "POST", {
             name,
             icon,
           });
           await refreshPlaylists();
-          browse(`playlist:${created.id}`);
+          if (!playlistReturnTrack.current) browse(`playlist:${created.id}`);
           setNotice(`Created “${created.name}”.`);
         }}
       />
@@ -1338,7 +1337,6 @@ function TrackList({
   onRemove?: (t: Track) => void;
 }) {
   const [scroll, setScroll] = useState(0);
-  const [expanded, setExpanded] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(600);
   useEffect(() => {
@@ -1415,43 +1413,13 @@ function TrackList({
                 </div>
                 <span className="track-album">{t.album}</span>
                 <span className="track-duration">{duration(t.duration)}</span>
-                <div
-                  className={`track-actions ${expanded === t.id ? "open" : ""}`}
-                >
-                  <button
-                    title={t.liked ? "Unlike" : "Like"}
-                    aria-pressed={t.liked}
-                    className={t.liked ? "enabled" : ""}
-                    onClick={() => onLike(t)}
-                  >
-                    <Heart size={16} fill={t.liked ? "currentColor" : "none"} />
-                  </button>
-                  <button
-                    title="Add to selected playlist"
-                    onClick={() => onAdd(t)}
-                  >
-                    <Plus size={17} />
-                  </button>
-                  <button title="Add to queue" onClick={() => onQueue(t)}>
-                    <ListMusic size={17} />
-                  </button>
-                  {onRemove && (
-                    <button
-                      title="Remove from playlist"
-                      onClick={() => onRemove(t)}
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
-                <button
-                  className="track-menu-trigger"
-                  aria-label={`Actions for ${t.title}`}
-                  aria-expanded={expanded === t.id}
-                  onClick={() => setExpanded((v) => (v === t.id ? null : t.id))}
-                >
-                  •••
-                </button>
+                <TrackActions
+                  track={t}
+                  onLike={() => onLike(t)}
+                  onQueue={() => onQueue(t)}
+                  onAdd={() => onAdd(t)}
+                  onRemove={onRemove ? () => onRemove(t) : undefined}
+                />
               </div>
             );
           })}
