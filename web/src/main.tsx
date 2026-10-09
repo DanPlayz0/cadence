@@ -46,6 +46,7 @@ import { Admin } from "./Admin";
 import { AccountMenu } from "./AccountMenu";
 import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
+import { useNavigation } from "./useNavigation";
 import "./style.css";
 
 function Artwork({
@@ -175,16 +176,27 @@ function App() {
       live = false;
     };
   }, []);
-  const [view, setView] = useState("home");
-  const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
-  const [selectedArtist, setSelectedArtist] = useState("");
+  const { route, navigate } = useNavigation();
+  const view = route.view;
+  const query = route.query || "";
+  const [debounced, setDebounced] = useState(query);
+  const selectedArtist = route.artist || "";
+  const selectedAlbumId = route.albumId;
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [addingPlaylist, setAddingPlaylist] = useState(false);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const albumTrack = tracks.find((track) => track.albumId === selectedAlbumId);
+  const selectedAlbum = selectedAlbumId
+    ? albums.find((album) => album.id === selectedAlbumId) || {
+        id: selectedAlbumId,
+        title: albumTrack?.album || "Album",
+        artist: albumTrack?.albumArtist || albumTrack?.artist || "",
+        coverId: albumTrack?.artwork ? albumTrack.id : "",
+        tracks: 0,
+      }
+    : null;
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
@@ -204,7 +216,7 @@ function App() {
   const mainElement = useRef<HTMLElement>(null);
   useEffect(() => {
     mainElement.current?.scrollTo({ top: 0 });
-  }, [view, selectedAlbum?.id, selectedArtist, debounced]);
+  }, [view, selectedAlbumId, selectedArtist, debounced]);
   const [targetPlaylist, setTargetPlaylist] = useState("");
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 250);
@@ -220,18 +232,22 @@ function App() {
   useEffect(() => {
     if (session) void refreshPlaylists();
   }, [session, refreshPlaylists]);
-  const browse = useCallback((v: string) => {
-    setView(v);
-    setSelectedAlbum(null);
-    setSelectedArtist("");
-    setOffset(0);
-    setQuery("");
-  }, []);
+  const browse = useCallback(
+    (v: string) => {
+      navigate({ view: v });
+      setOffset(0);
+    },
+    [navigate],
+  );
+  useEffect(() => {
+    if (session && !session.user.admin && view === "admin")
+      navigate({ view: "home" }, true);
+  }, [session, view, navigate]);
   const albumView = view === "home" || view === "albums";
   const artistView = view === "artists";
   useEffect(() => {
-    if (!session || view === "admin") return;
     const id = ++request.current;
+    if (!session || view === "admin") return;
     setLoading(true);
     setOffset(0);
     const params = new URLSearchParams({
@@ -239,7 +255,7 @@ function App() {
       offset: "0",
       q: debounced,
     });
-    if (selectedAlbum) params.set("album", selectedAlbum.id);
+    if (selectedAlbumId) params.set("album", selectedAlbumId);
     if (selectedArtist) params.set("artist", selectedArtist);
     if (view === "likes" || view === "history") params.set("collection", view);
     if (view.startsWith("playlist:")) params.set("playlist", view.slice(9));
@@ -278,7 +294,7 @@ function App() {
     view,
     albumView,
     artistView,
-    selectedAlbum,
+    selectedAlbumId,
     selectedArtist,
     debounced,
     reload,
@@ -293,7 +309,7 @@ function App() {
       offset: String(next),
       q: debounced,
     });
-    if (selectedAlbum) params.set("album", selectedAlbum.id);
+    if (selectedAlbumId) params.set("album", selectedAlbumId);
     if (selectedArtist) params.set("artist", selectedArtist);
     if (view === "likes" || view === "history") params.set("collection", view);
     if (view.startsWith("playlist:")) params.set("playlist", view.slice(9));
@@ -559,17 +575,18 @@ function App() {
               placeholder="Search your collection"
               value={query}
               onChange={(e) => {
-                setQuery(e.target.value);
-                if (e.target.value) {
-                  setView("songs");
-                  setSelectedAlbum(null);
-                  setSelectedArtist("");
-                  setOffset(0);
-                }
+                navigate(
+                  { view: "songs", query: e.target.value },
+                  view === "songs",
+                );
+                setOffset(0);
               }}
             />
             {query && (
-              <button aria-label="Clear search" onClick={() => setQuery("")}>
+              <button
+                aria-label="Clear search"
+                onClick={() => navigate({ ...route, query: "" }, true)}
+              >
                 <X size={16} />
               </button>
             )}
@@ -611,6 +628,8 @@ function App() {
         )}
         {view === "admin" ? (
           <Admin
+            tab={route.adminTab || "library"}
+            onTab={(tab) => navigate({ view: "admin", adminTab: tab })}
             report={setError}
             onUpdated={userUpdated}
             onRevoked={(id) => {
@@ -759,8 +778,7 @@ function App() {
                     className="album-card"
                     key={a.id}
                     onClick={() => {
-                      setSelectedAlbum(a);
-                      setView("album");
+                      navigate({ view: "album", albumId: a.id });
                       setOffset(0);
                     }}
                   >
@@ -786,8 +804,7 @@ function App() {
                     className="album-card artist-card"
                     key={a.name}
                     onClick={() => {
-                      setSelectedArtist(a.name);
-                      setView("artist");
+                      navigate({ view: "artist", artist: a.name });
                       setOffset(0);
                     }}
                   >

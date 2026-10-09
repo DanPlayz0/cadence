@@ -2,10 +2,34 @@
 package httpapi
 
 import (
+	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestFrontendDeepLinks(t *testing.T) {
+	root := t.TempDir()
+	const page = "<!doctype html><title>Cadence</title>"
+	if err := os.WriteFile(filepath.Join(root, "index.html"), []byte(page), 0600); err != nil {
+		t.Fatal(err)
+	}
+	s := Server{Config: Config{WebDir: root}}
+	for _, path := range []string{"/songs?q=rock", "/albums/example", "/artists/AC%2FDC", "/playlists/example", "/admin/people"} {
+		w := httptest.NewRecorder()
+		s.static(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != http.StatusOK || w.Body.String() != page {
+			t.Fatalf("deep link %s: status=%d body=%s", path, w.Code, w.Body.String())
+		}
+	}
+	w := httptest.NewRecorder()
+	s.static(w, httptest.NewRequest(http.MethodGet, "/api/unknown", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatal("missing API route must not serve the frontend")
+	}
+}
 
 func TestJSONProtection(t *testing.T) {
 	for _, body := range []string{`{"name":"x"} {}`, `{"unknown":"x"}`, `not-json`} {

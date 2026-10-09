@@ -29,14 +29,18 @@ export function Admin({
   onUpdated,
   onRevoked,
   onExpired,
+  tab,
+  onTab,
 }: {
   report: (s: string) => void;
   onUpdated: (user: User) => void;
   onRevoked: (id: string) => void;
   onExpired: () => void;
+  tab: string;
+  onTab: (tab: string) => void;
 }) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [tab, setTab] = useState("library");
+  useEffect(() => setSelectedUser(null), [tab]);
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [exclusions, setExclusions] = useState<Exclusion[]>([]);
@@ -134,7 +138,8 @@ export function Admin({
             key={t}
             className={tab === t ? "selected" : ""}
             onClick={() => {
-              setTab(t);
+              setSelectedUser(null);
+              onTab(t);
               if (t === "suggestions") void loadSuggestions();
             }}
           >

@@ -48,6 +48,12 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Replaced separate avatar/name sections with a clickable avatar supporting dropped replacements, an explicit removal confirmation, and inline display-name editing. Password fields expand on demand. Administrator account fields and session controls remain available.
 - Frontend tests, TypeScript/production build, formatting, and diff checks passed. Chromium API-fixture checks at 1280 and 390 pixels passed for name saves, avatar file selection/drop/removal/cancellation, password checks, and administrator editing. Profile dialogs had no internal overflow at the tested 844-pixel height, including expanded password fields; the phone screenshot was visually reviewed. Shorter viewports can still scroll to keep controls reachable. Physical touchscreen/file-picker and cross-browser checks were not run.
 
+## URL navigation update (2026-10-09)
+
+- Library collections, album/artist details, playlists, and administrator tabs use URL paths; searches use query parameters. Refresh and Back/Forward restore the route. Direct links survive the sign-in screen, and non-admin accounts are redirected out of administrator paths. Unknown/malformed paths recover to Home.
+- Seven frontend tests, TypeScript/production build, formatting, and diff checks passed. URL tests cover encoded identifiers, Unicode, search punctuation, malformed URLs, and canonical routes. HTTP API race tests passed, including serving nested frontend paths while preserving API 404s.
+- Chromium API-fixture checks at 1280 and 390 pixels passed for collection/detail refreshes, correct album/artist/playlist filters, encoded artist names, search restoration/clearing, administrator tab navigation, browser Back/Forward, direct-link sign-in return, and permission redirects, with no runtime errors or horizontal overflow. Cross-browser and live full-stack browser checks were not run.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.
