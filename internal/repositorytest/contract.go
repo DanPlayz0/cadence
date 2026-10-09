@@ -13,17 +13,43 @@ import (
 
 func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 	t.Helper()
+	t.Run("user_names", func(t *testing.T) {
+		r := newRepo(t)
+		ctx := context.Background()
+		u, e := r.CreateUser(ctx, domain.User{Username: "  DaNnY  ", DisplayName: "Danny's Music", Password: "hash"}, true)
+		must(t, e)
+		if u.Username != "danny" || u.DisplayName != "Danny's Music" {
+			t.Fatalf("incorrect user names: %+v", u)
+		}
+		loaded, e := r.UserByUsername(ctx, " DANNY ")
+		must(t, e)
+		if loaded.ID != u.ID || loaded.DisplayName != u.DisplayName || loaded.Username != u.Username {
+			t.Fatal("case-insensitive lookup lost identity or display name")
+		}
+		_, e = r.CreateUser(ctx, domain.User{Username: "DANNY", DisplayName: "Another Danny", Password: "hash"}, false)
+		if !errors.Is(e, domain.ErrConflict) {
+			t.Fatalf("case-insensitive duplicate accepted: %v", e)
+		}
+		must(t, r.SaveSession(ctx, "session-token", u.ID, "csrf", time.Now().Add(time.Hour)))
+		session, e := r.Session(ctx, "session-token")
+		must(t, e)
+		users, e := r.Users(ctx)
+		must(t, e)
+		if session.User.DisplayName != u.DisplayName || session.User.Username != u.Username || len(users) != 1 || users[0].DisplayName != u.DisplayName || users[0].Username != u.Username {
+			t.Fatal("session or administrator listing lost user names")
+		}
+	})
 	t.Run("catalog_permissions_and_personal_data", func(t *testing.T) {
 		r := newRepo(t)
 		ctx := context.Background()
-		admin, e := r.CreateUser(ctx, domain.User{Name: "admin", Password: "hash"}, true)
+		admin, e := r.CreateUser(ctx, domain.User{Username: "admin", Password: "hash"}, true)
 		must(t, e)
-		listener, e := r.CreateUser(ctx, domain.User{Name: "listener", Password: "hash"}, false)
+		listener, e := r.CreateUser(ctx, domain.User{Username: "listener", Password: "hash"}, false)
 		must(t, e)
 		if !admin.Admin {
 			t.Fatal("first user must be admin")
 		}
-		_, e = r.CreateUser(ctx, domain.User{Name: "another-first"}, true)
+		_, e = r.CreateUser(ctx, domain.User{Username: "another-first"}, true)
 		if !errors.Is(e, domain.ErrConflict) {
 			t.Fatalf("setup must be one-time: %v", e)
 		}

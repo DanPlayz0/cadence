@@ -204,7 +204,8 @@ export function Admin({ report }: { report: (s: string) => void }) {
                 const f = new FormData(form);
                 void perform(async () => {
                   await api("/admin/users", "POST", {
-                    name: f.get("name"),
+                    username: String(f.get("username")).trim().toLowerCase(),
+                    displayName: f.get("displayName"),
                     password: f.get("password"),
                     admin: f.get("admin") === "on",
                   });
@@ -213,8 +214,27 @@ export function Admin({ report }: { report: (s: string) => void }) {
               }}
             >
               <label>
+                Display name
+                <input
+                  name="displayName"
+                  required
+                  maxLength={120}
+                  autoComplete="nickname"
+                />
+              </label>
+              <label>
                 Username
-                <input name="name" required maxLength={120} />
+                <input
+                  name="username"
+                  required
+                  maxLength={120}
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  onChange={(e) => {
+                    e.currentTarget.value = e.currentTarget.value.toLowerCase();
+                  }}
+                />
               </label>
               <label>
                 Initial password
@@ -241,7 +261,8 @@ export function Admin({ report }: { report: (s: string) => void }) {
               <div className="user-row" key={u.id}>
                 <div className="row">
                   <strong>
-                    {u.name} {u.admin && <span className="badge">admin</span>}
+                    {u.displayName} <small>@{u.username}</small>{" "}
+                    {u.admin && <span className="badge">admin</span>}
                   </strong>
                   <button
                     className="subtle"

@@ -11,11 +11,12 @@ var ErrNotFound = errors.New("not found")
 var ErrConflict = errors.New("conflict")
 
 type User struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	Admin    bool     `json:"admin"`
-	Password string   `json:"-"`
-	Groups   []string `json:"groups"`
+	ID          string   `json:"id"`
+	Username    string   `json:"username"`
+	DisplayName string   `json:"displayName"`
+	Admin       bool     `json:"admin"`
+	Password    string   `json:"-"`
+	Groups      []string `json:"groups"`
 }
 type Session struct {
 	User    User
@@ -102,7 +103,7 @@ type Scan struct {
 type AuthRepository interface {
 	HasUsers(context.Context) (bool, error)
 	CreateUser(context.Context, User, bool) (User, error)
-	UserByName(context.Context, string) (User, error)
+	UserByUsername(context.Context, string) (User, error)
 	SaveSession(context.Context, string, string, string, time.Time) error
 	Session(context.Context, string) (Session, error)
 	DeleteSession(context.Context, string) error

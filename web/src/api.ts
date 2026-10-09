@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 export type User = {
   id: string;
-  name: string;
+  username: string;
+  displayName: string;
   admin: boolean;
   groups?: string[];
 };

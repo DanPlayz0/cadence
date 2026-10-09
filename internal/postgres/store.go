@@ -21,6 +21,9 @@ import (
 //go:embed schema.sql
 var schema string
 
+//go:embed 002_user_names.sql
+var userNamesMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -73,6 +76,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=2)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, userNamesMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(2)"); err != nil {
+			return err
+		}
+	}
 	// A previous process may have stopped in the middle of a scan.
 	_, err = tx.Exec(ctx, "UPDATE scans SET status='interrupted',finished=now() WHERE status='running'")
 	if err != nil {
@@ -108,6 +122,11 @@ func (s *Store) HasUsers(ctx context.Context) (bool, error) {
 }
 func (s *Store) CreateUser(ctx context.Context, u domain.User, first bool) (domain.User, error) {
 	u.ID = ID()
+	u.Username = strings.ToLower(strings.TrimSpace(u.Username))
+	u.DisplayName = strings.TrimSpace(u.DisplayName)
+	if u.DisplayName == "" {
+		u.DisplayName = u.Username
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return u, err
@@ -126,15 +145,15 @@ func (s *Store) CreateUser(ctx context.Context, u domain.User, first bool) (doma
 		}
 		u.Admin = true
 	}
-	_, err = tx.Exec(ctx, "INSERT INTO users VALUES($1,$2,$3,$4)", u.ID, u.Name, u.Password, u.Admin)
+	err = tx.QueryRow(ctx, "INSERT INTO users(id,username,password,admin,display_name) VALUES($1,lower($2),$3,$4,$5) RETURNING username", u.ID, u.Username, u.Password, u.Admin, u.DisplayName).Scan(&u.Username)
 	if err != nil {
 		return u, mapped(err)
 	}
 	return u, tx.Commit(ctx)
 }
-func (s *Store) UserByName(ctx context.Context, name string) (domain.User, error) {
+func (s *Store) UserByUsername(ctx context.Context, username string) (domain.User, error) {
 	var u domain.User
-	err := s.pool.QueryRow(ctx, "SELECT id,name,password,admin FROM users WHERE name=$1", name).Scan(&u.ID, &u.Name, &u.Password, &u.Admin)
+	err := s.pool.QueryRow(ctx, "SELECT id,username,display_name,password,admin FROM users WHERE username=lower($1)", strings.ToLower(strings.TrimSpace(username))).Scan(&u.ID, &u.Username, &u.DisplayName, &u.Password, &u.Admin)
 	return u, mapped(err)
 }
 func (s *Store) SaveSession(ctx context.Context, token, user, csrf string, expires time.Time) error {
@@ -147,7 +166,7 @@ func (s *Store) SaveSession(ctx context.Context, token, user, csrf string, expir
 }
 func (s *Store) Session(ctx context.Context, token string) (domain.Session, error) {
 	var v domain.Session
-	err := s.pool.QueryRow(ctx, "SELECT u.id,u.name,u.admin,s.csrf,s.expires FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=$1 AND s.expires>now()", token).Scan(&v.User.ID, &v.User.Name, &v.User.Admin, &v.CSRF, &v.Expires)
+	err := s.pool.QueryRow(ctx, "SELECT u.id,u.username,u.display_name,u.admin,s.csrf,s.expires FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=$1 AND s.expires>now()", token).Scan(&v.User.ID, &v.User.Username, &v.User.DisplayName, &v.User.Admin, &v.CSRF, &v.Expires)
 	return v, mapped(err)
 }
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
@@ -414,7 +433,7 @@ func (s *Store) RecordPlay(ctx context.Context, user, track, event string) error
 	return err
 }
 func (s *Store) Users(ctx context.Context) ([]domain.User, error) {
-	rows, err := s.pool.Query(ctx, "SELECT u.id,u.name,u.admin,coalesce(array_agg(ug.group_id) FILTER(WHERE ug.group_id IS NOT NULL),'{}') FROM users u LEFT JOIN user_groups ug ON ug.user_id=u.id GROUP BY u.id ORDER BY u.name")
+	rows, err := s.pool.Query(ctx, "SELECT u.id,u.username,u.display_name,u.admin,coalesce(array_agg(ug.group_id) FILTER(WHERE ug.group_id IS NOT NULL),'{}') FROM users u LEFT JOIN user_groups ug ON ug.user_id=u.id GROUP BY u.id ORDER BY u.username")
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +441,7 @@ func (s *Store) Users(ctx context.Context) ([]domain.User, error) {
 	out := []domain.User{}
 	for rows.Next() {
 		var u domain.User
-		if err = rows.Scan(&u.ID, &u.Name, &u.Admin, &u.Groups); err != nil {
+		if err = rows.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Admin, &u.Groups); err != nil {
 			return nil, err
 		}
 		out = append(out, u)

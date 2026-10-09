@@ -123,8 +123,13 @@ paths:
             schema:
               type: object
               properties:
-                name:
+                username:
                   type: string
+                  description: Trimmed and normalized to lowercase; case-insensitive sign-in
+                displayName:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
                 password:
                   type: string
                   minLength: 3
@@ -187,8 +192,9 @@ paths:
             schema:
               type: object
               properties:
-                name:
+                username:
                   type: string
+                  description: Trimmed and normalized to lowercase; case-insensitive sign-in
                 password:
                   type: string
   /logout:
@@ -1686,8 +1692,13 @@ paths:
             schema:
               type: object
               properties:
-                name:
+                username:
                   type: string
+                  description: Trimmed and normalized to lowercase; case-insensitive sign-in
+                displayName:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
                 password:
                   type: string
                   minLength: 3
@@ -2512,7 +2523,10 @@ components:
       properties:
         id:
           type: string
-        name:
+        username:
+          type: string
+          description: Unique lowercase sign-in name
+        displayName:
           type: string
         admin:
           type: boolean

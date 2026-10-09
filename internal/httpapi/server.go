@@ -422,8 +422,9 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 }
 
 type credentials struct {
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Password    string `json:"password"`
 }
 
 func validPassword(password string) bool {
@@ -439,8 +440,8 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if !validName(v.Name) || !validPassword(v.Password) {
-		write(w, 400, map[string]string{"error": "Use a name and a password of at least 3 characters, up to 72 bytes"})
+	if !validName(v.Username) || !validName(v.DisplayName) || !validPassword(v.Password) {
+		write(w, 400, map[string]string{"error": "Use a username, display name, and a password of at least 3 characters, up to 72 bytes"})
 		return
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(v.Password), bcrypt.DefaultCost)
@@ -448,7 +449,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	u, e := s.Repo.CreateUser(r.Context(), domain.User{Name: strings.TrimSpace(v.Name), Password: string(hash)}, true)
+	u, e := s.Repo.CreateUser(r.Context(), domain.User{Username: v.Username, DisplayName: v.DisplayName, Password: string(hash)}, true)
 	if e != nil {
 		failure(w, e)
 		return
@@ -464,11 +465,11 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if len(v.Name) > 120 || len(v.Password) > 72 {
+	if len(v.Username) > 120 || len(v.Password) > 72 {
 		write(w, 401, map[string]string{"error": "Invalid credentials"})
 		return
 	}
-	u, e := s.Repo.UserByName(r.Context(), strings.TrimSpace(v.Name))
+	u, e := s.Repo.UserByUsername(r.Context(), v.Username)
 	hash := u.Password
 	if e != nil {
 		hash = "$2a$10$7EqJtq98hPqEX7fNZaFWoO5IWuZOeGzRKeMwZOVpIU2qaOYIYqcIO"
@@ -530,15 +531,16 @@ func (s *Server) createPlaylist(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var v struct {
-		Name     string `json:"name"`
-		Password string `json:"password"`
-		Admin    bool   `json:"admin"`
+		Username    string `json:"username"`
+		DisplayName string `json:"displayName"`
+		Password    string `json:"password"`
+		Admin       bool   `json:"admin"`
 	}
 	if !decode(w, r, &v) {
 		return
 	}
-	if !validName(v.Name) || !validPassword(v.Password) {
-		write(w, 400, map[string]string{"error": "Use a name and a password of at least 3 characters, up to 72 bytes"})
+	if !validName(v.Username) || !validName(v.DisplayName) || !validPassword(v.Password) {
+		write(w, 400, map[string]string{"error": "Use a username, display name, and a password of at least 3 characters, up to 72 bytes"})
 		return
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(v.Password), bcrypt.DefaultCost)
@@ -546,7 +548,7 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	u, e := s.Repo.CreateUser(r.Context(), domain.User{Name: strings.TrimSpace(v.Name), Password: string(hash), Admin: v.Admin}, false)
+	u, e := s.Repo.CreateUser(r.Context(), domain.User{Username: v.Username, DisplayName: v.DisplayName, Password: string(hash), Admin: v.Admin}, false)
 	if e != nil {
 		failure(w, e)
 		return

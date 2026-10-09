@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/png"
 	"net/http"
@@ -125,11 +126,11 @@ func TestScannerAndHTTP(t *testing.T) {
 		t.Fatal("scan failed to start")
 	}
 	waitScan(t, r, id)
-	admin, e := r.CreateUser(ctx, domain.User{Name: "admin", Password: "hash"}, true)
+	admin, e := r.CreateUser(ctx, domain.User{Username: "admin", Password: "hash"}, true)
 	if e != nil {
 		t.Fatal(e)
 	}
-	user, e := r.CreateUser(ctx, domain.User{Name: "user", Password: "hash"}, false)
+	user, e := r.CreateUser(ctx, domain.User{Username: "user", Password: "hash"}, false)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -306,20 +307,24 @@ func TestSetupAndLogin(t *testing.T) {
 		h.ServeHTTP(w, req)
 		return w
 	}
-	w := post("/api/v1/setup", `{"name":"owner","password":"ab"}`)
+	w := post("/api/v1/setup", `{"username":"OwNeR","displayName":"The Owner","password":"ab"}`)
 	if w.Code != 400 {
 		t.Fatal(w.Code)
 	}
-	w = post("/api/v1/setup", `{"name":"owner","password":"abc"}`)
+	w = post("/api/v1/setup", `{"username":"OwNeR","displayName":"The Owner","password":"abc"}`)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	var session struct {
-		CSRF string `json:"csrf"`
+		CSRF string      `json:"csrf"`
+		User domain.User `json:"user"`
 	}
 	json.Unmarshal(w.Body.Bytes(), &session)
 	if session.CSRF == "" || !w.Result().Cookies()[0].HttpOnly {
 		t.Fatal("invalid authentication response")
+	}
+	if session.User.Username != "owner" || session.User.DisplayName != "The Owner" {
+		t.Fatal("setup names not preserved/normalized", session.User)
 	}
 	cookie := w.Result().Cookies()[0]
 	for _, tc := range []struct {
@@ -327,7 +332,7 @@ func TestSetupAndLogin(t *testing.T) {
 		status   int
 	}{{"ab", 400}, {"音楽", 400}, {"音楽家", 201}} {
 		w := httptest.NewRecorder()
-		body, _ := json.Marshal(map[string]string{"name": "invited", "password": tc.password})
+		body, _ := json.Marshal(map[string]string{"username": "InViTeD", "displayName": "Invited Listener", "password": tc.password})
 		req := httptest.NewRequest("POST", "/api/v1/admin/users", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-CSRF-Token", session.CSRF)
@@ -337,24 +342,86 @@ func TestSetupAndLogin(t *testing.T) {
 			t.Fatal("invited password validation", w.Code, w.Body.String())
 		}
 	}
-	w = post("/api/v1/setup", `{"name":"other","password":"abc"}`)
+	w = post("/api/v1/setup", `{"username":"other","displayName":"Other","password":"abc"}`)
 	if w.Code != 409 {
 		t.Fatal("second setup allowed")
 	}
-	w = post("/api/v1/login", `{"name":"owner","password":"incorrect"}`)
+	w = post("/api/v1/login", `{"username":"OwNeR","displayName":"The Owner","password":"incorrect"}`)
 	if w.Code != 401 {
 		t.Fatal("wrong password allowed")
 	}
-	w = post("/api/v1/login", `{"name":"owner","password":"abc"}`)
+	w = post("/api/v1/login", `{"username":"OwNeR","displayName":"The Owner","password":"abc"}`)
 	if w.Code != 200 {
 		t.Fatal(w.Code, w.Body.String())
+	}
+}
+
+func TestUserNameMigration(t *testing.T) {
+	for _, collision := range []bool{false, true} {
+		t.Run(fmt.Sprintf("collision_%t", collision), func(t *testing.T) {
+			r, c := fixture(t)
+			ctx := context.Background()
+			r.Close()
+			_, e := c.Exec(ctx, `ALTER TABLE users DROP CONSTRAINT users_username_normalized;
+			 ALTER TABLE users DROP COLUMN display_name;
+			 ALTER TABLE users RENAME COLUMN username TO name;
+			 DELETE FROM schema_migrations WHERE version=2;
+			 INSERT INTO users VALUES('legacy','Danny','hash',true);
+			 INSERT INTO sessions VALUES('legacy-session','legacy','csrf',now()+interval '1 hour')`)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if collision {
+				if _, e = c.Exec(ctx, "INSERT INTO users VALUES('duplicate','danny','hash',false)"); e != nil {
+					t.Fatal(e)
+				}
+			}
+			var schema string
+			if e = c.QueryRow(ctx, "SELECT current_schema()").Scan(&schema); e != nil {
+				t.Fatal(e)
+			}
+			uri, _ := url.Parse(os.Getenv("TEST_DATABASE_URL"))
+			q := uri.Query()
+			q.Set("search_path", schema)
+			uri.RawQuery = q.Encode()
+			migrated, e := postgres.Open(ctx, uri.String())
+			if collision {
+				if e == nil {
+					migrated.Close()
+					t.Fatal("colliding accounts migrated")
+				}
+				if !strings.Contains(e.Error(), "Cannot normalize usernames") {
+					t.Fatal(e)
+				}
+				var count int
+				if e = c.QueryRow(ctx, "SELECT count(*) FROM users WHERE name IN ('Danny','danny')").Scan(&count); e != nil || count != 2 {
+					t.Fatal("failed migration changed accounts", e)
+				}
+				return
+			}
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer migrated.Close()
+			u, e := migrated.UserByUsername(ctx, "DANNY")
+			if e != nil || u.ID != "legacy" || u.Username != "danny" || u.DisplayName != "Danny" || u.Password != "hash" {
+				t.Fatal("legacy identity lost", u, e)
+			}
+			session, e := migrated.Session(ctx, "legacy-session")
+			if e != nil || session.User.DisplayName != "Danny" {
+				t.Fatal("legacy session lost", e)
+			}
+			if _, e = c.Exec(ctx, "UPDATE users SET username='DANNY' WHERE id='legacy'"); e == nil {
+				t.Fatal("database accepted uppercase username")
+			}
+		})
 	}
 }
 
 func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 	r, c := fixture(t)
 	ctx := context.Background()
-	u, e := r.CreateUser(ctx, domain.User{Name: "persisted-owner", Password: "hash"}, true)
+	u, e := r.CreateUser(ctx, domain.User{Username: "persisted-owner", Password: "hash"}, true)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -391,7 +458,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 1 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 2 {
 		t.Fatal("migration reapplied", e)
 	}
 }
@@ -399,7 +466,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 func BenchmarkLargeLibrary(b *testing.B) {
 	r, c := fixture(b)
 	ctx := context.Background()
-	u, e := r.CreateUser(ctx, domain.User{Name: "bench", Password: "hash"}, true)
+	u, e := r.CreateUser(ctx, domain.User{Username: "bench", Password: "hash"}, true)
 	if e != nil {
 		b.Fatal(e)
 	}

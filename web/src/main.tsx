@@ -298,7 +298,8 @@ function App() {
     const f = new FormData(e.currentTarget);
     try {
       const s = await api<Session>(setup ? "/setup" : "/login", "POST", {
-        name: f.get("name"),
+        username: String(f.get("username")).trim().toLowerCase(),
+        ...(setup ? { displayName: f.get("displayName") } : {}),
         password: f.get("password"),
       });
       setSession(s);
@@ -359,13 +360,29 @@ function App() {
               : "Sign in and pick up where you left off."}
           </p>
           <form onSubmit={auth}>
+            {setup && (
+              <label>
+                Display name
+                <input
+                  name="displayName"
+                  required
+                  maxLength={120}
+                  autoComplete="nickname"
+                />
+              </label>
+            )}
             <label>
               Username
               <input
-                name="name"
+                name="username"
                 required
                 maxLength={120}
                 autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                onChange={(e) => {
+                  e.currentTarget.value = e.currentTarget.value.toLowerCase();
+                }}
               />
             </label>
             <label>
@@ -536,8 +553,11 @@ function App() {
               </button>
             )}
           </div>
-          <div className="user-avatar" title={session.user.name}>
-            {session.user.name.slice(0, 1).toUpperCase()}
+          <div
+            className="user-avatar"
+            title={`${session.user.displayName} (@${session.user.username})`}
+          >
+            {session.user.displayName.slice(0, 1).toUpperCase()}
           </div>
         </header>
         {error && (

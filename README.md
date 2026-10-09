@@ -9,7 +9,7 @@ See [the validation record](docs/VALIDATION.md) for tested behavior, benchmarks,
 1. Run `node scripts/setup-env.mjs` to create `.env` with a cryptographically random database password. The script fills a missing or placeholder password and preserves existing configured values. Alternatively, copy `.env.example` to `.env` and supply your own database password.
 2. Set `MUSIC_PATH` in `.env` to an existing absolute music-folder path. Keep `.env` private; it is excluded from Git.
 3. Run `docker compose up -d --build`.
-4. Open http://localhost:8080 and create the administrator account (at least 3 characters, up to 72 bytes per password). Setup is available only until the first account is created.
+4. Open http://localhost:8080 and create the administrator account with a display name, lowercase username, and password (at least 3 characters, up to 72 bytes). Setup is available only until the first account is created. Display names preserve capitalization; usernames are normalized to lowercase and sign-in is case-insensitive.
 5. Open **Instance settings → Library** and run a scan. Automatic incremental scans also run at startup and hourly by default.
 
 Linux containers run as UID/GID 10001; the mounted music directory must be readable/traversable by that user. Cadence never writes into that mount. For more roots, add read-only bind mounts and set `MUSIC_ROOTS=/music;/more-music` on the app service. Keep roots non-overlapping.
@@ -64,6 +64,8 @@ cd web && npm test && npm run build
 Set `TEST_DATABASE_URL` to a **disposable test database** to run PostgreSQL/HTTP integration tests. Tests create and drop isolated `cadence_test_*` schemas. Set it before `go test ./...`. FFmpeg integration tests skip if tools are absent. Scale benchmark: `go test ./internal/postgres -run '^$' -bench BenchmarkLargeLibrary -benchtime=3x -timeout=10m` with that variable set. Results reflect your hardware; the 250,000-track/20-listener targets are not universal capacity guarantees.
 
 ## Storage, backups, upgrades
+
+Account migration preserves existing login names as display names and lowercases usernames. If legacy accounts differ only by case or surrounding spaces, migration stops without changing data; rename those conflicting accounts in the old database before upgrading.
 
 Back up the PostgreSQL database, app data volume, and original music separately. For a consistent catalog/app-data snapshot, stop app activity during backup. PostgreSQL example:
 
