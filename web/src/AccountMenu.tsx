@@ -17,6 +17,7 @@ import { volumeLabel } from "./volume";
 import { AccountEditor } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
 import { useDialogDismiss } from "./useDialogDismiss";
+import { usePopoverDismiss } from "./usePopoverDismiss";
 import { Checkbox } from "./Checkbox";
 import type { useMiniPlayer } from "./MiniPlayer";
 
@@ -59,15 +60,11 @@ export function AccountMenu({
   const menu = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const dismiss = useDialogDismiss(editingBusy);
+  usePopoverDismiss(open, root, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;
     menu.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
 
   function closeMenu() {
@@ -92,6 +89,10 @@ export function AccountMenu({
         aria-controls="account-menu"
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
+          if (event.key === "Escape" && open) {
+            event.preventDefault();
+            closeMenu();
+          }
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             event.preventDefault();
             setOpen(true);
@@ -108,9 +109,6 @@ export function AccountMenu({
           role="menu"
           aria-label="Account"
           ref={menu}
-          onBlur={(event) => {
-            if (!root.current?.contains(event.relatedTarget)) setOpen(false);
-          }}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();

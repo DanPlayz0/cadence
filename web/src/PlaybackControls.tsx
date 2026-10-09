@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Check, ChevronDown, Volume2, VolumeX } from "lucide-react";
 import type { Quality } from "./player";
 import { volumeLabel } from "./volume";
+import { usePopoverDismiss } from "./usePopoverDismiss";
 
 const qualities: { value: Quality; label: string; detail: string }[] = [
   { value: "auto", label: "Auto", detail: "Original audio when supported" },
@@ -24,16 +25,12 @@ export function QualitySelect({
   const trigger = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const id = useId();
+  usePopoverDismiss(open, root, () => setOpen(false));
   useEffect(() => {
     if (!open) return;
     list.current
       ?.querySelector<HTMLButtonElement>('[aria-selected="true"]')
       ?.focus();
-    const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
   function choose(next: Quality) {
     onChange(next);
@@ -41,13 +38,7 @@ export function QualitySelect({
     trigger.current?.focus();
   }
   return (
-    <div
-      className={`quality-select ${compact ? "compact" : ""}`}
-      ref={root}
-      onBlur={(event) => {
-        if (!root.current?.contains(event.relatedTarget)) setOpen(false);
-      }}
-    >
+    <div className={`quality-select ${compact ? "compact" : ""}`} ref={root}>
       <button
         className="quality-trigger"
         ref={trigger}
