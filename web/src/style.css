@@ -298,6 +298,123 @@ main {
   place-items: center;
   font-size: 12px;
   font-weight: 650;
+  overflow: hidden;
+}
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.account-editor {
+  display: grid;
+  gap: 24px;
+}
+.account-editor .profile-identity {
+  margin-bottom: 0;
+}
+.account-editor fieldset {
+  min-width: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 16px 0 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.account-editor legend {
+  padding: 0 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.account-dialog .account-editor form {
+  display: block;
+  margin: 0;
+}
+.account-editor label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: #bec6b4;
+}
+.account-editor button {
+  justify-self: start;
+}
+.account-editor input[type="file"] {
+  width: 100%;
+  padding: 8px;
+  font-size: 11px;
+}
+.account-editor input::file-selector-button {
+  border: 1px solid #5f6a52;
+  border-radius: 5px;
+  padding: 8px 10px;
+  margin-right: 10px;
+  background: #303927;
+  color: #eeefea;
+  cursor: pointer;
+}
+.account-editor .editor-groups {
+  border: 0;
+  padding: 0;
+}
+.account-editor .themed-checkbox {
+  display: flex;
+  font-size: 13px;
+}
+.account-editor .muted {
+  margin: 0;
+}
+.account-editor small {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.editor-feedback {
+  position: sticky;
+  top: 0;
+  background: #2e3b26;
+  padding: 12px;
+  color: #e0eed2;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  border-radius: 6px;
+  z-index: 2;
+}
+.editor-feedback.auth-error {
+  background: #493121;
+}
+.user-editor-dialog {
+  width: min(490px, calc(100vw - 32px));
+}
+.user-select {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  gap: 12px;
+  text-align: left;
+  border-radius: 6px;
+  padding: 16px 10px;
+}
+.user-select:hover,
+.user-select:focus-visible {
+  background: #2b3323;
+}
+.user-select .user-avatar {
+  margin: 0;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+.user-select > span:not(.user-avatar):not(.badge):not(.user-edit-label) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.user-edit-label {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--accent);
 }
 .content {
   padding: 28px 40px 25px;
@@ -1634,6 +1751,7 @@ main,
   overflow-wrap: anywhere;
 }
 .profile-identity .user-avatar {
+  margin: 0;
   width: 56px;
   height: 56px;
   flex-shrink: 0;

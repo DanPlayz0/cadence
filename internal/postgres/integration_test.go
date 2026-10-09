@@ -111,7 +111,7 @@ func TestPlaylistIconAPI(t *testing.T) {
 		t.Fatal(e)
 	}
 	hash := sha256.Sum256([]byte("playlist-token"))
-	if e = r.SaveSession(ctx, hex.EncodeToString(hash[:]), u.ID, "playlist-csrf", time.Now().Add(time.Hour)); e != nil {
+	if e = r.SaveSession(ctx, hex.EncodeToString(hash[:]), u.ID, "playlist-csrf", time.Now().Add(time.Hour), u.Password); e != nil {
 		t.Fatal(e)
 	}
 	handler := (&httpapi.Server{Repo: r, Config: httpapi.Config{PublicURL: "http://example.test"}}).Handler()
@@ -250,7 +250,7 @@ func TestScannerAndHTTP(t *testing.T) {
 	handler := app.Handler()
 	makeSession := func(u domain.User, token string) {
 		hash := sha256.Sum256([]byte(token))
-		if e = r.SaveSession(ctx, hex.EncodeToString(hash[:]), u.ID, "csrf-test-token", time.Now().Add(time.Hour)); e != nil {
+		if e = r.SaveSession(ctx, hex.EncodeToString(hash[:]), u.ID, "csrf-test-token", time.Now().Add(time.Hour), u.Password); e != nil {
 			t.Fatal(e)
 		}
 	}
@@ -534,7 +534,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 3 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 4 {
 		t.Fatal("migration reapplied", e)
 	}
 }

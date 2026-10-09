@@ -17,6 +17,8 @@ Linux containers run as UID/GID 10001; the mounted music directory must be reada
 ## Listening and administration
 
 - Open your avatar for profile details, listening settings, the play queue, and sign-out. Administrators also find **Instance settings** here. Volume and playback quality changes apply immediately in the current tab.
+- In **Your profile**, update your display name, upload/remove an avatar, or change your password by entering your current password. A password change keeps this session signed in and revokes your other sessions. JPEG/PNG avatars are limited to 2 MiB, center-cropped and resized, and stored in PostgreSQL with the account.
+- In **Instance settings → People**, click a listener to edit their username/display name, assign groups, upload/remove their avatar, revoke sessions, or reset their password without the current password. Administrator password resets revoke all of that user's sessions, including your own if you reset your own account. Account metadata and expired sessions refresh each minute, on window focus, and on reconnection.
 - Volume uses a dB-based curve and shows percentage plus attenuation on hover or keyboard focus; zero mutes playback. Quality uses a custom selector with bitrate descriptions. Create playlists in a dialog with a name and one of six built-in icons; icons are saved on the server. On wide screens the queue occupies its own column; on smaller screens it opens as a dedicated view.
 - Browse albums/artists, search words in tags, like songs, create personal playlists, and edit the play queue. **Play loaded songs** queues the currently fetched tracks; use Load more for larger collections.
 - Auto plays original supported audio and falls back to MP3 320 kbps on unsupported formats/playback errors. High and Saver explicitly convert to 320/128 kbps. Seeking in converted audio works once conversion finishes; initial conversion can take time. FFmpeg workers and disk cache are bounded by configuration.
@@ -86,6 +88,6 @@ Before upgrading, back up both volumes. Update code and run `docker compose up -
 
 `internal/domain` defines repository contracts; `internal/postgres` owns SQL and migration details. The scanner and HTTP layer depend on domain interfaces. Future SQLite/MySQL/MongoDB adapters must pass equivalent repository contract tests; they are not implemented in v1.
 
-One application process owns an instance. There is no public registration, centralized hosting, upload endpoint, recommendation engine, native app, or persistent offline download. Queue/temporary cache are per-tab. Album grouping uses source directory, album artist, and album tags; catalog renaming does not change album IDs. Original files with missing/unknown duration may not show an accurate progress bar.
+One application process owns an instance. There is no public registration, centralized hosting, music-upload endpoint, recommendation engine, native app, or persistent offline download. Queue/temporary cache are per-tab. Album grouping uses source directory, album artist, and album tags; catalog renaming does not change album IDs. Original files with missing/unknown duration may not show an accurate progress bar.
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [COPYING](COPYING), and [LICENSE](LICENSE) for distribution information.

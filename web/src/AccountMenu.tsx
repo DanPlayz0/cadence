@@ -14,6 +14,8 @@ import type { User } from "./api";
 import type { Quality } from "./player";
 import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { volumeLabel } from "./volume";
+import { AccountEditor } from "./AccountEditor";
+import { UserAvatar } from "./UserAvatar";
 
 export function AccountMenu({
   user,
@@ -25,6 +27,8 @@ export function AccountMenu({
   onAdmin,
   onQueue,
   onLogout,
+  onUpdated,
+  onExpired,
 }: {
   user: User;
   quality: Quality;
@@ -35,7 +39,11 @@ export function AccountMenu({
   onAdmin: () => void;
   onQueue: () => void;
   onLogout: () => Promise<void>;
+  onUpdated: (user: User) => void;
+  onExpired: () => void;
 }) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [editingBusy, setEditingBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<"profile" | "settings">("profile");
@@ -61,6 +69,7 @@ export function AccountMenu({
   function showPanel(next: "profile" | "settings") {
     closeMenu();
     setPanel(next);
+    setProfileOpen(next === "profile");
     dialog.current?.showModal();
   }
 
@@ -81,9 +90,7 @@ export function AccountMenu({
           }
         }}
       >
-        <span className="user-avatar">
-          {user.displayName.slice(0, 1).toUpperCase()}
-        </span>
+        <UserAvatar user={user} />
         <ChevronDown size={14} />
       </button>
       {open && (
@@ -175,7 +182,13 @@ export function AccountMenu({
         className="account-dialog"
         ref={dialog}
         aria-labelledby="account-title"
-        onClose={() => trigger.current?.focus()}
+        onClose={() => {
+          setProfileOpen(false);
+          trigger.current?.focus();
+        }}
+        onCancel={(event) => {
+          if (editingBusy) event.preventDefault();
+        }}
       >
         <div className="row dialog-heading">
           <h2 id="account-title">
@@ -183,38 +196,22 @@ export function AccountMenu({
           </h2>
           <button
             aria-label="Close account details"
+            disabled={editingBusy}
             onClick={() => dialog.current?.close()}
           >
             <X size={20} />
           </button>
         </div>
         {panel === "profile" ? (
-          <>
-            <div className="profile-identity">
-              <span className="user-avatar">
-                {user.displayName.slice(0, 1).toUpperCase()}
-              </span>
-              <div>
-                <strong>{user.displayName}</strong>
-                <p>@{user.username}</p>
-              </div>
-            </div>
-            <dl className="profile-details">
-              <div>
-                <dt>Account</dt>
-                <dd>{user.admin ? "Administrator" : "Listener"}</dd>
-              </div>
-              <div>
-                <dt>Connection</dt>
-                <dd>
-                  {offline ? "Offline session" : "Connected to your instance"}
-                </dd>
-              </div>
-            </dl>
-            <p className="muted">
-              Your account is managed by this music instance's administrator.
-            </p>
-          </>
+          profileOpen && (
+            <AccountEditor
+              user={user}
+              onUpdated={onUpdated}
+              onRevoked={() => {}}
+              onExpired={onExpired}
+              onBusy={setEditingBusy}
+            />
+          )
         ) : (
           <div className="listening-settings">
             <div className="setting-field">
@@ -232,7 +229,9 @@ export function AccountMenu({
           </div>
         )}
         <form method="dialog">
-          <button className="primary">Done</button>
+          <button className="primary" disabled={editingBusy}>
+            Done
+          </button>
         </form>
       </dialog>
     </div>

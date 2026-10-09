@@ -27,6 +27,9 @@ var userNamesMigration string
 //go:embed 003_playlist_icons.sql
 var playlistIconsMigration string
 
+//go:embed 004_user_avatars.sql
+var userAvatarsMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -101,6 +104,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=4)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, userAvatarsMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(4)"); err != nil {
+			return err
+		}
+	}
 	// A previous process may have stopped in the middle of a scan.
 	_, err = tx.Exec(ctx, "UPDATE scans SET status='interrupted',finished=now() WHERE status='running'")
 	if err != nil {
@@ -167,20 +181,33 @@ func (s *Store) CreateUser(ctx context.Context, u domain.User, first bool) (doma
 }
 func (s *Store) UserByUsername(ctx context.Context, username string) (domain.User, error) {
 	var u domain.User
-	err := s.pool.QueryRow(ctx, "SELECT id,username,display_name,password,admin FROM users WHERE username=lower($1)", strings.ToLower(strings.TrimSpace(username))).Scan(&u.ID, &u.Username, &u.DisplayName, &u.Password, &u.Admin)
+	err := s.pool.QueryRow(ctx, "SELECT id,username,display_name,password,admin,octet_length(avatar)>0,avatar_version FROM users WHERE username=lower($1)", strings.ToLower(strings.TrimSpace(username))).Scan(&u.ID, &u.Username, &u.DisplayName, &u.Password, &u.Admin, &u.Avatar, &u.AvatarVersion)
 	return u, mapped(err)
 }
-func (s *Store) SaveSession(ctx context.Context, token, user, csrf string, expires time.Time) error {
-	_, err := s.pool.Exec(ctx, "DELETE FROM sessions WHERE expires<now()")
+func (s *Store) SaveSession(ctx context.Context, token, user, csrf string, expires time.Time, expectedHash string) error {
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, "INSERT INTO sessions VALUES($1,$2,$3,$4)", token, user, csrf, expires)
-	return err
+	defer tx.Rollback(ctx)
+	var hash string
+	if err = tx.QueryRow(ctx, "SELECT password FROM users WHERE id=$1 FOR SHARE", user).Scan(&hash); err != nil {
+		return mapped(err)
+	}
+	if hash != expectedHash {
+		return domain.ErrConflict
+	}
+	if _, err = tx.Exec(ctx, "DELETE FROM sessions WHERE expires<now()"); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO sessions VALUES($1,$2,$3,$4)", token, user, csrf, expires); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 func (s *Store) Session(ctx context.Context, token string) (domain.Session, error) {
 	var v domain.Session
-	err := s.pool.QueryRow(ctx, "SELECT u.id,u.username,u.display_name,u.admin,s.csrf,s.expires FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=$1 AND s.expires>now()", token).Scan(&v.User.ID, &v.User.Username, &v.User.DisplayName, &v.User.Admin, &v.CSRF, &v.Expires)
+	err := s.pool.QueryRow(ctx, "SELECT u.id,u.username,u.display_name,u.admin,s.csrf,s.expires,octet_length(u.avatar)>0,u.avatar_version,ARRAY(SELECT group_id FROM user_groups WHERE user_id=u.id ORDER BY group_id) FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=$1 AND s.expires>now()", token).Scan(&v.User.ID, &v.User.Username, &v.User.DisplayName, &v.User.Admin, &v.CSRF, &v.Expires, &v.User.Avatar, &v.User.AvatarVersion, &v.User.Groups)
 	return v, mapped(err)
 }
 func (s *Store) DeleteSession(ctx context.Context, token string) error {
@@ -450,7 +477,7 @@ func (s *Store) RecordPlay(ctx context.Context, user, track, event string) error
 	return err
 }
 func (s *Store) Users(ctx context.Context) ([]domain.User, error) {
-	rows, err := s.pool.Query(ctx, "SELECT u.id,u.username,u.display_name,u.admin,coalesce(array_agg(ug.group_id) FILTER(WHERE ug.group_id IS NOT NULL),'{}') FROM users u LEFT JOIN user_groups ug ON ug.user_id=u.id GROUP BY u.id ORDER BY u.username")
+	rows, err := s.pool.Query(ctx, "SELECT u.id,u.username,u.display_name,u.admin,octet_length(u.avatar)>0,u.avatar_version,coalesce(array_agg(ug.group_id) FILTER(WHERE ug.group_id IS NOT NULL),'{}') FROM users u LEFT JOIN user_groups ug ON ug.user_id=u.id GROUP BY u.id ORDER BY u.username")
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +485,7 @@ func (s *Store) Users(ctx context.Context) ([]domain.User, error) {
 	out := []domain.User{}
 	for rows.Next() {
 		var u domain.User
-		if err = rows.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Admin, &u.Groups); err != nil {
+		if err = rows.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Admin, &u.Avatar, &u.AvatarVersion, &u.Groups); err != nil {
 			return nil, err
 		}
 		out = append(out, u)

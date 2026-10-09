@@ -31,6 +31,13 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Replaced the administrator field with a themed checkbox component: 24-pixel check indicator, a larger clickable label, permission description, visible keyboard focus, and disabled styling. Native checkbox semantics and FormData behavior are preserved.
 - Five frontend tests, TypeScript/production build, and Prettier checks passed. Chromium fixture checks at 1280 × 844 and 390 × 844 passed for label and Space-key toggling, visual checked state, disabling during submission, true/false administrator payloads, form reset, and no horizontal overflow or runtime errors. Desktop and mobile screenshots were reviewed. Account creation responses were fixtures; backend behavior was unchanged.
 
+## Account editing update (2026-10-09)
+
+- Added persistent avatar storage and a migration preserving existing account names/passwords with empty-avatar defaults. Avatars are authenticated JPEG responses; uploaded JPEG/PNG data is bounded by byte/dimension/pixel limits, cropped, resized, and re-encoded.
+- Go tests passed with race detection and a separate disposable PostgreSQL database. Tests cover wrong/missing current passwords, password bounds, preserved current session, revocation of other sessions, administrator resets/revocation, stale-password login protection, CSRF and non-admin rejection, name normalization, username conflicts, atomic username/group rollback, avatar upload/removal/versioning, private avatar reads, invalid/oversized images, and avatar migration. Go vet and the OpenAPI checker passed with 38 documented paths.
+- Frontend tests, TypeScript/production build, and Prettier checks passed. Chromium fixture checks at 1280 × 844 and 390 × 844 passed for profile name/avatar changes, immediate header updates, password confirmation and current-password errors, password-field clearing on success, clickable user rows, group/username edits, save-error recovery, administrator reset without current password, session revocation, avatar removal, focus restoration, account refresh on focus, self-reset sign-out, and no page overflow/runtime errors. Profile and user-editor screenshots were visually reviewed.
+- Browser requests used isolated fixtures; backend account checks used real PostgreSQL. Cross-browser, physical-device avatar picking, and simultaneous multi-device UI refresh remain outside this update. Temporary scripts, images, and databases were excluded from Git.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.

@@ -5,7 +5,7 @@ Cadence should feel like a music library: artwork, collections, and playback com
 ## Improvements implemented
 
 - The avatar opens an account dropdown with profile details, listening settings, play queue, administrator-only instance settings, and sign-out. Account actions move out of the music sidebar. The dropdown supports keyboard navigation, Escape, outside clicks, and focus restoration. Profile and settings use native modal dialogs.
-- Profile details show the signed-in display name, username, role, and connection status. Account editing is not available in the current API, so this view does not present a pretend save action.
+- Profile editing supports display names, uploaded avatars, avatar removal, and password changes with current-password verification. Changes update the account menu immediately. Usernames are changed through the administrator user editor.
 - Listening settings connect directly to the existing player volume and quality controls. The account menu also makes the queue accessible at tablet widths, where player extras are hidden. Changes apply immediately in the current tab.
 - Volume uses equal dB steps from -60 to 0 dB, with zero explicitly muted. The audio gain is `10^(dB/20)`; 50% slider position is -30 dB, not half the signal amplitude. The popup shows slider percentage and attenuation relative to full gain, not measured room loudness. Gain is a signal multiplier, as described in the [Web Audio specification](https://www.w3.org/TR/webaudio-1.0/#GainNode).
 - A shared custom quality selector replaces native quality inputs in the player and listening settings. Options include bitrate descriptions, selected-state indicators, keyboard navigation, and Escape dismissal.
@@ -14,6 +14,8 @@ Cadence should feel like a music library: artwork, collections, and playback com
 - Playlist creation, adding a song to a playlist, and queue additions now show success feedback. Deleting a playlist asks for confirmation and explains that library songs remain available.
 - Album cards use a navigation chevron instead of suggesting that clicking the artwork starts playback. Keyboard focus reveals the same affordance as hover.
 - Search has a visible focus state; likes and shuffle expose their toggle state; the queue trigger exposes its expanded state. Playback and seeking controls are disabled when unavailable. Loading animation and album transitions respect reduced motion.
+
+- People rows open a user editor with themed group checkboxes, username/display name editing, avatar uploads/removal, session revocation, and password resets. Saves provide inline feedback and preserve inputs after errors. Self password changes revoke other sessions; administrator resets revoke all target sessions.
 
 ## Recommended next changes
 
@@ -26,7 +28,7 @@ Cadence should feel like a music library: artwork, collections, and playback com
 | Medium | Navigation history | Give collection/detail/search views real URLs and browser back/forward behavior. | The current back button always returns Home; deep links and previous search state cannot be restored. Requires consistent routing and state handling. |
 | Medium | Feedback and loading | Add pending states to playlist mutations and likes, and use layout-stable loading placeholders. | Prevent duplicate requests and reduce stale-content flashes while switching collections. Preserve meaningful error and empty states. |
 
-Profile editing, password changes, durable playback preferences, and durable offline downloads need explicit server support or persistence design before adding controls for them.
+Durable playback preferences and durable offline downloads still need persistence design before adding controls for them.
 
 ## Verification
 

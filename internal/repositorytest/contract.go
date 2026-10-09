@@ -30,7 +30,7 @@ func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 		if !errors.Is(e, domain.ErrConflict) {
 			t.Fatalf("case-insensitive duplicate accepted: %v", e)
 		}
-		must(t, r.SaveSession(ctx, "session-token", u.ID, "csrf", time.Now().Add(time.Hour)))
+		must(t, r.SaveSession(ctx, "session-token", u.ID, "csrf", time.Now().Add(time.Hour), u.Password))
 		session, e := r.Session(ctx, "session-token")
 		must(t, e)
 		users, e := r.Users(ctx)
@@ -172,7 +172,7 @@ func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 		if p.Total != 2 || len(p.Items) != 1 {
 			t.Fatal("pagination failed")
 		}
-		must(t, r.SaveSession(ctx, "hashed-token", listener.ID, "csrf", time.Now().Add(time.Hour)))
+		must(t, r.SaveSession(ctx, "hashed-token", listener.ID, "csrf", time.Now().Add(time.Hour), listener.Password))
 		s, e := r.Session(ctx, "hashed-token")
 		must(t, e)
 		if s.User.ID != listener.ID {

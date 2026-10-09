@@ -35,11 +35,12 @@ type Config struct {
 	Roots                     []string
 }
 type Server struct {
-	Repo    domain.Repository
-	Scanner *library.Scanner
-	Cache   *media.Cache
-	Config  Config
-	limiter loginLimiter
+	Repo            domain.Repository
+	Scanner         *library.Scanner
+	Cache           *media.Cache
+	Config          Config
+	limiter         loginLimiter
+	passwordLimiter loginLimiter
 }
 type sessionKey struct{}
 
@@ -126,6 +127,11 @@ func (s *Server) Handler() http.Handler {
 		v := current(r)
 		write(w, 200, map[string]any{"user": v.User, "csrf": v.CSRF})
 	})
+	m.HandleFunc("PUT /api/v1/me", s.updateProfile)
+	m.HandleFunc("POST /api/v1/me/password", s.changePassword)
+	m.HandleFunc("PUT /api/v1/me/avatar", s.updateAvatar)
+	m.HandleFunc("DELETE /api/v1/me/avatar", s.updateAvatar)
+	m.HandleFunc("GET /api/v1/users/{id}/avatar", s.userAvatar)
 	m.HandleFunc("POST /api/v1/logout", s.logout)
 	m.HandleFunc("GET /api/v1/tracks", s.tracks)
 	m.HandleFunc("GET /api/v1/albums", func(w http.ResponseWriter, r *http.Request) {
@@ -252,6 +258,10 @@ func (s *Server) Handler() http.Handler {
 		write(w, 200, v)
 	})
 	m.HandleFunc("POST /api/v1/admin/users", s.createUser)
+	m.HandleFunc("PUT /api/v1/admin/users/{id}", s.updateAdminUser)
+	m.HandleFunc("POST /api/v1/admin/users/{id}/password", s.changePassword)
+	m.HandleFunc("PUT /api/v1/admin/users/{id}/avatar", s.updateAvatar)
+	m.HandleFunc("DELETE /api/v1/admin/users/{id}/avatar", s.updateAvatar)
 	m.HandleFunc("PUT /api/v1/admin/users/{id}/groups", func(w http.ResponseWriter, r *http.Request) {
 		var v struct {
 			Groups []string `json:"groups"`
@@ -484,7 +494,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 func (s *Server) newSession(w http.ResponseWriter, r *http.Request, u domain.User) {
 	token, csrf := random(), random()
 	expires := time.Now().Add(30 * 24 * time.Hour)
-	if e := s.Repo.SaveSession(r.Context(), tokenHash(token), u.ID, csrf, expires); e != nil {
+	if e := s.Repo.SaveSession(r.Context(), tokenHash(token), u.ID, csrf, expires, u.Password); e != nil {
 		failure(w, e)
 		return
 	}

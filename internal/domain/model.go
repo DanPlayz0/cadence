@@ -11,12 +11,20 @@ var ErrNotFound = errors.New("not found")
 var ErrConflict = errors.New("conflict")
 
 type User struct {
-	ID          string   `json:"id"`
-	Username    string   `json:"username"`
-	DisplayName string   `json:"displayName"`
-	Admin       bool     `json:"admin"`
-	Password    string   `json:"-"`
-	Groups      []string `json:"groups"`
+	ID            string   `json:"id"`
+	Username      string   `json:"username"`
+	DisplayName   string   `json:"displayName"`
+	Admin         bool     `json:"admin"`
+	Password      string   `json:"-"`
+	Groups        []string `json:"groups"`
+	Avatar        bool     `json:"avatar"`
+	AvatarVersion int64    `json:"avatarVersion"`
+}
+
+type UserUpdate struct {
+	Username    *string
+	DisplayName *string
+	Groups      *[]string
 }
 type Session struct {
 	User    User
@@ -105,7 +113,12 @@ type AuthRepository interface {
 	HasUsers(context.Context) (bool, error)
 	CreateUser(context.Context, User, bool) (User, error)
 	UserByUsername(context.Context, string) (User, error)
-	SaveSession(context.Context, string, string, string, time.Time) error
+	UserByID(context.Context, string) (User, error)
+	UpdateUser(context.Context, string, UserUpdate) (User, error)
+	ChangePassword(context.Context, string, string, string, string) error
+	Avatar(context.Context, string) ([]byte, error)
+	SetAvatar(context.Context, string, []byte) (User, error)
+	SaveSession(context.Context, string, string, string, time.Time, string) error
 	Session(context.Context, string) (Session, error)
 	DeleteSession(context.Context, string) error
 	RevokeSessions(context.Context, string) error

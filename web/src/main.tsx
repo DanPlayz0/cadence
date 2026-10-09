@@ -39,6 +39,7 @@ import {
   Session,
   setSession,
   Track,
+  User,
 } from "./api";
 import { usePlayer } from "./player";
 import { Admin } from "./Admin";
@@ -99,6 +100,45 @@ function App() {
     updateSession(null);
     setError("Your session expired. Sign in again.");
   }, []);
+  const userUpdated = useCallback((user: User) => {
+    updateSession((current) =>
+      current?.user.id === user.id ? { ...current, user } : current,
+    );
+  }, []);
+  useEffect(() => {
+    const userID = session?.user.id;
+    if (!userID) return;
+    let live = true;
+    const refresh = async () => {
+      if (!navigator.onLine) return;
+      try {
+        const next = await api<Session>("/me");
+        if (live && next.user.id === userID) {
+          setSession(next);
+          updateSession((current) => {
+            if (current?.user.id !== userID) return current;
+            if (
+              current.csrf === next.csrf &&
+              JSON.stringify(current.user) === JSON.stringify(next.user)
+            )
+              return current;
+            return next;
+          });
+        }
+      } catch (error) {
+        if (live && error instanceof APIError && error.status === 401) expire();
+      }
+    };
+    const timer = window.setInterval(() => void refresh(), 60000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+    };
+  }, [session?.user.id, expire]);
   const player = usePlayer(setError, expire);
   useEffect(() => {
     if (!session) {
@@ -544,6 +584,8 @@ function App() {
             onAdmin={() => browse("admin")}
             onQueue={() => setQueueOpen(true)}
             onLogout={logout}
+            onUpdated={userUpdated}
+            onExpired={expire}
           />
         </header>
         {notice && (
@@ -568,7 +610,14 @@ function App() {
           </div>
         )}
         {view === "admin" ? (
-          <Admin report={setError} />
+          <Admin
+            report={setError}
+            onUpdated={userUpdated}
+            onRevoked={(id) => {
+              if (id === session.user.id) expire();
+            }}
+            onExpired={expire}
+          />
         ) : (
           <section className="content">
             <div className="mobile-nav">

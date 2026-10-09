@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, RefreshCw, Shield, Trash2, X } from "lucide-react";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
+import { UserEditorDialog } from "./AccountEditor";
+import { UserAvatar } from "./UserAvatar";
 type Group = { id: string; name: string };
 type Exclusion = { id: string; groupId: string; kind: string; target: string };
 type Suggestion = {
@@ -22,7 +24,18 @@ type Scan = {
   indexed: number;
   errors: string[];
 };
-export function Admin({ report }: { report: (s: string) => void }) {
+export function Admin({
+  report,
+  onUpdated,
+  onRevoked,
+  onExpired,
+}: {
+  report: (s: string) => void;
+  onUpdated: (user: User) => void;
+  onRevoked: (id: string) => void;
+  onExpired: () => void;
+}) {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [tab, setTab] = useState("library");
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -90,6 +103,23 @@ export function Admin({ report }: { report: (s: string) => void }) {
   }
   return (
     <section className="content admin">
+      {selectedUser && (
+        <UserEditorDialog
+          key={selectedUser.id}
+          user={selectedUser}
+          groups={groups}
+          onClose={() => setSelectedUser(null)}
+          onUpdated={(next) => {
+            setSelectedUser(next);
+            setUsers((current) =>
+              current.map((user) => (user.id === next.id ? next : user)),
+            );
+            onUpdated(next);
+          }}
+          onRevoked={onRevoked}
+          onExpired={onExpired}
+        />
+      )}
       <div className="page-heading">
         <div>
           <p className="eyebrow">YOUR SERVER, YOUR RULES</p>
@@ -262,47 +292,19 @@ export function Admin({ report }: { report: (s: string) => void }) {
           <div className="panel">
             <h2>Listeners</h2>
             {users.map((u) => (
-              <div className="user-row" key={u.id}>
-                <div className="row">
-                  <strong>
-                    {u.displayName} <small>@{u.username}</small>{" "}
-                    {u.admin && <span className="badge">admin</span>}
-                  </strong>
-                  <button
-                    className="subtle"
-                    disabled={loading}
-                    onClick={() =>
-                      void perform(() =>
-                        api(`/admin/users/${u.id}/sessions`, "DELETE"),
-                      )
-                    }
-                  >
-                    Revoke sessions
-                  </button>
-                </div>
-                <div className="group-toggles">
-                  {groups.map((g) => (
-                    <label className="checkbox" key={g.id}>
-                      <input
-                        type="checkbox"
-                        checked={u.groups?.includes(g.id) ?? false}
-                        disabled={loading}
-                        onChange={(e) => {
-                          const ids = new Set(u.groups);
-                          if (e.target.checked) ids.add(g.id);
-                          else ids.delete(g.id);
-                          void perform(() =>
-                            api(`/admin/users/${u.id}/groups`, "PUT", {
-                              groups: [...ids],
-                            }),
-                          );
-                        }}
-                      />
-                      {g.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <button
+                className="user-row user-select"
+                key={u.id}
+                onClick={() => setSelectedUser(u)}
+              >
+                <UserAvatar user={u} />
+                <span>
+                  <strong>{u.displayName}</strong>
+                  <small>@{u.username}</small>
+                </span>
+                {u.admin && <span className="badge">admin</span>}
+                <span className="user-edit-label">Manage</span>
+              </button>
             ))}
           </div>
         </>

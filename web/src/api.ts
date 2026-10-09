@@ -5,6 +5,8 @@ export type User = {
   displayName: string;
   admin: boolean;
   groups?: string[];
+  avatar: boolean;
+  avatarVersion: number;
 };
 export type Track = {
   id: string;
@@ -74,6 +76,27 @@ export async function api<T>(
 }
 export function cover(id: string) {
   return `/api/v1/tracks/${encodeURIComponent(id)}/art`;
+}
+
+export async function uploadAvatar(path: string, file: File): Promise<User> {
+  if (file.size > 2 * 1024 * 1024)
+    throw new Error("Choose an image under 2 MiB.");
+  const res = await fetch(`/api/v1${path}`, {
+    method: "PUT",
+    credentials: "same-origin",
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "X-CSRF-Token": csrf,
+    },
+    body: file,
+  });
+  const data = await res
+    .json()
+    .catch(() => ({ error: "Invalid server response" }));
+  if (!res.ok)
+    throw new APIError(res.status, data.error || "Could not upload avatar.");
+  return data as User;
 }
 export function stream(id: string, quality: string) {
   return `/api/v1/tracks/${encodeURIComponent(id)}/stream?quality=${quality}`;
