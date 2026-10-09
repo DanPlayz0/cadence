@@ -783,6 +783,9 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 25px 23px;
 }
+.artist-albums {
+  margin-bottom: 32px;
+}
 .album-card {
   display: flex;
   flex-direction: column;

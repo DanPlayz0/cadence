@@ -146,7 +146,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/tracks", s.tracks)
 	m.HandleFunc("GET /api/v1/albums", func(w http.ResponseWriter, r *http.Request) {
 		l, o := pagination(r)
-		v, e := s.Repo.Albums(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), l, o)
+		v, e := s.Repo.Albums(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), r.URL.Query().Get("artist"), l, o)
 		if e != nil {
 			failure(w, e)
 			return

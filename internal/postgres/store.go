@@ -379,8 +379,8 @@ func (s *Store) Tracks(ctx context.Context, user string, q domain.Query) (domain
 	}
 	return p, lr.Err()
 }
-func (s *Store) Albums(ctx context.Context, user, search string, limit, offset int) ([]domain.Album, error) {
-	rows, err := s.pool.Query(ctx, `SELECT t.album_id,min(coalesce(t.overrides->>'album',t.album)),min(coalesce(t.overrides->>'albumArtist',t.album_artist)),count(*),coalesce(min(t.id) FILTER (WHERE coalesce(t.overrides->>'artwork',t.art_path)<>''),'') FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) GROUP BY t.album_id ORDER BY lower(min(coalesce(t.overrides->>'album',t.album))),t.album_id LIMIT $3 OFFSET $4`, user, search, limit, offset)
+func (s *Store) Albums(ctx context.Context, user, search, artist string, limit, offset int) ([]domain.Album, error) {
+	rows, err := s.pool.Query(ctx, `SELECT t.album_id,min(coalesce(t.overrides->>'album',t.album)),min(coalesce(t.overrides->>'albumArtist',t.album_artist)),count(*),coalesce(min(t.id) FILTER (WHERE coalesce(t.overrides->>'artwork',t.art_path)<>''),'') FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) AND ($3='' OR artist_names(coalesce(t.overrides->>'artist',t.artist)) @> ARRAY[$3]::text[]) GROUP BY t.album_id ORDER BY lower(min(coalesce(t.overrides->>'album',t.album))),t.album_id LIMIT $4 OFFSET $5`, user, search, artist, limit, offset)
 	if err != nil {
 		return nil, err
 	}

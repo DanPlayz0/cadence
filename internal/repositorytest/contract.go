@@ -132,7 +132,7 @@ func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 		if e = r.RecordPlay(ctx, listener.ID, id, "another-play-event"); !errors.Is(e, domain.ErrNotFound) {
 			t.Fatal("excluded history write allowed")
 		}
-		albums, e := r.Albums(ctx, listener.ID, "", 100, 0)
+		albums, e := r.Albums(ctx, listener.ID, "", "", 100, 0)
 		must(t, e)
 		if len(albums) != 1 || albums[0].ID != "album-two" {
 			t.Fatal("hidden albums/counts leaked")

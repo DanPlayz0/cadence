@@ -155,7 +155,7 @@ type LibraryRepository interface {
 	Tracks(context.Context, string, Query) (Page, error)
 	Track(context.Context, string, string) (Track, error)
 	AllowedIDs(context.Context, string, []string) ([]string, error)
-	Albums(context.Context, string, string, int, int) ([]Album, error)
+	Albums(context.Context, string, string, string, int, int) ([]Album, error)
 	Artists(context.Context, string, string, int, int) ([]Artist, error)
 	UpsertTrack(context.Context, Track, string) (string, error)
 	FileStamp(context.Context, string) (int64, int64, error)

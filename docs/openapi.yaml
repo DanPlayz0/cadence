@@ -1211,6 +1211,11 @@ paths:
       security:
         - session: []
       parameters:
+        - name: artist
+          in: query
+          description: Exact individual artist credit, including comma-separated collaborations. Counts and artwork include only accessible matching songs.
+          schema:
+            type: string
         - name: limit
           in: query
           schema:
