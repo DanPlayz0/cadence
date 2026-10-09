@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ChevronDown,
   Headphones,
@@ -16,8 +16,20 @@ import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { volumeLabel } from "./volume";
 import { AccountEditor } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
-import { useDialogDismiss } from "./useDialogDismiss";
-import { usePopoverDismiss } from "./usePopoverDismiss";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+} from "./components/ui/dropdown-menu";
+import { Button } from "./components/ui/button";
 import { Checkbox } from "./Checkbox";
 import type { useMiniPlayer } from "./MiniPlayer";
 
@@ -55,122 +67,71 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [panel, setPanel] = useState<"profile" | "settings">("profile");
-  const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
-  const dismiss = useDialogDismiss(editingBusy);
-  usePopoverDismiss(open, root, () => setOpen(false));
-
-  useEffect(() => {
-    if (!open) return;
-    menu.current?.querySelector<HTMLButtonElement>("button")?.focus();
-  }, [open]);
-
+  const [dialogOpen, setDialogOpen] = useState(false);
   function closeMenu() {
     setOpen(false);
-    trigger.current?.focus();
   }
   function showPanel(next: "profile" | "settings") {
     closeMenu();
     setPanel(next);
     setProfileOpen(next === "profile");
-    dialog.current?.showModal();
+    setDialogOpen(true);
   }
 
   return (
-    <div className="account" ref={root}>
-      <button
-        ref={trigger}
-        className="account-trigger"
-        aria-label={`Account menu for ${user.displayName}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls="account-menu"
-        onClick={() => setOpen((value) => !value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape" && open) {
-            event.preventDefault();
-            closeMenu();
-          }
-          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault();
-            setOpen(true);
-          }
-        }}
-      >
-        <UserAvatar user={user} />
-        <ChevronDown size={14} />
-      </button>
-      {open && (
-        <div
+    <div className="account">
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            ref={trigger}
+            className="account-trigger"
+            aria-label={`Account menu for ${user.displayName}`}
+          >
+            <UserAvatar user={user} />
+            <ChevronDown size={14} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
           className="account-menu"
-          id="account-menu"
-          role="menu"
+          align="end"
           aria-label="Account"
-          ref={menu}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              closeMenu();
-            }
-            if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-              event.preventDefault();
-              const items = [
-                ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
-                  "button:not(:disabled)",
-                ),
-              ];
-              const current = items.indexOf(
-                document.activeElement as HTMLButtonElement,
-              );
-              const next =
-                event.key === "Home"
-                  ? 0
-                  : event.key === "End"
-                    ? items.length - 1
-                    : (current +
-                        (event.key === "ArrowDown" ? 1 : -1) +
-                        items.length) %
-                      items.length;
-              items[next]?.focus();
-            }
+          onCloseAutoFocus={(event) => {
+            if (dialogOpen) event.preventDefault();
           }}
         >
-          <div className="account-summary" role="presentation">
+          <DropdownMenuLabel className="account-summary">
             <strong>{user.displayName}</strong>
             <span>@{user.username}</span>
-          </div>
-          <button role="menuitem" onClick={() => showPanel("profile")}>
+          </DropdownMenuLabel>
+          <DropdownMenuItem onSelect={() => showPanel("profile")}>
             <UserRound size={17} /> Your profile
-          </button>
-          <button role="menuitem" onClick={() => showPanel("settings")}>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => showPanel("settings")}>
             <Headphones size={17} /> Listening settings
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => {
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
               closeMenu();
               onQueue();
             }}
           >
             <ListMusic size={17} /> Play queue
-          </button>
+          </DropdownMenuItem>
           {user.admin && (
-            <button
-              role="menuitem"
-              onClick={() => {
+            <DropdownMenuItem
+              onSelect={() => {
                 closeMenu();
                 onAdmin();
               }}
             >
               <Settings size={17} /> Instance settings
-            </button>
+            </DropdownMenuItem>
           )}
-          <button
-            role="menuitem"
+          <DropdownMenuItem
             disabled={busy}
-            onClick={async () => {
+            onSelect={async () => {
               setBusy(true);
               try {
                 await onLogout();
@@ -181,86 +142,103 @@ export function AccountMenu({
             }}
           >
             <LogOut size={17} /> {busy ? "Signing out…" : "Sign out"}
-          </button>
-        </div>
-      )}
-      <dialog
-        {...dismiss}
-        className="account-dialog"
-        ref={dialog}
-        aria-labelledby="account-title"
-        onClose={() => {
-          setProfileOpen(false);
-          trigger.current?.focus();
-        }}
-        onCancel={(event) => {
-          if (editingBusy) event.preventDefault();
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(next) => {
+          if (!editingBusy) {
+            setDialogOpen(next);
+            if (!next) setProfileOpen(false);
+          }
         }}
       >
-        <div className="row dialog-heading">
-          <h2 id="account-title">
-            {panel === "profile" ? "Your profile" : "Listening settings"}
-          </h2>
-          <button
-            aria-label="Close account details"
-            disabled={editingBusy}
-            onClick={() => dialog.current?.close()}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        {panel === "profile" ? (
-          profileOpen && (
-            <AccountEditor
-              user={user}
-              onUpdated={onUpdated}
-              onRevoked={() => {}}
-              onExpired={onExpired}
-              onBusy={setEditingBusy}
-            />
-          )
-        ) : (
-          <div className="listening-settings">
-            <div className="setting-field">
-              <span>Playback quality</span>
-              <QualitySelect value={quality} onChange={onQuality} />
-            </div>
-            <div className="setting-field volume-setting">
-              <span>Volume · {volumeLabel(volume)}</span>
-              <VolumeControl value={volume} onChange={onVolume} />
-            </div>
-            <Checkbox
-              label="Automatically open mini player"
-              description={
-                miniPlayer.supported
-                  ? "Keep controls visible when you switch tabs while music plays. Your browser must allow automatic picture-in-picture for this site. Saved in this browser."
-                  : "This browser does not support floating Document picture-in-picture controls. System media controls are still available."
-              }
-              checked={miniPlayer.enabled}
-              disabled={!miniPlayer.supported}
-              onChange={(event) => miniPlayer.setEnabled(event.target.checked)}
-            />
-            {miniPlayer.supported && (
-              <button
-                disabled={!hasTrack}
-                onClick={() => void miniPlayer.open()}
-              >
-                Open mini player
-              </button>
-            )}
-            {miniPlayer.error && <p role="alert">{miniPlayer.error}</p>}
-            <p className="muted">
-              Changes apply immediately in this tab. High and Saver require a
-              server connection for conversion.
-            </p>
+        <DialogContent
+          busy={editingBusy}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            trigger.current?.focus();
+          }}
+        >
+          <div className="row dialog-heading">
+            <DialogTitle>
+              {panel === "profile" ? "Your profile" : "Listening settings"}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Manage your profile or listening preferences.
+            </DialogDescription>
+            <Button
+              variant="ghost"
+              aria-label="Close account details"
+              disabled={editingBusy}
+              onClick={() => setDialogOpen(false)}
+            >
+              <X size={20} />
+            </Button>
           </div>
-        )}
-        <form method="dialog">
-          <button className="primary" disabled={editingBusy}>
-            Done
-          </button>
-        </form>
-      </dialog>
+          {panel === "profile" ? (
+            profileOpen && (
+              <AccountEditor
+                user={user}
+                onUpdated={onUpdated}
+                onRevoked={() => {}}
+                onExpired={onExpired}
+                onBusy={setEditingBusy}
+              />
+            )
+          ) : (
+            <div className="listening-settings">
+              <div className="setting-field">
+                <span>Playback quality</span>
+                <QualitySelect value={quality} onChange={onQuality} />
+              </div>
+              <div className="setting-field volume-setting">
+                <span>Volume · {volumeLabel(volume)}</span>
+                <VolumeControl value={volume} onChange={onVolume} />
+              </div>
+              <Checkbox
+                label="Automatically open mini player"
+                description={
+                  miniPlayer.supported
+                    ? "Keep controls visible when you switch tabs while music plays. Your browser must allow automatic picture-in-picture for this site. Saved in this browser."
+                    : "This browser does not support floating Document picture-in-picture controls. System media controls are still available."
+                }
+                checked={miniPlayer.enabled}
+                disabled={!miniPlayer.supported}
+                onChange={(event) =>
+                  miniPlayer.setEnabled(event.target.checked)
+                }
+              />
+              {miniPlayer.supported && (
+                <Button
+                  variant="ghost"
+                  disabled={!hasTrack}
+                  onClick={() => void miniPlayer.open()}
+                >
+                  Open mini player
+                </Button>
+              )}
+              {miniPlayer.error && <p role="alert">{miniPlayer.error}</p>}
+              <p className="muted">
+                Changes apply immediately in this tab. High and Saver require a
+                server connection for conversion.
+              </p>
+            </div>
+          )}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!editingBusy) {
+                setDialogOpen(false);
+                setProfileOpen(false);
+              }
+            }}
+          >
+            <Button disabled={editingBusy}>Done</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

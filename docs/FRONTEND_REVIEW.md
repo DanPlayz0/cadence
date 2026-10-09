@@ -56,3 +56,11 @@ Playback resumption is now account-backed; durable offline downloads still need 
 ## Verification
 
 Verification for this change is recorded in [VALIDATION.md](VALIDATION.md). Browser fixtures verify interface behavior, not live server authentication, media conversion, or account permissions enforced by the backend.
+
+## shadcn/ui integration (2026-10-09)
+
+Review found the highest-value adoption points in the custom account and song menus and in playlist/profile dialogs, where positioning, focus trapping, keyboard navigation, and dismissal were maintained separately. These now use locally owned shadcn/ui Radix component patterns in `web/src/components/ui`: Button, Input, Dialog, and DropdownMenu. Account/profile/listening settings, playlist creation, and playlist selection use Dialog; account and song actions use DropdownMenu. Buttons and playlist text inputs share the new primitives.
+
+This is a manual, CSS-adapted integration: Cadence's warm palette, typography, responsive sizing, and existing styles replace upstream Tailwind utility classes. Tailwind and the shadcn CLI are not configured; future upstream components require the same CSS adaptation. Radix handles menu typeahead, keyboard navigation, focus management, portals, and collision positioning. Song menus remain non-modal so other library controls stay accessible. Dialog saves block Escape/outside dismissal while pending; global playback shortcuts recognize Radix dialogs and menus.
+
+Remaining candidates are the quality selector (Select), admin user editor (Dialog), admin navigation (Tabs), and checkbox controls. Native selects, radio inputs, range controls, and disclosure elements remain appropriate where their browser semantics already meet the interaction needs. Playlist deletion still uses a browser confirmation and could use AlertDialog in a separate behavior change. See [VALIDATION.md](VALIDATION.md) for checks and limitations.

@@ -129,3 +129,11 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 
 - Chromium fixtures at 1280 and 390 pixels deliberately failed/delayed collection requests. Switching collections removed previous rows and their play action immediately; retry showed only the newly requested collection. Delayed/failed likes disabled the like action, repeated clicks issued one request, unrelated menu actions retained keyboard focus, and failed saves left the original liked state intact and recoverable.
 - Build and all 15 frontend tests passed. The full route/dialog accessibility sweep was repeated after introducing loading placeholders and retry controls. QA used controlled API responses; production network behavior and real account changes were not tested.
+
+## shadcn/ui integration (2026-10-09)
+
+- Frontend production build/TypeScript and all 15 tests across seven files passed. Dependency installation reported zero npm audit vulnerabilities. Updated the exact npm license inventory and retained shadcn's MIT notice.
+- Chromium API-fixture checks passed at 1280, 900, 390, and 320 pixels for navigation, song-menu keyboard/Escape/focus handling, playlist searching/adding/creation-and-return, queue actions, outside dismissal, admin tabs, and no runtime errors or horizontal overflow.
+- Additional checks at 1280 and 390 pixels passed for account-menu keyboard navigation, menu-to-profile/settings dialogs, focus restoration to the account trigger, outside dismissal, pending playlist save protection against Escape/outside clicks, failed-save recovery preserving input, and responsive layout. Desktop profile and phone playlist screenshots were visually reviewed.
+- Existing profile regression fixtures also passed at desktop/phone widths for name/avatar/password saves and error recovery, administrator editing/reset/revocation, and focus restoration. Their stale admin button selector was updated to the current tab role in the ignored fixture script.
+- Browser checks use isolated API/media fixtures. Live server saves/playback, cross-browser behavior, and physical touch devices were not verified. Backend code was unchanged. Vite build/test subprocesses and Chromium needed execution outside the restricted sandbox.

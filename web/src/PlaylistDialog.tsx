@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { useEffect, useRef, useState } from "react";
-import { useDialogDismiss } from "./useDialogDismiss";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./components/ui/dialog";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
 import {
   Disc3,
   Headphones,
@@ -39,116 +46,116 @@ export function PlaylistDialog({
   onClose: () => void;
   onCreate: (name: string, icon: string) => Promise<void>;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("music");
   const [busy, setBusy] = useState(false);
-  const dismiss = useDialogDismiss(busy);
   const [error, setError] = useState("");
   useEffect(() => {
     if (open) {
       setName("");
       setIcon("music");
       setError("");
-      dialog.current?.showModal();
-    } else dialog.current?.close();
+    }
   }, [open]);
   return (
-    <dialog
-      {...dismiss}
-      className="account-dialog playlist-dialog"
-      ref={dialog}
-      aria-labelledby="playlist-dialog-title"
-      onClose={onClose}
-      onCancel={(event) => {
-        if (busy) event.preventDefault();
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !busy) onClose();
       }}
     >
-      <div className="row dialog-heading">
-        <h2 id="playlist-dialog-title">Create playlist</h2>
-        <button
-          aria-label="Close playlist dialog"
-          disabled={busy}
-          onClick={() => dialog.current?.close()}
-        >
-          <X size={20} />
-        </button>
-      </div>
-      <form
-        className="playlist-create"
-        aria-busy={busy}
-        onSubmit={async (event) => {
-          event.preventDefault();
-          if (busy || !name.trim()) return;
-          setBusy(true);
-          setError("");
-          try {
-            await onCreate(name.trim(), icon);
-            dialog.current?.close();
-          } catch (error) {
-            setError(
-              error instanceof Error
-                ? error.message
-                : "Could not create playlist.",
-            );
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <div className="playlist-preview">
-          <PlaylistIcon name={icon} size={36} />
-          <span>{name.trim() || "Your next mix"}</span>
-        </div>
-        <label>
-          Playlist name
-          <input
-            autoFocus
-            required
-            maxLength={120}
-            value={name}
+      <DialogContent busy={busy} className="playlist-dialog">
+        <div className="row dialog-heading">
+          <DialogTitle>Create playlist</DialogTitle>
+          <DialogDescription className="sr-only">
+            Name your playlist and choose its icon.
+          </DialogDescription>
+          <Button
+            variant="ghost"
+            aria-label="Close playlist dialog"
             disabled={busy}
-            placeholder="e.g. Late nights"
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <fieldset disabled={busy}>
-          <legend>Choose an icon</legend>
-          <div className="playlist-icons">
-            {Object.keys(icons).map((value) => (
-              <label key={value} className={value === icon ? "selected" : ""}>
-                <input
-                  type="radio"
-                  name="playlist-icon"
-                  value={value}
-                  checked={value === icon}
-                  onChange={() => setIcon(value)}
-                />
-                <PlaylistIcon name={value} size={22} />
-                <span>{value}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        {error && (
-          <p role="alert" className="auth-error">
-            {error}
-          </p>
-        )}
-        <div className="row dialog-actions">
-          <button
-            type="button"
-            className="subtle"
-            disabled={busy}
-            onClick={() => dialog.current?.close()}
+            onClick={() => onClose()}
           >
-            Cancel
-          </button>
-          <button className="primary" disabled={busy || !name.trim()}>
-            {busy ? "Creating…" : "Create playlist"}
-          </button>
+            <X size={20} />
+          </Button>
         </div>
-      </form>
-    </dialog>
+        <form
+          className="playlist-create"
+          aria-busy={busy}
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (busy || !name.trim()) return;
+            setBusy(true);
+            setError("");
+            try {
+              await onCreate(name.trim(), icon);
+              onClose();
+            } catch (error) {
+              setError(
+                error instanceof Error
+                  ? error.message
+                  : "Could not create playlist.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <div className="playlist-preview">
+            <PlaylistIcon name={icon} size={36} />
+            <span>{name.trim() || "Your next mix"}</span>
+          </div>
+          <label>
+            Playlist name
+            <Input
+              autoFocus
+              required
+              maxLength={120}
+              value={name}
+              disabled={busy}
+              placeholder="e.g. Late nights"
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <fieldset disabled={busy}>
+            <legend>Choose an icon</legend>
+            <div className="playlist-icons">
+              {Object.keys(icons).map((value) => (
+                <label key={value} className={value === icon ? "selected" : ""}>
+                  <Input
+                    type="radio"
+                    name="playlist-icon"
+                    value={value}
+                    checked={value === icon}
+                    onChange={() => setIcon(value)}
+                  />
+                  <PlaylistIcon name={value} size={22} />
+                  <span>{value}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {error && (
+            <p role="alert" className="auth-error">
+              {error}
+            </p>
+          )}
+          <div className="row dialog-actions">
+            <Button
+              variant="ghost"
+              type="button"
+              className="subtle"
+              disabled={busy}
+              onClick={() => onClose()}
+            >
+              Cancel
+            </Button>
+            <Button disabled={busy || !name.trim()}>
+              {busy ? "Creating…" : "Create playlist"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

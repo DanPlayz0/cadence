@@ -449,7 +449,13 @@ function App() {
   }
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (!session || document.querySelector("dialog[open]") || e.repeat)
+      if (
+        !session ||
+        document.querySelector(
+          'dialog[open], [role="dialog"], [role="menu"]',
+        ) ||
+        e.repeat
+      )
         return;
       if (
         (e.ctrlKey || e.metaKey) &&
