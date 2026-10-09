@@ -3055,6 +3055,153 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/library:
+    get:
+      summary: Browse accessible indexed music folders and files (administrator)
+      description: Lists roots or immediate catalog children, never arbitrary filesystem contents. Folder paths use forward slashes, including Windows catalog paths. Unavailable and excluded files are omitted.
+      security:
+        - session: []
+      parameters:
+        - name: path
+          in: query
+          schema:
+            type: string
+          description: Empty lists indexed roots; otherwise an indexed folder path.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Immediate folders and files, folders first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        path:
+                          type: string
+                        kind:
+                          type: string
+                          enum: [folder, file]
+                        trackId:
+                          type: string
+                        title:
+                          type: string
+                        artist:
+                          type: string
+                        tracks:
+                          type: integer
+        "401":
+          description: Sign in required
+        "403":
+          description: Administrator required
+  /admin/tracks/{id}/suggestions:
+    get:
+      summary: All pending candidates for one accessible song (administrator)
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Every pending source and field for the song, newest candidates first within each field
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Suggestion"
+        "401":
+          description: Sign in required
+        "403":
+          description: Administrator required
+        "404":
+          description: Song missing or excluded
+  /admin/tracks/{id}/metadata:
+    post:
+      summary: Apply individually chosen metadata replacements atomically (administrator)
+      description: Replaces only chosen fields, accepts chosen candidates, and dismisses competing pending candidates for those fields. Other fields stay pending. Current values must match the compared snapshot; stale or conflicting choices roll back the whole request. Changes affect catalog overrides only.
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [choices]
+              properties:
+                choices:
+                  type: array
+                  minItems: 1
+                  maxItems: 9
+                  items:
+                    type: object
+                    required: [id, current]
+                    properties:
+                      id:
+                        type: string
+                        description: Pending suggestion for this song; choose at most one per field.
+                      current:
+                        type: string
+                        description: Current value shown by the pending suggestions response.
+                      value:
+                        type: string
+                        maxLength: 500
+                        description: Optional edited replacement. Artwork candidates cannot be edited; empty optional text values are allowed, including album to classify as Single.
+      responses:
+        "200":
+          description: Replacements applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: integer
+        "400":
+          description: Invalid field values, choice count, or foreign song candidate
+        "401":
+          description: Sign in required
+        "403":
+          description: Administrator, CSRF, or origin check rejected
+        "404":
+          description: Song or suggestion missing or excluded
+        "409":
+          description: Comparison changed, candidate resolved, or multiple choices for one field; nothing applied
   /admin/suggestions:
     get:
       summary: Pending scan or external suggestions

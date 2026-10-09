@@ -529,6 +529,151 @@ main {
   display: grid;
   gap: 4px;
 }
+.metadata-browse-modes,
+.metadata-breadcrumbs,
+.chooser-tools,
+.chooser-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.metadata-breadcrumbs,
+.metadata-breadcrumbs > span {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+.metadata-breadcrumbs button {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.metadata-file-path {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 12px;
+}
+.metadata-folder-list {
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  gap: 4px;
+}
+.metadata-folder-entry {
+  width: 100%;
+  min-width: 0;
+  min-height: 60px;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+.metadata-folder-entry > span {
+  flex: 1;
+  min-width: 0;
+}
+.metadata-folder-entry strong,
+.metadata-folder-entry small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.metadata-folder-entry small {
+  color: var(--muted);
+  margin-top: 4px;
+}
+.metadata-folder-entry > svg {
+  flex-shrink: 0;
+}
+.song-suggestion-card {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.song-suggestion-card > .row {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.song-suggestion-card h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.song-suggestion-card summary,
+.bulk-review-section > summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 12px 0;
+}
+.metadata-chooser.ui-dialog-content {
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+.metadata-chooser h2,
+.metadata-chooser p {
+  overflow-wrap: anywhere;
+}
+.metadata-comparison {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.metadata-comparison legend {
+  padding: 0 8px;
+  color: var(--accent);
+}
+.comparison-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.comparison-value {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+.comparison-value.chosen {
+  border-color: var(--accent);
+  background: #dfaa710a;
+}
+.comparison-value input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  accent-color: var(--accent);
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.comparison-text {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.comparison-source {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.comparison-source select,
+.comparison-value input {
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .comparison-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .metadata-comparison {
+    padding: 10px;
+  }
+}
 .metadata-form .metadata-restore {
   padding: 4px 0;
   font-size: 11px;

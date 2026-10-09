@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useCallback, useEffect, useState } from "react";
-import { Check, RefreshCw, Shield, Trash2, X } from "lucide-react";
+import { RefreshCw, Shield, Trash2 } from "lucide-react";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
 import { UserEditorDialog } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
 import { TrackMetadataEditor } from "./TrackMetadataEditor";
+import { SuggestionReview } from "./SuggestionReview";
 type Group = { id: string; name: string };
 type Exclusion = { id: string; groupId: string; kind: string; target: string };
 type Suggestion = {
@@ -502,142 +503,99 @@ export function Admin({
             />
             <div className="panel">
               <h2>Review changes</h2>
-              <fieldset className="bulk-review" disabled={loading}>
-                <legend>Fields to accept</legend>
-                <div className="bulk-review-fields">
-                  {Object.entries(reviewFields).map(([field, label]) => (
-                    <Checkbox
-                      key={field}
-                      label={label}
-                      checked={acceptFields.includes(field)}
-                      onChange={(event) => {
+              <p className="muted">
+                Choose metadata for a song to compare all of its pending sources
+                and replace individual fields.
+              </p>
+              <details className="bulk-review-section">
+                <summary>Bulk accept by field</summary>
+                <fieldset className="bulk-review" disabled={loading}>
+                  <legend>Fields to accept</legend>
+                  <div className="bulk-review-fields">
+                    {Object.entries(reviewFields).map(([field, label]) => (
+                      <Checkbox
+                        key={field}
+                        label={label}
+                        checked={acceptFields.includes(field)}
+                        onChange={(event) => {
+                          setBulkNotice("");
+                          setAcceptFields((current) =>
+                            event.target.checked
+                              ? [...current, field]
+                              : current.filter((value) => value !== field),
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="row bulk-review-actions">
+                    <button
+                      type="button"
+                      className="subtle"
+                      onClick={() => {
+                        setAcceptFields(Object.keys(reviewFields));
                         setBulkNotice("");
-                        setAcceptFields((current) =>
-                          event.target.checked
-                            ? [...current, field]
-                            : current.filter((value) => value !== field),
-                        );
                       }}
-                    />
-                  ))}
-                </div>
-                <div className="row bulk-review-actions">
-                  <button
-                    type="button"
-                    className="subtle"
-                    onClick={() => {
-                      setAcceptFields(Object.keys(reviewFields));
-                      setBulkNotice("");
-                    }}
-                  >
-                    Select all fields
-                  </button>
-                  <button
-                    type="button"
-                    className="subtle"
-                    onClick={() => {
-                      setAcceptFields([]);
-                      setBulkNotice("");
-                    }}
-                  >
-                    Clear selection
-                  </button>
-                  <button
-                    type="button"
-                    className="primary"
-                    disabled={!acceptFields.length || !suggestions.length}
-                    onClick={() =>
-                      void perform(async () => {
+                    >
+                      Select all fields
+                    </button>
+                    <button
+                      type="button"
+                      className="subtle"
+                      onClick={() => {
+                        setAcceptFields([]);
                         setBulkNotice("");
-                        const result = await api<{ accepted: number }>(
-                          "/admin/suggestions/accept-all",
-                          "POST",
-                          { fields: acceptFields },
-                        );
-                        setBulkNotice(
-                          `${result.accepted} ${result.accepted === 1 ? "change" : "changes"} accepted.`,
-                        );
-                        await loadSuggestions();
-                      })
-                    }
-                  >
-                    {loading ? "Working…" : "Accept all selected fields"}
-                  </button>
-                </div>
-                <p className="muted">
-                  Applies to all pending changes in these fields, including
-                  those not loaded below. If a song has conflicting changes for
-                  one field, the newest wins.
-                </p>
-              </fieldset>
+                      }}
+                    >
+                      Clear selection
+                    </button>
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={!acceptFields.length || !suggestions.length}
+                      onClick={() =>
+                        void perform(async () => {
+                          setBulkNotice("");
+                          const result = await api<{ accepted: number }>(
+                            "/admin/suggestions/accept-all",
+                            "POST",
+                            { fields: acceptFields },
+                          );
+                          setBulkNotice(
+                            `${result.accepted} ${result.accepted === 1 ? "change" : "changes"} accepted.`,
+                          );
+                          await loadSuggestions();
+                        })
+                      }
+                    >
+                      {loading ? "Working…" : "Accept all selected fields"}
+                    </button>
+                  </div>
+                  <p className="muted">
+                    Applies to all pending changes in these fields, including
+                    those not loaded below. If a song has conflicting changes
+                    for one field, the newest wins.
+                  </p>
+                </fieldset>
+              </details>
               {bulkNotice && (
                 <p className="bulk-review-notice" role="status">
                   {bulkNotice}
                 </p>
               )}
-              {suggestions.map((s) => (
-                <div className="suggestion" key={s.id}>
-                  <div>
-                    <strong>{s.title}</strong>
-                    <p>
-                      <span className="badge">{s.field}</span>{" "}
-                      {s.field === "artwork" ? (
-                        "Suggested album artwork"
-                      ) : (
-                        <>
-                          <span className="old-value">
-                            {s.current || "(empty)"}
-                          </span>{" "}
-                          → {s.value || "(empty)"}
-                        </>
-                      )}
-                    </p>
-                    {s.field === "artwork" && (
-                      <img
-                        className="suggestion-art"
-                        src={`/api/v1/admin/suggestions/${s.id}/art`}
-                        alt="Suggested album artwork"
-                        loading="lazy"
-                      />
-                    )}
-                    <small>{s.source}</small>
-                  </div>
-                  <div className="row">
-                    <button
-                      className="primary small"
-                      disabled={loading}
-                      onClick={() =>
-                        void perform(async () => {
-                          await api(
-                            `/admin/suggestions/${s.id}/resolve`,
-                            "POST",
-                            { accept: true },
-                          );
-                          await loadSuggestions();
-                        })
-                      }
-                    >
-                      <Check size={15} /> Accept
-                    </button>
-                    <button
-                      className="subtle"
-                      disabled={loading}
-                      onClick={() =>
-                        void perform(async () => {
-                          await api(
-                            `/admin/suggestions/${s.id}/resolve`,
-                            "POST",
-                            { accept: false },
-                          );
-                          await loadSuggestions();
-                        })
-                      }
-                    >
-                      <X size={15} /> Dismiss
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <SuggestionReview
+                suggestions={suggestions}
+                busy={loading}
+                onApplied={() => loadSuggestions()}
+                onDismiss={(id) =>
+                  void perform(async () => {
+                    await api(`/admin/suggestions/${id}/resolve`, "POST", {
+                      accept: false,
+                    });
+                    await loadSuggestions();
+                  })
+                }
+              />
               {!suggestions.length && (
                 <p className="muted">
                   No pending suggestions. Run a full scan to check existing

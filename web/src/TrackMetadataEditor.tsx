@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useEffect, useState } from "react";
 import { api, type Track, type Page } from "./api";
+import { LibraryMetadataBrowser } from "./LibraryMetadataBrowser";
+import { MetadataChooser } from "./MetadataChooser";
+import { Button } from "./components/ui/button";
 
 const fields = {
   title: "Title",
@@ -40,7 +43,37 @@ export function TrackMetadataEditor({
   const [error, setError] = useState("");
   const [searchError, setSearchError] = useState("");
   const [notice, setNotice] = useState("");
+  const [mode, setMode] = useState<"search" | "folders">("folders");
+  const [selectedPath, setSelectedPath] = useState("");
+  const [chooser, setChooser] = useState(false);
+  const dirty =
+    !!draft &&
+    !!baseline &&
+    fieldNames.some((field) => draft[field] !== baseline[field]);
+  async function selectTrack(id: string, path = "") {
+    if (busy || dirty) return;
+    setBusy(true);
+    setError("");
+    setSearchError("");
+    setNotice("");
+    try {
+      const current = await api<Track>(`/tracks/${encodeURIComponent(id)}`);
+      setSelected(current);
+      setSelectedPath(path);
+      setDraft(values(current));
+      setBaseline(values(current));
+    } catch (error) {
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : "Could not load song metadata.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
+    if (mode !== "search") return;
     let live = true;
     setSearching(true);
     setSearchError("");
@@ -68,7 +101,7 @@ export function TrackMetadataEditor({
       live = false;
       clearTimeout(timer);
     };
-  }, [query, limit, revision]);
+  }, [query, limit, revision, mode]);
   async function restore(field: Field) {
     if (!selected || busy) return;
     setBusy(true);
@@ -103,86 +136,107 @@ export function TrackMetadataEditor({
         Find a song in this instance’s library, then edit its metadata. Save
         changes as suggestions to review below; your music files stay intact.
       </p>
-      <label className="metadata-search">
-        Search library
-        <input
-          type="search"
-          value={query}
-          placeholder="Song title, artist, or album"
-          disabled={busy}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setLimit(20);
-          }}
-        />
-      </label>
-      {searchError && (
-        <p role="alert" className="auth-error">
-          {searchError}
+      <div className="row metadata-browse-modes">
+        <Button
+          variant="outline"
+          aria-pressed={mode === "folders"}
+          onClick={() => setMode("folders")}
+        >
+          Browse folders
+        </Button>
+        <Button
+          variant="outline"
+          aria-pressed={mode === "search"}
+          onClick={() => setMode("search")}
+        >
+          Search songs
+        </Button>
+      </div>
+      {dirty && (
+        <p role="status">
+          Save or discard your edits before selecting another song.{" "}
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => setDraft(baseline)}
+          >
+            Discard unsaved edits
+          </Button>
         </p>
       )}
-      <div
-        className="metadata-results"
-        aria-label="Library search results"
-        aria-busy={searching}
-      >
-        {searching ? (
-          <p role="status">Searching library…</p>
-        ) : (
-          results.map((track) => (
+      {mode === "folders" ? (
+        <LibraryMetadataBrowser
+          onSelect={(id, path) => void selectTrack(id, path)}
+          busy={busy || dirty}
+          revision={revision}
+        />
+      ) : (
+        <>
+          <label className="metadata-search">
+            Search library
+            <input
+              type="search"
+              value={query}
+              placeholder="Song title, artist, or album"
+              disabled={busy}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setLimit(20);
+              }}
+            />
+          </label>
+          {searchError && (
+            <p role="alert" className="auth-error">
+              {searchError}
+            </p>
+          )}
+          <div
+            className="metadata-results"
+            aria-label="Library search results"
+            aria-busy={searching}
+          >
+            {searching ? (
+              <p role="status">Searching library…</p>
+            ) : (
+              results.map((track) => (
+                <button
+                  type="button"
+                  key={track.id}
+                  disabled={busy || dirty}
+                  aria-pressed={selected?.id === track.id}
+                  onClick={() => void selectTrack(track.id)}
+                >
+                  <strong>{track.title}</strong>
+                  <span>
+                    {track.artist} · {track.album || "Single"}
+                  </span>
+                </button>
+              ))
+            )}
+            {!searching && !searchError && !results.length && (
+              <p>No songs found. Try another title or artist.</p>
+            )}
+          </div>
+          {!searching && results.length < total && limit < 500 && (
             <button
               type="button"
-              key={track.id}
+              className="subtle"
               disabled={busy}
-              aria-pressed={selected?.id === track.id}
-              onClick={async () => {
-                if (busy) return;
-                setBusy(true);
-                setError("");
-                setSearchError("");
-                setNotice("");
-                try {
-                  const current = await api<Track>(
-                    `/tracks/${encodeURIComponent(track.id)}`,
-                  );
-                  setSelected(current);
-                  setDraft(values(current));
-                  setBaseline(values(current));
-                } catch (error) {
-                  setSearchError(
-                    error instanceof Error
-                      ? error.message
-                      : "Could not load song metadata.",
-                  );
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              onClick={() => setLimit((current) => Math.min(current + 20, 500))}
             >
-              <strong>{track.title}</strong>
-              <span>
-                {track.artist} · {track.album || "Single"}
-              </span>
+              Show more songs ({results.length} of {total})
             </button>
-          ))
-        )}
-        {!searching && !searchError && !results.length && (
-          <p>No songs found. Try another title or artist.</p>
-        )}
-      </div>
-      {!searching && results.length < total && limit < 500 && (
-        <button
-          type="button"
-          className="subtle"
-          disabled={busy}
-          onClick={() => setLimit((current) => Math.min(current + 20, 500))}
-        >
-          Show more songs ({results.length} of {total})
-        </button>
+          )}
+          {!searching && limit >= 500 && results.length < total && (
+            <p className="muted">
+              Refine your search to find a song beyond these 500 results.
+            </p>
+          )}
+        </>
       )}
-      {!searching && limit >= 500 && results.length < total && (
-        <p className="muted">
-          Refine your search to find a song beyond these 500 results.
+      {mode === "folders" && searchError && (
+        <p role="alert" className="auth-error">
+          {searchError}
         </p>
       )}
       {selected && draft && baseline && (
@@ -225,6 +279,17 @@ export function TrackMetadataEditor({
           <div className="wide metadata-selection">
             <strong>{selected.title}</strong>
             <span>{selected.artist}</span>
+            {selectedPath && (
+              <span className="metadata-file-path">{selectedPath}</span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy || dirty}
+              onClick={() => setChooser(true)}
+            >
+              Choose suggested metadata
+            </Button>
           </div>
           {fieldNames.map((field) => (
             <div className="metadata-field" key={field}>
@@ -289,6 +354,16 @@ export function TrackMetadataEditor({
             {busy ? "Saving…" : "Save suggestions"}
           </button>
         </form>
+      )}
+      {chooser && selected && (
+        <MetadataChooser
+          trackId={selected.id}
+          onClose={() => setChooser(false)}
+          onApplied={async () => {
+            await selectTrack(selected.id, selectedPath);
+            await onSuggestions();
+          }}
+        />
       )}
     </div>
   );

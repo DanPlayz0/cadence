@@ -78,6 +78,27 @@ type Page struct {
 	Offset int     `json:"offset"`
 	Limit  int     `json:"limit"`
 }
+
+type LibraryEntry struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Kind    string `json:"kind"`
+	TrackID string `json:"trackId,omitempty"`
+	Title   string `json:"title,omitempty"`
+	Artist  string `json:"artist,omitempty"`
+	Tracks  int64  `json:"tracks"`
+}
+type LibraryDirectory struct {
+	Items  []LibraryEntry `json:"items"`
+	Total  int64          `json:"total"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
+}
+type MetadataChoice struct {
+	ID      string  `json:"id"`
+	Current string  `json:"current"`
+	Value   *string `json:"value,omitempty"`
+}
 type Query struct {
 	Search, Album, Artist, Collection, Playlist string
 	Offset, Limit                               int
@@ -167,6 +188,7 @@ type LibraryRepository interface {
 	Track(context.Context, string, string) (Track, error)
 	AllowedIDs(context.Context, string, []string) ([]string, error)
 	Albums(context.Context, string, string, string, int, int) ([]Album, error)
+	LibraryDirectory(context.Context, string, string, int, int) (LibraryDirectory, error)
 	Artists(context.Context, string, string, int, int) ([]Artist, error)
 	UpsertTrack(context.Context, Track, string) (string, error)
 	FileStamp(context.Context, string) (int64, int64, error)
@@ -201,6 +223,8 @@ type AdminRepository interface {
 	CreateExclusion(context.Context, Exclusion) (Exclusion, error)
 	DeleteExclusion(context.Context, string) error
 	Suggestions(context.Context, int, int) ([]Suggestion, error)
+	TrackSuggestions(context.Context, string) ([]Suggestion, error)
+	ApplyMetadataChoices(context.Context, string, []MetadataChoice) error
 	Suggestion(context.Context, string) (Suggestion, error)
 	ResolveSuggestion(context.Context, string, bool) error
 	AcceptSuggestions(context.Context, []string) (int64, error)
