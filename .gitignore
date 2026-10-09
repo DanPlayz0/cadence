@@ -1,0 +1,7 @@
+node_modules/
+web/dist/
+.cache/
+.local/
+.env
+*.exe
+coverage.out

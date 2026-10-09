@@ -1,0 +1,33 @@
+# Validation record
+
+Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.11, Go 1.26.9, Node 22.16, and FFmpeg 6.0. This describes observed checks, not a universal capacity guarantee.
+
+- `go test -race ./...`: passed with a real disposable PostgreSQL database. Includes repository contracts, one-time setup/login, CSRF/origin rejection, private playlists, group exclusions, scan errors, unavailable mounts, source-file preservation, catalog override persistence, range seeking, simultaneous media requests, migration re-entry, and cache limits/cancellation.
+- `go vet ./...`: passed.
+- Frontend: TypeScript check, production Vite build, and three cache tests passed.
+- `node scripts/check-openapi.mjs`: passed, 32 documented paths.
+- `npm audit`: zero reported vulnerabilities. `govulncheck` using Go 1.26.9: zero vulnerabilities reachable from project code; one advisory remains in a required module for code paths the application does not invoke.
+- `docker compose --env-file .env.example config --quiet`: passed. Official Go/Node base-image manifests resolved. A full container build/run was not tested locally because Docker Desktop's engine was not running; CI includes a container build.
+- Real PostgreSQL custom-format backup and restore into a separate database preserved 1 test account, 3 generated audio tracks, 1 playlist, 1 like, and 8 recorded play events.
+- In-app Chromium browser checks: first-run setup, original and 128 kbps converted playback, keyboard seeking, quality switching while paused with position preserved, mobile playlist creation, playlist membership, likes, rescans, and navigation. Cached audio played successfully after the Go server was stopped; the client displayed Offline session.
+- Responsive views checked at 390 × 844 and 1280 × 800. Screenshots use generated sine-wave test fixtures, not a real music collection.
+
+## Catalog benchmark
+
+PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.
+
+| Operation | Mean |
+| --- | ---: |
+| First 100 tracks with full-library count | 70.3 ms |
+| Exact-word full-text search | 4.9 ms |
+| Batch of 20 concurrent full-text searches | 16.6 ms |
+
+An additional integration scenario passed 20 concurrent audio range requests sharing a 320 kbps conversion. Sustained bandwidth, 20 distinct concurrent transcodes, browser-specific codec behavior, and end-to-end 250,000-file scan duration remain deployment-dependent.
+
+## Remaining release checks
+
+Run the complete Compose stack on a Docker-enabled machine and verify ownership of real read-only music mounts. Cross-browser playback still needs dedicated Firefox, Safari, iOS, and Android device checks; the in-app Chromium test is not a substitute for those. Live external metadata-provider responses were not exercised: enrichment was tested with a controlled HTTP transport and is off by default.
+
+![Desktop](screenshots/cadence-desktop.jpg)
+
+![Mobile](screenshots/cadence-mobile.jpg)

@@ -1,0 +1,7 @@
+.git
+.cache
+.local
+web/node_modules
+web/dist
+.env
+*.exe

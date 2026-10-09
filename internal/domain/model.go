@@ -1,0 +1,158 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+package domain
+
+import (
+	"context"
+	"errors"
+	"time"
+)
+
+var ErrNotFound = errors.New("not found")
+var ErrConflict = errors.New("conflict")
+
+type User struct {
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Admin    bool     `json:"admin"`
+	Password string   `json:"-"`
+	Groups   []string `json:"groups"`
+}
+type Session struct {
+	User    User
+	CSRF    string
+	Expires time.Time
+}
+type Track struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Artist      string  `json:"artist"`
+	AlbumArtist string  `json:"albumArtist"`
+	Album       string  `json:"album"`
+	AlbumID     string  `json:"albumId"`
+	Number      int     `json:"number"`
+	Disc        int     `json:"disc"`
+	Year        string  `json:"year"`
+	Genre       string  `json:"genre"`
+	Duration    float64 `json:"duration"`
+	Codec       string  `json:"codec"`
+	MIME        string  `json:"mime"`
+	Artwork     bool    `json:"artwork"`
+	Liked       bool    `json:"liked"`
+	Path        string  `json:"-"`
+	ArtPath     string  `json:"-"`
+	Size        int64   `json:"-"`
+	Modified    int64   `json:"-"`
+	Root        string  `json:"-"`
+}
+type Page struct {
+	Items  []Track `json:"items"`
+	Total  int64   `json:"total"`
+	Offset int     `json:"offset"`
+	Limit  int     `json:"limit"`
+}
+type Query struct {
+	Search, Album, Artist, Collection, Playlist string
+	Offset, Limit                               int
+}
+type Album struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Artist  string `json:"artist"`
+	Tracks  int    `json:"tracks"`
+	CoverID string `json:"coverId"`
+}
+type Artist struct {
+	Name   string `json:"name"`
+	Tracks int    `json:"tracks"`
+}
+type Playlist struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+type Group struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+type Exclusion struct {
+	ID      string `json:"id"`
+	GroupID string `json:"groupId"`
+	Kind    string `json:"kind"`
+	Target  string `json:"target"`
+}
+type Suggestion struct {
+	ID      string `json:"id"`
+	TrackID string `json:"trackId"`
+	Field   string `json:"field"`
+	Value   string `json:"value"`
+	Source  string `json:"source"`
+	Status  string `json:"status"`
+	Title   string `json:"title"`
+	Current string `json:"current"`
+}
+type Scan struct {
+	ID       string     `json:"id"`
+	Started  time.Time  `json:"started"`
+	Finished *time.Time `json:"finished"`
+	Status   string     `json:"status"`
+	Indexed  int        `json:"indexed"`
+	Errors   []string   `json:"errors"`
+}
+
+// Interfaces contain domain values only; adapters own SQL and persistence details.
+type AuthRepository interface {
+	HasUsers(context.Context) (bool, error)
+	CreateUser(context.Context, User, bool) (User, error)
+	UserByName(context.Context, string) (User, error)
+	SaveSession(context.Context, string, string, string, time.Time) error
+	Session(context.Context, string) (Session, error)
+	DeleteSession(context.Context, string) error
+	RevokeSessions(context.Context, string) error
+}
+type LibraryRepository interface {
+	Tracks(context.Context, string, Query) (Page, error)
+	Track(context.Context, string, string) (Track, error)
+	AllowedIDs(context.Context, string, []string) ([]string, error)
+	Albums(context.Context, string, string, int, int) ([]Album, error)
+	Artists(context.Context, string, string, int, int) ([]Artist, error)
+	UpsertTrack(context.Context, Track, string) (string, error)
+	FileStamp(context.Context, string) (int64, int64, error)
+	MarkSeen(context.Context, string, string) error
+	FinishRoot(context.Context, string, string) error
+	AddSuggestion(context.Context, Suggestion) error
+	ScanStart(context.Context, Scan) error
+	ScanFinish(context.Context, Scan) error
+	Scans(context.Context) ([]Scan, error)
+	RawTracks(context.Context, int, int) ([]Track, error)
+}
+type PersonalRepository interface {
+	Playlists(context.Context, string) ([]Playlist, error)
+	CreatePlaylist(context.Context, string, string) (Playlist, error)
+	DeletePlaylist(context.Context, string, string) error
+	AddPlaylistTrack(context.Context, string, string, string) error
+	RemovePlaylistTrack(context.Context, string, string, string) error
+	Like(context.Context, string, string, bool) error
+	RecordPlay(context.Context, string, string, string) error
+}
+type AdminRepository interface {
+	Users(context.Context) ([]User, error)
+	Groups(context.Context) ([]Group, error)
+	CreateGroup(context.Context, string) (Group, error)
+	SetGroups(context.Context, string, []string) error
+	Exclusions(context.Context) ([]Exclusion, error)
+	CreateExclusion(context.Context, Exclusion) (Exclusion, error)
+	DeleteExclusion(context.Context, string) error
+	Suggestions(context.Context, int, int) ([]Suggestion, error)
+	Suggestion(context.Context, string) (Suggestion, error)
+	ResolveSuggestion(context.Context, string, bool) error
+	ClearOverride(context.Context, string, string) error
+	Settings(context.Context) (map[string]bool, error)
+	SetEnrichment(context.Context, bool) error
+}
+type Repository interface {
+	AuthRepository
+	LibraryRepository
+	PersonalRepository
+	AdminRepository
+	Ping(context.Context) error
+	Close()
+}

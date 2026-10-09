@@ -1,0 +1,36 @@
+name: Validate
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: cadence_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cadence -d cadence_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      TEST_DATABASE_URL: postgres://cadence:test-password@localhost:5432/cadence_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: npm ci && npm test && npm run build
+        working-directory: web
+      - run: node scripts/check-openapi.mjs
+      - run: docker compose --env-file .env.example config --quiet
+      - run: docker build -t cadence:test .

@@ -1,0 +1,27 @@
+{
+  "name": "cadence-web",
+  "private": true,
+  "version": "0.1.0",
+  "license": "GPL-2.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "prettier": "^3.9.9",
+    "typescript": "^5.8.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3",
+    "yaml": "^2.9.1"
+  }
+}
