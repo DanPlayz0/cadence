@@ -307,7 +307,81 @@ main {
 }
 .account-editor {
   display: grid;
-  gap: 24px;
+  gap: 16px;
+}
+.account-dialog .account-editor .profile-details-form {
+  display: none;
+}
+.avatar-edit {
+  position: relative;
+  padding: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: transparent;
+}
+.avatar-edit.dragging {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+.avatar-edit-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--surface);
+  border-radius: 50%;
+  padding: 3px;
+  box-sizing: content-box;
+}
+.profile-name {
+  flex: 1;
+  min-width: 0;
+}
+.name-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+  max-width: 100%;
+}
+.name-edit strong {
+  overflow-wrap: anywhere;
+}
+.name-edit svg {
+  flex-shrink: 0;
+  color: #bec6b4;
+}
+.profile-name input {
+  width: 100%;
+  min-width: 0;
+}
+.inline-edit-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.avatar-confirm p {
+  margin: 0;
+  font-size: 13px;
+}
+.password-settings {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.password-settings summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.password-settings[open] summary {
+  margin-bottom: 14px;
+}
+.account-editor .password-settings fieldset {
+  border: 0;
+  padding: 0;
+  gap: 10px;
 }
 .account-editor .profile-identity {
   margin-bottom: 0;

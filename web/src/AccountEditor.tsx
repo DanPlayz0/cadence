@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Pencil, Camera, X } from "lucide-react";
 import { api, APIError, uploadAvatar, type User } from "./api";
 import { Checkbox } from "./Checkbox";
 import { UserAvatar } from "./UserAvatar";
@@ -33,6 +33,14 @@ export function AccountEditor({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [confirmAvatar, setConfirmAvatar] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (editingName) nameInput.current?.focus();
+  }, [editingName]);
   useEffect(() => setAccount(user), [user]);
   const path = adminMode
     ? `/admin/users/${encodeURIComponent(account.id)}`
@@ -60,16 +68,153 @@ export function AccountEditor({
       onBusy(false);
     }
   }
+  function saveAvatar(file?: File) {
+    if (!file || busy) return;
+    void run("avatar", async () => {
+      updated(await uploadAvatar(`${path}/avatar`, file));
+      setConfirmAvatar(false);
+      return "Avatar updated.";
+    });
+  }
   return (
     <div className="account-editor" aria-busy={!!busy}>
       <div className="profile-identity">
-        <UserAvatar user={account} />
-        <div>
-          <strong>{account.displayName}</strong>
+        <button
+          type="button"
+          className={`avatar-edit ${dragging ? "dragging" : ""}`}
+          disabled={!!busy}
+          aria-label={account.avatar ? "Manage avatar" : "Upload avatar"}
+          title={
+            account.avatar
+              ? "Manage avatar or drop a replacement"
+              : "Choose or drop a JPEG or PNG, up to 2 MiB"
+          }
+          onClick={() =>
+            account.avatar
+              ? setConfirmAvatar(true)
+              : avatarInput.current?.click()
+          }
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!busy) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            saveAvatar(event.dataTransfer.files[0]);
+          }}
+        >
+          <UserAvatar user={account} />
+          <Camera
+            size={15}
+            className="avatar-edit-indicator"
+            aria-hidden="true"
+          />
+        </button>
+        <input
+          ref={avatarInput}
+          type="file"
+          hidden
+          aria-label="Avatar file"
+          accept="image/jpeg,image/png"
+          disabled={!!busy}
+          onChange={(event) => {
+            saveAvatar(event.currentTarget.files?.[0]);
+            event.currentTarget.value = "";
+          }}
+        />
+        <div className="profile-name">
+          {editingName ? (
+            <input
+              ref={nameInput}
+              form="account-details"
+              aria-label="Display name"
+              value={displayName}
+              required
+              maxLength={120}
+              autoComplete="nickname"
+              disabled={!!busy}
+              onChange={(event) => setDisplayName(event.target.value)}
+            />
+          ) : (
+            <button
+              type="button"
+              className="name-edit"
+              disabled={!!busy}
+              aria-label="Edit display name"
+              onClick={() => {
+                setDisplayName(account.displayName);
+                setEditingName(true);
+              }}
+            >
+              <strong>{account.displayName}</strong>
+              <Pencil size={14} aria-hidden="true" />
+            </button>
+          )}
           <p>@{account.username}</p>
           <small>{account.admin ? "Administrator" : "Listener"}</small>
+          {editingName && !adminMode && (
+            <div className="inline-edit-actions">
+              <button
+                form="account-details"
+                className="primary"
+                disabled={!!busy || !displayName.trim()}
+              >
+                {busy === "details" ? "Saving…" : "Save name"}
+              </button>
+              <button
+                type="button"
+                className="subtle"
+                disabled={!!busy}
+                onClick={() => {
+                  setDisplayName(account.displayName);
+                  setEditingName(false);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      {confirmAvatar && (
+        <div className="avatar-confirm">
+          <p>Remove this avatar and return to initials?</p>
+          <div className="inline-edit-actions">
+            <button
+              type="button"
+              className="subtle"
+              disabled={!!busy}
+              onClick={() =>
+                void run("avatar", async () => {
+                  updated(await api<User>(`${path}/avatar`, "DELETE"));
+                  setConfirmAvatar(false);
+                  return "Avatar removed.";
+                })
+              }
+            >
+              Remove avatar
+            </button>
+            <button
+              type="button"
+              className="subtle"
+              disabled={!!busy}
+              onClick={() => avatarInput.current?.click()}
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              className="subtle"
+              disabled={!!busy}
+              onClick={() => setConfirmAvatar(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {error && (
         <p className="auth-error editor-feedback" role="alert">
           {error}
@@ -80,42 +225,9 @@ export function AccountEditor({
           {notice}
         </p>
       )}
-      <fieldset disabled={!!busy} className="avatar-settings">
-        <legend>Avatar</legend>
-        <label>
-          Upload avatar
-          <input
-            type="file"
-            accept="image/jpeg,image/png"
-            onChange={(event) => {
-              const input = event.currentTarget,
-                file = input.files?.[0];
-              if (!file) return;
-              void run("avatar", async () => {
-                updated(await uploadAvatar(`${path}/avatar`, file));
-                return "Avatar updated.";
-              }).finally(() => {
-                input.value = "";
-              });
-            }}
-          />
-        </label>
-        <small>JPEG or PNG, up to 2 MiB. Images are cropped to a square.</small>
-        <button
-          type="button"
-          className="subtle"
-          disabled={!account.avatar || !!busy}
-          onClick={() =>
-            void run("avatar", async () => {
-              updated(await api<User>(`${path}/avatar`, "DELETE"));
-              return "Avatar removed.";
-            })
-          }
-        >
-          {busy === "avatar" ? "Updating avatar…" : "Remove avatar"}
-        </button>
-      </fieldset>
       <form
+        id="account-details"
+        className={adminMode ? "" : "profile-details-form"}
         onSubmit={(event) => {
           event.preventDefault();
           void run("details", async () => {
@@ -129,160 +241,155 @@ export function AccountEditor({
             setDisplayName(next.displayName);
             setUsername(next.username);
             setGroupIDs(next.groups || []);
+            setEditingName(false);
             return adminMode
               ? "User details and groups saved."
               : "Profile saved.";
           });
         }}
       >
-        <fieldset disabled={!!busy}>
-          <legend>{adminMode ? "Account details" : "Display name"}</legend>
-          <label>
-            Display name
-            <input
-              value={displayName}
-              required
-              maxLength={120}
-              autoComplete="nickname"
-              onChange={(event) => setDisplayName(event.target.value)}
-            />
-          </label>
-          {adminMode && (
-            <>
+        {adminMode && (
+          <fieldset disabled={!!busy}>
+            <legend>Account details</legend>
+            {adminMode && (
+              <>
+                <label>
+                  Username
+                  <input
+                    value={username}
+                    required
+                    maxLength={120}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    autoComplete="off"
+                    onChange={(event) =>
+                      setUsername(event.target.value.toLowerCase())
+                    }
+                  />
+                </label>
+                <fieldset className="editor-groups">
+                  <legend>Groups</legend>
+                  {groups.length ? (
+                    groups.map((group) => (
+                      <Checkbox
+                        key={group.id}
+                        label={group.name}
+                        checked={groupIDs.includes(group.id)}
+                        onChange={(event) =>
+                          setGroupIDs((current) =>
+                            event.target.checked
+                              ? [...current, group.id]
+                              : current.filter((id) => id !== group.id),
+                          )
+                        }
+                      />
+                    ))
+                  ) : (
+                    <p className="muted">
+                      Create groups in Permissions to assign them here.
+                    </p>
+                  )}
+                </fieldset>
+              </>
+            )}
+            <button
+              className="primary"
+              disabled={
+                !displayName.trim() || (adminMode && !username.trim()) || !!busy
+              }
+            >
+              {busy === "details"
+                ? "Saving…"
+                : adminMode
+                  ? "Save user"
+                  : "Save profile"}
+            </button>
+          </fieldset>
+        )}
+      </form>
+      <details className="password-settings">
+        <summary>{adminMode ? "Reset password" : "Change password"}</summary>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = event.currentTarget,
+              fields = new FormData(form);
+            const password = String(fields.get("password")),
+              confirm = String(fields.get("confirmPassword"));
+            void run("password", async () => {
+              if (password !== confirm)
+                throw new Error("New passwords do not match.");
+              if (
+                [...password].length < 3 ||
+                new TextEncoder().encode(password).length > 72
+              )
+                throw new Error(
+                  "Use a password of at least 3 characters, up to 72 bytes.",
+                );
+              await api(`${path}/password`, "POST", {
+                password,
+                ...(!adminMode
+                  ? { currentPassword: fields.get("currentPassword") }
+                  : {}),
+              });
+              form.reset();
+              if (adminMode) onRevoked(account.id);
+              return adminMode
+                ? "Password reset. All sessions for this user were signed out."
+                : "Password changed. Your other sessions were signed out.";
+            });
+          }}
+        >
+          <fieldset disabled={!!busy}>
+            {!adminMode && (
               <label>
-                Username
+                Current password
                 <input
-                  value={username}
+                  name="currentPassword"
+                  type="password"
                   required
-                  maxLength={120}
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  autoComplete="off"
-                  onChange={(event) =>
-                    setUsername(event.target.value.toLowerCase())
-                  }
+                  maxLength={72}
+                  autoComplete="current-password"
                 />
               </label>
-              <fieldset className="editor-groups">
-                <legend>Groups</legend>
-                {groups.length ? (
-                  groups.map((group) => (
-                    <Checkbox
-                      key={group.id}
-                      label={group.name}
-                      checked={groupIDs.includes(group.id)}
-                      onChange={(event) =>
-                        setGroupIDs((current) =>
-                          event.target.checked
-                            ? [...current, group.id]
-                            : current.filter((id) => id !== group.id),
-                        )
-                      }
-                    />
-                  ))
-                ) : (
-                  <p className="muted">
-                    Create groups in Permissions to assign them here.
-                  </p>
-                )}
-              </fieldset>
-            </>
-          )}
-          <button
-            className="primary"
-            disabled={
-              !displayName.trim() || (adminMode && !username.trim()) || !!busy
-            }
-          >
-            {busy === "details"
-              ? "Saving…"
-              : adminMode
-                ? "Save user"
-                : "Save profile"}
-          </button>
-        </fieldset>
-      </form>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          const form = event.currentTarget,
-            fields = new FormData(form);
-          const password = String(fields.get("password")),
-            confirm = String(fields.get("confirmPassword"));
-          void run("password", async () => {
-            if (password !== confirm)
-              throw new Error("New passwords do not match.");
-            if (
-              [...password].length < 3 ||
-              new TextEncoder().encode(password).length > 72
-            )
-              throw new Error(
-                "Use a password of at least 3 characters, up to 72 bytes.",
-              );
-            await api(`${path}/password`, "POST", {
-              password,
-              ...(!adminMode
-                ? { currentPassword: fields.get("currentPassword") }
-                : {}),
-            });
-            form.reset();
-            if (adminMode) onRevoked(account.id);
-            return adminMode
-              ? "Password reset. All sessions for this user were signed out."
-              : "Password changed. Your other sessions were signed out.";
-          });
-        }}
-      >
-        <fieldset disabled={!!busy}>
-          <legend>{adminMode ? "Reset password" : "Change password"}</legend>
-          {!adminMode && (
+            )}
             <label>
-              Current password
+              New password
               <input
-                name="currentPassword"
+                name="password"
                 type="password"
                 required
+                minLength={3}
                 maxLength={72}
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
             </label>
-          )}
-          <label>
-            New password
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={3}
-              maxLength={72}
-              autoComplete="new-password"
-            />
-          </label>
-          <label>
-            Confirm new password
-            <input
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={3}
-              maxLength={72}
-              autoComplete="new-password"
-            />
-          </label>
-          <p className="muted">
-            {adminMode
-              ? "Resetting the password signs out all of this user's sessions."
-              : "Enter your current password to confirm. This session stays signed in."}
-          </p>
-          <button className="primary" disabled={!!busy}>
-            {busy === "password"
-              ? "Updating…"
-              : adminMode
-                ? "Reset password"
-                : "Change password"}
-          </button>
-        </fieldset>
-      </form>
+            <label>
+              Confirm new password
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={3}
+                maxLength={72}
+                autoComplete="new-password"
+              />
+            </label>
+            <p className="muted">
+              {adminMode
+                ? "Resetting the password signs out all of this user's sessions."
+                : "Enter your current password to confirm. This session stays signed in."}
+            </p>
+            <button className="primary" disabled={!!busy}>
+              {busy === "password"
+                ? "Updating…"
+                : adminMode
+                  ? "Reset password"
+                  : "Change password"}
+            </button>
+          </fieldset>
+        </form>
+      </details>
       {adminMode && (
         <fieldset disabled={!!busy}>
           <legend>Sessions</legend>

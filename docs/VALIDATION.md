@@ -43,6 +43,11 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Account/profile, listening settings, user editor, and playlist dialogs now dismiss on an outside click or tap. Both ends of a pointer gesture must be outside; dialog padding, scrollbars, and drags from inside do not dismiss. Pending saves continue to block dismissal.
 - Frontend tests, TypeScript/production build, formatting, and diff checks passed. Chromium fixture checks at desktop and phone widths passed for dismissal, focus restoration, padding, drag gestures, and pending-save protection. The desktop-only playlist trigger was invoked programmatically at phone width to check its dialog. Cross-browser and physical touchscreen checks were not run.
 
+## Compact profile update (2026-10-09)
+
+- Replaced separate avatar/name sections with a clickable avatar supporting dropped replacements, an explicit removal confirmation, and inline display-name editing. Password fields expand on demand. Administrator account fields and session controls remain available.
+- Frontend tests, TypeScript/production build, formatting, and diff checks passed. Chromium API-fixture checks at 1280 and 390 pixels passed for name saves, avatar file selection/drop/removal/cancellation, password checks, and administrator editing. Profile dialogs had no internal overflow at the tested 844-pixel height, including expanded password fields; the phone screenshot was visually reviewed. Shorter viewports can still scroll to keep controls reachable. Physical touchscreen/file-picker and cross-browser checks were not run.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.
