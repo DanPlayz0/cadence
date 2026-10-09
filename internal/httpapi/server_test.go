@@ -31,6 +31,23 @@ func TestFrontendDeepLinks(t *testing.T) {
 	}
 }
 
+func TestMetadataSuggestionValues(t *testing.T) {
+	for _, v := range []struct {
+		field, value string
+		valid        bool
+	}{
+		{"title", "Song", true}, {"artist", "", false}, {"title", "  ", false},
+		{"genre", "", true}, {"album", "", true}, {"number", "0", true}, {"disc", "9999", true},
+		{"number", "-1", false}, {"number", "1.5", false}, {"disc", "10000", false},
+		{"disc", "", false}, {"artwork", "path", false}, {"author", "someone", false},
+		{"genre", strings.Repeat("x", 501), false},
+	} {
+		if validSuggestion(v.field, v.value) != v.valid {
+			t.Errorf("%s=%q", v.field, v.value)
+		}
+	}
+}
+
 func TestJSONProtection(t *testing.T) {
 	for _, body := range []string{`{"name":"x"} {}`, `{"unknown":"x"}`, `not-json`} {
 		w := httptest.NewRecorder()

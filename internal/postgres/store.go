@@ -30,6 +30,9 @@ var playlistIconsMigration string
 //go:embed 004_user_avatars.sql
 var userAvatarsMigration string
 
+//go:embed 005_metadata_numbers.sql
+var metadataNumbersMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -112,6 +115,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(4)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=5)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, metadataNumbersMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(5)"); err != nil {
 			return err
 		}
 	}
@@ -221,7 +235,7 @@ func (s *Store) RevokeSessions(ctx context.Context, user string) error {
 
 // Every consumer filters tracks before aggregation. Folder matches require a path boundary.
 const allowed = `t.available AND NOT EXISTS (SELECT 1 FROM user_groups ug JOIN exclusions e ON e.group_id=ug.group_id WHERE ug.user_id=$1 AND ((e.kind='track' AND e.target=t.id) OR (e.kind='album' AND e.target=t.album_id) OR (e.kind='folder' AND (t.path=e.target OR left(t.path,length(e.target)+1)=e.target||'/'))))`
-const columns = `t.id,coalesce(t.overrides->>'title',t.title),coalesce(t.overrides->>'artist',t.artist),coalesce(t.overrides->>'albumArtist',t.album_artist),coalesce(t.overrides->>'album',t.album),t.album_id,t.number,t.disc,coalesce(t.overrides->>'year',t.year),coalesce(t.overrides->>'genre',t.genre),t.duration,t.codec,t.mime,t.path,coalesce(t.overrides->>'artwork',t.art_path),t.size,t.modified,t.root`
+const columns = `t.id,coalesce(t.overrides->>'title',t.title),coalesce(t.overrides->>'artist',t.artist),coalesce(t.overrides->>'albumArtist',t.album_artist),coalesce(t.overrides->>'album',t.album),t.album_id,coalesce((t.overrides->>'number')::integer,t.number),coalesce((t.overrides->>'disc')::integer,t.disc),coalesce(t.overrides->>'year',t.year),coalesce(t.overrides->>'genre',t.genre),t.duration,t.codec,t.mime,t.path,coalesce(t.overrides->>'artwork',t.art_path),t.size,t.modified,t.root`
 
 func readTrack(row pgx.Row) (domain.Track, error) {
 	var t domain.Track
@@ -252,7 +266,7 @@ func filter(q domain.Query) (string, []any, string) {
 	w := allowed
 	args := []any{}
 	n := 1
-	order := `lower(coalesce(t.overrides->>'albumArtist',t.album_artist)),lower(coalesce(t.overrides->>'album',t.album)),t.disc,t.number,t.id`
+	order := `lower(coalesce(t.overrides->>'albumArtist',t.album_artist)),lower(coalesce(t.overrides->>'album',t.album)),coalesce((t.overrides->>'disc')::integer,t.disc),coalesce((t.overrides->>'number')::integer,t.number),t.id`
 	add := func(expr string, value any) { n++; w += " AND " + fmt.Sprintf(expr, n); args = append(args, value) }
 	if q.Search != "" {
 		add("t.search @@ websearch_to_tsquery('simple',$%d)", q.Search)
@@ -558,7 +572,7 @@ func (s *Store) DeleteExclusion(ctx context.Context, id string) error {
 	return affected(s.pool.Exec(ctx, "DELETE FROM exclusions WHERE id=$1", id))
 }
 
-const suggestionColumns = `s.id,s.track_id,s.field,s.value,s.source,s.status,coalesce(t.overrides->>'title',t.title),coalesce(t.overrides->>s.field,jsonb_build_object('title',t.title,'artist',t.artist,'album',t.album,'albumArtist',t.album_artist,'year',t.year,'genre',t.genre,'artwork',t.art_path)->>s.field,'')`
+const suggestionColumns = `s.id,s.track_id,s.field,s.value,s.source,s.status,coalesce(t.overrides->>'title',t.title),coalesce(t.overrides->>s.field,jsonb_build_object('title',t.title,'artist',t.artist,'album',t.album,'albumArtist',t.album_artist,'year',t.year,'genre',t.genre,'number',t.number,'disc',t.disc,'artwork',t.art_path)->>s.field,'')`
 
 func readSuggestion(row pgx.Row) (domain.Suggestion, error) {
 	var v domain.Suggestion

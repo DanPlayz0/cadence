@@ -534,7 +534,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 4 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 5 {
 		t.Fatal("migration reapplied", e)
 	}
 }

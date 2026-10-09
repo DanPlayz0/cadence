@@ -55,7 +55,7 @@ func TestVorbisStreamTags(t *testing.T) {
 	if _, e := exec.LookPath("ffprobe"); e != nil {
 		t.Skip("ffprobe missing")
 	}
-	file := filepath.Join(t.TempDir(), "song.ogg")
+	file := filepath.Join(t.TempDir(), "Wrong Artist - Wrong Title (Official Video).ogg")
 	if b, e := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=duration=0.1", "-metadata", "title=Tagged title", "-metadata", "artist=Tagged artist", "-metadata", "album=Tagged album", "-y", file).CombinedOutput(); e != nil {
 		t.Fatalf("%v %s", e, b)
 	}

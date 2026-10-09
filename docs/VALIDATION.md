@@ -54,6 +54,12 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Seven frontend tests, TypeScript/production build, formatting, and diff checks passed. URL tests cover encoded identifiers, Unicode, search punctuation, malformed URLs, and canonical routes. HTTP API race tests passed, including serving nested frontend paths while preserving API 404s.
 - Chromium API-fixture checks at 1280 and 390 pixels passed for collection/detail refreshes, correct album/artist/playlist filters, encoded artist names, search restoration/clearing, administrator tab navigation, browser Back/Forward, direct-link sign-in return, and permission redirects, with no runtime errors or horizontal overflow. Cross-browser and live full-stack browser checks were not run.
 
+## Queue, filename detection, and metadata editor update (2026-10-09)
+
+- Queue moves are limited to upcoming songs; played/current positions remain fixed. Disabled arrow controls and the player enforce the same boundary. Filename fallback recognizes common artist/title download names, marked reversed names, movie credits, video labels, and YouTube IDs; embedded tags, meaningful parentheses, and featured credits are preserved.
+- Replaced raw track-ID suggestion/restore forms with library search, song selection, eight editable metadata fields, multi-field suggestions, and per-field restoration. Partial saves retain unsaved edits without resubmitting successful fields. Added track/disc overrides, numeric validation, blank optional metadata, and migration 5 with an updated sort index.
+- Eight frontend tests, TypeScript/production build, formatting, OpenAPI checks, Go vet, and the Go race suite passed with a disposable PostgreSQL database. Filename cases, FFprobe embedded-tag precedence, API bounds, numeric/blank overrides, full-scan preservation, extracted-value restoration, and migration preservation were checked. Chromium API-fixture checks at desktop/phone widths passed for queue boundaries, upcoming moves, metadata search/error recovery, populated fields, partial-save retry, numeric/blank values, restoration, and no horizontal overflow/runtime errors; editor screenshots were reviewed. Cross-browser and live full-stack browser checks were not run. Personal filename listings and test artifacts stay in ignored `.local/`.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.

@@ -2926,8 +2926,11 @@ paths:
                     - albumArtist
                     - year
                     - genre
+                    - number
+                    - disc
                 value:
                   type: string
+                  description: Text up to 500 bytes; title and artist must be nonempty. Track/disc numbers are integers from 0 to 9999. Optional text fields may be empty.
   /admin/suggestions/{id}/resolve:
     post:
       summary: Accept into catalog overrides or dismiss; files stay unchanged

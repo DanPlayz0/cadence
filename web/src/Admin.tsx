@@ -5,6 +5,7 @@ import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
 import { UserEditorDialog } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
+import { TrackMetadataEditor } from "./TrackMetadataEditor";
 type Group = { id: string; name: string };
 type Exclusion = { id: string; groupId: string; kind: string; target: string };
 type Suggestion = {
@@ -51,6 +52,7 @@ export function Admin({
   const [loading, setLoading] = useState(false);
   const [full, setFull] = useState(false);
   const [suggestionOffset, setSuggestionOffset] = useState(0);
+  const [suggestionRevision, setSuggestionRevision] = useState(0);
   const [more, setMore] = useState(false);
   const load = useCallback(async () => {
     try {
@@ -81,6 +83,7 @@ export function Admin({
         );
         setSuggestions((s) => (offset ? [...s, ...v] : v));
         setSuggestionOffset(offset);
+        setSuggestionRevision((current) => current + 1);
         setMore(v.length === 100);
       } catch (e) {
         report((e as Error).message);
@@ -433,57 +436,10 @@ export function Admin({
       )}
       {tab === "suggestions" && (
         <>
-          <div className="panel">
-            <h2>Suggest a catalog correction</h2>
-            <p className="muted">
-              Corrections can be reviewed below. Original tags and music files
-              are always preserved.
-            </p>
-            <form
-              className="admin-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const f = new FormData(form);
-                void perform(async () => {
-                  await api("/admin/suggestions", "POST", {
-                    trackId: f.get("trackId"),
-                    field: f.get("field"),
-                    value: f.get("value"),
-                  });
-                  form.reset();
-                  await loadSuggestions();
-                });
-              }}
-            >
-              <label>
-                Track ID
-                <input name="trackId" required />
-              </label>
-              <label>
-                Field
-                <select name="field">
-                  {[
-                    "title",
-                    "artist",
-                    "album",
-                    "albumArtist",
-                    "year",
-                    "genre",
-                  ].map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="wide">
-                Suggested value
-                <input name="value" required maxLength={500} />
-              </label>
-              <button className="primary" disabled={loading}>
-                Add suggestion
-              </button>
-            </form>
-          </div>
+          <TrackMetadataEditor
+            revision={suggestionRevision}
+            onSuggestions={() => loadSuggestions()}
+          />
           <div className="panel">
             <h2>Review changes</h2>
             {suggestions.map((s) => (
@@ -499,7 +455,7 @@ export function Admin({
                         <span className="old-value">
                           {s.current || "(empty)"}
                         </span>{" "}
-                        → {s.value}
+                        → {s.value || "(empty)"}
                       </>
                     )}
                   </p>
@@ -562,46 +518,6 @@ export function Admin({
                 Load more
               </button>
             )}
-          </div>
-          <div className="panel">
-            <h2>Restore an extracted value</h2>
-            <form
-              className="admin-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const f = new FormData(e.currentTarget);
-                void perform(() =>
-                  api(
-                    `/admin/tracks/${encodeURIComponent(String(f.get("trackId")))}/overrides/${f.get("field")}`,
-                    "DELETE",
-                  ),
-                );
-              }}
-            >
-              <label>
-                Track ID
-                <input name="trackId" required />
-              </label>
-              <label>
-                Override field
-                <select name="field">
-                  {[
-                    "title",
-                    "artist",
-                    "album",
-                    "albumArtist",
-                    "year",
-                    "genre",
-                    "artwork",
-                  ].map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
-              </label>
-              <button className="subtle" disabled={loading}>
-                Remove override
-              </button>
-            </form>
           </div>
         </>
       )}

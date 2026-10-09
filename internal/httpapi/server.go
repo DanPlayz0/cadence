@@ -615,7 +615,7 @@ func (s *Server) createExclusion(w http.ResponseWriter, r *http.Request) {
 }
 func validField(f string) bool {
 	switch f {
-	case "title", "artist", "album", "albumArtist", "year", "genre", "artwork":
+	case "title", "artist", "album", "albumArtist", "year", "genre", "number", "disc", "artwork":
 		return true
 	}
 	return false
@@ -629,7 +629,7 @@ func (s *Server) suggest(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if !validField(v.Field) || v.Field == "artwork" || strings.TrimSpace(v.Value) == "" || len(v.Value) > 500 {
+	if !validSuggestion(v.Field, v.Value) {
 		write(w, 400, map[string]string{"error": "Invalid metadata suggestion"})
 		return
 	}
@@ -638,6 +638,19 @@ func (s *Server) suggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.ok(w, s.Repo.AddSuggestion(r.Context(), domain.Suggestion{TrackID: v.TrackID, Field: v.Field, Value: v.Value, Source: "administrator"}))
+}
+func validSuggestion(field, value string) bool {
+	if !validField(field) || field == "artwork" || len(value) > 500 {
+		return false
+	}
+	if field == "title" || field == "artist" {
+		return strings.TrimSpace(value) != ""
+	}
+	if field == "number" || field == "disc" {
+		number, err := strconv.Atoi(value)
+		return err == nil && number >= 0 && number <= 9999
+	}
+	return true
 }
 func (s *Server) checkPermissions(w http.ResponseWriter, r *http.Request) {
 	var v struct {
