@@ -19,6 +19,7 @@ import {
   Pause,
   Play,
   Plus,
+  PictureInPicture2,
   Repeat,
   Search,
   Shuffle,
@@ -50,6 +51,7 @@ import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
 import { useNavigation } from "./useNavigation";
 import { canMoveQueueItem } from "./queue";
 import { LyricsPanel } from "./LyricsPanel";
+import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import "./style.css";
 
 function Artwork({
@@ -144,6 +146,7 @@ function App() {
     };
   }, [session?.user.id, expire]);
   const player = usePlayer(setError, expire);
+  const miniPlayer = useMiniPlayer(player, session?.user.id);
   useEffect(() => {
     if (!session) {
       player.clear();
@@ -596,6 +599,8 @@ function App() {
             )}
           </div>
           <AccountMenu
+            miniPlayer={miniPlayer}
+            hasTrack={!!player.current}
             user={session.user}
             quality={player.quality}
             volume={player.volume}
@@ -620,6 +625,17 @@ function App() {
             <button
               aria-label="Dismiss notification"
               onClick={() => setNotice("")}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        {miniPlayer.error && (
+          <div className="toast" role="alert">
+            <span>{miniPlayer.error}</span>
+            <button
+              aria-label="Dismiss mini player error"
+              onClick={miniPlayer.clearError}
             >
               <X size={16} />
             </button>
@@ -922,6 +938,11 @@ function App() {
           </section>
         )}
       </main>
+      <MiniPlayer
+        player={player}
+        target={miniPlayer.target}
+        onClose={miniPlayer.close}
+      />
       <PlaylistDialog
         open={addingPlaylist}
         onClose={() => setAddingPlaylist(false)}
@@ -1152,6 +1173,16 @@ function App() {
           </div>
         </div>
         <div className="player-extras">
+          {miniPlayer.supported && (
+            <button
+              aria-label="Open mini player"
+              title={miniPlayer.error || "Open mini player"}
+              disabled={!player.current}
+              onClick={() => void miniPlayer.open()}
+            >
+              <PictureInPicture2 size={18} />
+            </button>
+          )}
           {player.offline && <WifiOff size={17} />}
           <QualitySelect
             value={player.quality}

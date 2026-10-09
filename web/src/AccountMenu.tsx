@@ -17,12 +17,16 @@ import { volumeLabel } from "./volume";
 import { AccountEditor } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
 import { useDialogDismiss } from "./useDialogDismiss";
+import { Checkbox } from "./Checkbox";
+import type { useMiniPlayer } from "./MiniPlayer";
 
 export function AccountMenu({
   user,
   quality,
   volume,
   offline,
+  miniPlayer,
+  hasTrack,
   onQuality,
   onVolume,
   onAdmin,
@@ -35,6 +39,8 @@ export function AccountMenu({
   quality: Quality;
   volume: number;
   offline: boolean;
+  miniPlayer: ReturnType<typeof useMiniPlayer>;
+  hasTrack: boolean;
   onQuality: (quality: Quality) => void;
   onVolume: (volume: number) => void;
   onAdmin: () => void;
@@ -225,6 +231,26 @@ export function AccountMenu({
               <span>Volume · {volumeLabel(volume)}</span>
               <VolumeControl value={volume} onChange={onVolume} />
             </div>
+            <Checkbox
+              label="Automatically open mini player"
+              description={
+                miniPlayer.supported
+                  ? "Keep controls visible when you switch tabs while music plays. Your browser must allow automatic picture-in-picture for this site. Saved in this browser."
+                  : "This browser does not support floating Document picture-in-picture controls. System media controls are still available."
+              }
+              checked={miniPlayer.enabled}
+              disabled={!miniPlayer.supported}
+              onChange={(event) => miniPlayer.setEnabled(event.target.checked)}
+            />
+            {miniPlayer.supported && (
+              <button
+                disabled={!hasTrack}
+                onClick={() => void miniPlayer.open()}
+              >
+                Open mini player
+              </button>
+            )}
+            {miniPlayer.error && <p role="alert">{miniPlayer.error}</p>}
             <p className="muted">
               Changes apply immediately in this tab. High and Saver require a
               server connection for conversion.
