@@ -136,6 +136,8 @@ func (s *Server) Handler() http.Handler {
 		write(w, 200, map[string]any{"user": v.User, "csrf": v.CSRF})
 	})
 	m.HandleFunc("PUT /api/v1/me", s.updateProfile)
+	m.HandleFunc("GET /api/v1/me/playback", s.playback)
+	m.HandleFunc("PUT /api/v1/me/playback", s.playback)
 	m.HandleFunc("POST /api/v1/me/password", s.changePassword)
 	m.HandleFunc("PUT /api/v1/me/avatar", s.updateAvatar)
 	m.HandleFunc("DELETE /api/v1/me/avatar", s.updateAvatar)

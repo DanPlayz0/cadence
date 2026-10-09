@@ -11,6 +11,78 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /me/playback:
+    get:
+      summary: Restore this account's last song and playback position
+      description: Returns a null track when no checkpoint exists or the saved song is unavailable or excluded. Revision remains available for subsequent writes.
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Saved playback with the currently accessible track
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PlaybackCheckpoint"
+                  - type: object
+                    properties:
+                      track:
+                        nullable: true
+                        allOf:
+                          - $ref: "#/components/schemas/Track"
+        "401":
+          description: Sign in required
+        "500":
+          description: Server failure
+    put:
+      summary: Save this account's playback progress
+      description: Requires X-CSRF-Token. Use a random writer ID per tab lifetime and increasing sequence numbers. Same-writer saves accept only newer sequences. A different writer must supply the current revision. Position is clamped to known song duration. Checkpoints do not record listening-history plays.
+      security:
+        - session: []
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/PlaybackCheckpoint"
+                - type: object
+                  properties:
+                    trackId:
+                      type: string
+                      minLength: 1
+                    writer:
+                      type: string
+                      minLength: 16
+                    sequence:
+                      type: integer
+                      minimum: 1
+      responses:
+        "200":
+          description: Saved checkpoint with its new revision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackCheckpoint"
+        "400":
+          description: Invalid checkpoint
+        "401":
+          description: Sign in required
+        "403":
+          description: CSRF or origin rejected
+        "404":
+          description: Song unavailable or excluded
+        "409":
+          description: Checkpoint superseded by a newer sequence or device revision
+        "500":
+          description: Server failure
   /status:
     get:
       summary: Instance setup status
@@ -3234,6 +3306,32 @@ components:
       in: cookie
       name: cadence_session
   schemas:
+    PlaybackCheckpoint:
+      type: object
+      required: [trackId, position, revision, writer, sequence]
+      properties:
+        trackId:
+          type: string
+          maxLength: 120
+        position:
+          type: number
+          minimum: 0
+          maximum: 172800
+          description: Playback position in seconds
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+        writer:
+          type: string
+          pattern: "^([a-f0-9-]{16,64})?$"
+        sequence:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: Positive and increasing for saves; zero for an empty saved state
     OK:
       type: object
       properties:

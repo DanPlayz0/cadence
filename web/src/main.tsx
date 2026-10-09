@@ -52,6 +52,7 @@ import { useNavigation } from "./useNavigation";
 import { canMoveQueueItem } from "./queue";
 import { LyricsPanel } from "./LyricsPanel";
 import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
+import { usePlaybackResume } from "./usePlaybackResume";
 import "./style.css";
 
 function Artwork({
@@ -146,6 +147,7 @@ function App() {
     };
   }, [session?.user.id, expire]);
   const player = usePlayer(setError, expire);
+  usePlaybackResume(player, session?.user.id);
   const miniPlayer = useMiniPlayer(player, session?.user.id);
   useEffect(() => {
     if (!session) {

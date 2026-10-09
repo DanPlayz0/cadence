@@ -33,6 +33,9 @@ var userAvatarsMigration string
 //go:embed 005_metadata_numbers.sql
 var metadataNumbersMigration string
 
+//go:embed 006_playback.sql
+var playbackMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -126,6 +129,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(5)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=6)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, playbackMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(6)"); err != nil {
 			return err
 		}
 	}

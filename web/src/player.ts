@@ -38,6 +38,7 @@ export function usePlayer(
   const [repeat, setRepeat] = useState<"off" | "all" | "one">("off");
   const [offline, setOffline] = useState(!navigator.onLine);
   const [cacheVersion, setCacheVersion] = useState(0);
+  const [checkpointVersion, setCheckpointVersion] = useState(0);
   const state = useRef({ queue, index, quality, shuffle, repeat });
   state.current = { queue, index, quality, shuffle, repeat };
   const loadSeq = useRef(0);
@@ -49,6 +50,7 @@ export function usePlayer(
     last: number;
     recorded: boolean;
     fallback: boolean;
+    restorePosition: number | null;
   } | null>(null);
   const pending = useRef(new Map<string, AbortController>());
   const callbacks = useRef({ onError, onExpired });
@@ -103,6 +105,7 @@ export function usePlayer(
         last: resume?.position ?? 0,
         recorded: resume?.recorded ?? false,
         fallback: forced === "high",
+        restorePosition: resume?.position ?? 0,
       };
       try {
         if (navigator.onLine) {
@@ -127,16 +130,20 @@ export function usePlayer(
             "This track is not available in the temporary session cache.",
           );
         if (seq !== loadSeq.current) return;
-        if (resume && resume.position > 0)
-          audio.current.onloadedmetadata = () => {
-            if (seq === loadSeq.current) {
-              audio.current.currentTime = Math.min(
-                resume.position,
-                Math.max(0, audio.current.duration - 0.1),
-              );
-              audio.current.onloadedmetadata = null;
-            }
-          };
+        audio.current.onloadedmetadata = () => {
+          if (seq === loadSeq.current) {
+            const duration = Number.isFinite(audio.current.duration)
+              ? audio.current.duration
+              : t.duration;
+            audio.current.currentTime = Math.min(
+              resume?.position ?? 0,
+              Math.max(0, duration - 0.1),
+            );
+            if (active.current) active.current.restorePosition = null;
+            setPosition(audio.current.currentTime);
+            audio.current.onloadedmetadata = null;
+          }
+        };
         audio.current.src = cached ?? stream(t.id, mode);
         audio.current.load();
         if (resume?.autoplay !== false) await audio.current.play();
@@ -187,6 +194,32 @@ export function usePlayer(
     },
     [start],
   );
+  const restore = useCallback(
+    (track: Track, position: number) => {
+      state.current.queue = [track];
+      state.current.index = 0;
+      setQueue([track]);
+      void start(track, 0, undefined, {
+        position,
+        autoplay: false,
+        event: eventID(),
+        heard: 0,
+        recorded: false,
+      });
+    },
+    [start],
+  );
+  const snapshot = useCallback(() => {
+    const v = active.current;
+    return v
+      ? {
+          trackId: v.track.id,
+          position: Math.max(0, v.restorePosition ?? audio.current.currentTime),
+          playing: !audio.current.paused,
+        }
+      : null;
+  }, []);
+  const generation = useCallback(() => loadSeq.current, []);
   const toggle = useCallback(() => {
     if (!audio.current.src) return;
     if (audio.current.paused)
@@ -203,6 +236,8 @@ export function usePlayer(
     cache.current.clear();
     for (const c of pending.current.values()) c.abort();
     pending.current.clear();
+    state.current.queue = [];
+    state.current.index = -1;
     setQueue([]);
     setIndex(-1);
     active.current = null;
@@ -364,10 +399,18 @@ export function usePlayer(
     navigator.mediaSession.setActionHandler("nexttrack", () => next());
     navigator.mediaSession.setActionHandler("previoustrack", () => next(true));
     navigator.mediaSession.setActionHandler("seekto", (d) => {
-      if (d.seekTime !== undefined) audio.current.currentTime = d.seekTime;
+      if (d.seekTime !== undefined && Number.isFinite(d.seekTime)) {
+        audio.current.currentTime = Math.max(
+          0,
+          Math.min(d.seekTime, length || d.seekTime),
+        );
+        if (active.current) active.current.restorePosition = null;
+        setPosition(audio.current.currentTime);
+        setCheckpointVersion((v) => v + 1);
+      }
     });
     navigator.mediaSession.playbackState = playing ? "playing" : "paused";
-  }, [current, next, playing]);
+  }, [current, next, playing, length]);
   function changeQuality(q: Quality) {
     state.current.quality = q;
     setQuality(q);
@@ -419,6 +462,10 @@ export function usePlayer(
     offline,
     cacheVersion,
     play,
+    restore,
+    snapshot,
+    generation,
+    checkpointVersion,
     toggle,
     next,
     clear,
@@ -429,7 +476,9 @@ export function usePlayer(
       if (!Number.isFinite(n)) return;
       const target = Math.max(0, Math.min(n, length || n));
       audio.current.currentTime = target;
+      if (active.current) active.current.restorePosition = null;
       setPosition(target);
+      setCheckpointVersion((v) => v + 1);
     },
     enqueue: (t: Track) => setQueue((q) => [...q, t]),
     cached: (id: string) => cache.current.has(id),

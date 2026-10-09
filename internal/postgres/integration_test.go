@@ -515,6 +515,9 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 	if e = r.ResolveSuggestion(ctx, suggestions[0].ID, true); e != nil {
 		t.Fatal(e)
 	}
+	if _, e = r.SavePlayback(ctx, u.ID, domain.Playback{TrackID: id, Position: 42.5, Writer: "0123456789abcdef", Sequence: 1}); e != nil {
+		t.Fatal(e)
+	}
 	var schema string
 	if e = c.QueryRow(ctx, "SELECT current_schema()").Scan(&schema); e != nil {
 		t.Fatal(e)
@@ -534,8 +537,12 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 5 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 6 {
 		t.Fatal("migration reapplied", e)
+	}
+	checkpoint, e := reopened.Playback(ctx, u.ID)
+	if e != nil || checkpoint.TrackID != id || checkpoint.Position != 42.5 || checkpoint.Revision != 1 {
+		t.Fatal("playback persistence failed", checkpoint, e)
 	}
 }
 

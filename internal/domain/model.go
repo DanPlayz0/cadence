@@ -31,6 +31,14 @@ type Session struct {
 	CSRF    string
 	Expires time.Time
 }
+
+type Playback struct {
+	TrackID  string  `json:"trackId"`
+	Position float64 `json:"position"`
+	Revision int64   `json:"revision"`
+	Writer   string  `json:"writer"`
+	Sequence int64   `json:"sequence"`
+}
 type Track struct {
 	ID          string  `json:"id"`
 	Title       string  `json:"title"`
@@ -140,6 +148,8 @@ type LibraryRepository interface {
 	RawTracks(context.Context, int, int) ([]Track, error)
 }
 type PersonalRepository interface {
+	Playback(context.Context, string) (Playback, error)
+	SavePlayback(context.Context, string, Playback) (Playback, error)
 	Playlists(context.Context, string) ([]Playlist, error)
 	CreatePlaylist(context.Context, string, string, string) (Playlist, error)
 	DeletePlaylist(context.Context, string, string) error

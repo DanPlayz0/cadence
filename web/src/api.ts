@@ -57,10 +57,12 @@ export async function api<T>(
   path: string,
   method = "GET",
   body?: unknown,
+  keepalive = false,
 ): Promise<T> {
   const res = await fetch(`/api/v1${path}`, {
     method,
     credentials: "same-origin",
+    keepalive,
     signal: AbortSignal.timeout(15000),
     headers: {
       "Content-Type": "application/json",
