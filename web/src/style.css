@@ -3055,3 +3055,169 @@ input[type="range"] {
     outline: 2px solid Highlight;
   }
 }
+
+/* Resizable queue/lyrics panel: width on desktop, height on narrow screens. */
+.app.queue-open[data-panel-mode="side"] {
+  grid-template-columns: 235px minmax(360px, 1fr) var(--playback-panel-size);
+}
+.queue-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding-left: 24px;
+}
+.playback-panel-heading,
+.playback-tabs {
+  flex-shrink: 0;
+}
+.playback-panel-heading h2 {
+  flex: 1;
+  min-width: 0;
+}
+.playback-panel-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.playback-panel-actions button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.queue-panel > [role="tabpanel"] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.queue-panel #lyrics-content {
+  display: flex;
+  flex-direction: column;
+}
+.queue-panel .lyrics-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.queue-panel .lyrics-scroll {
+  flex: 1;
+  min-height: 100px;
+  max-height: none;
+}
+.queue-panel .lyrics-heading,
+.queue-panel .lyrics-source,
+.queue-panel .lyrics-tools {
+  flex-shrink: 0;
+}
+.panel-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+.panel-resize-handle::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  height: 48px;
+  border-radius: 3px;
+  top: calc(50% - 24px);
+  left: 3px;
+  background: var(--line);
+}
+.panel-resize-handle:hover::after,
+.panel-resize-handle:focus-visible::after,
+.panel-resizing .panel-resize-handle::after {
+  background: var(--accent);
+}
+.panel-resize-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.panel-resizing {
+  user-select: none;
+}
+@media (max-width: 1100px) {
+  .app.queue-open[data-panel-mode="stack"] {
+    grid-template-columns: 195px minmax(0, 1fr);
+    grid-template-rows: minmax(160px, 1fr) var(--playback-panel-size) 112px;
+    min-height: 472px;
+  }
+  .app.queue-open[data-panel-mode="stack"] main {
+    display: block;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 160px;
+  }
+  .app.queue-open[data-panel-mode="stack"] .sidebar {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .app.queue-open[data-panel-mode="stack"] .queue-panel {
+    grid-column: 2;
+    grid-row: 2;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 18px 18px 12px;
+  }
+  .app.queue-open[data-panel-mode="stack"] .player {
+    grid-row: 3;
+  }
+  .panel-resize-handle {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    width: auto;
+    height: 12px;
+    cursor: row-resize;
+  }
+  .panel-resize-handle::after {
+    width: 48px;
+    height: 3px;
+    top: 3px;
+    left: calc(50% - 24px);
+  }
+  .queue-panel .playback-tabs {
+    margin: 4px 0 8px;
+  }
+}
+@media (max-width: 700px) {
+  .app.queue-open[data-panel-mode="stack"] {
+    grid-template-columns: 65px minmax(0, 1fr);
+    grid-template-rows: minmax(160px, 1fr) var(--playback-panel-size) calc(
+        208px + env(safe-area-inset-bottom)
+      );
+    min-height: calc(568px + env(safe-area-inset-bottom));
+  }
+  .app.queue-open[data-panel-mode="stack"] .queue-panel {
+    padding: 16px 10px 10px;
+  }
+  .playback-panel-heading {
+    gap: 4px;
+  }
+  .playback-panel-heading h2 {
+    font-size: 18px;
+  }
+  .playback-panel-actions {
+    gap: 0;
+  }
+}
+
+.app.queue-open[data-panel-mode="side"] {
+  min-height: 312px;
+}
+.panel-resizing[data-panel-mode="side"],
+.panel-resizing[data-panel-mode="side"] * {
+  cursor: col-resize;
+}
+.panel-resizing[data-panel-mode="stack"],
+.panel-resizing[data-panel-mode="stack"] * {
+  cursor: row-resize;
+}

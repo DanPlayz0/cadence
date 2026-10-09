@@ -137,3 +137,10 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 - Additional checks at 1280 and 390 pixels passed for account-menu keyboard navigation, menu-to-profile/settings dialogs, focus restoration to the account trigger, outside dismissal, pending playlist save protection against Escape/outside clicks, failed-save recovery preserving input, and responsive layout. Desktop profile and phone playlist screenshots were visually reviewed.
 - Existing profile regression fixtures also passed at desktop/phone widths for name/avatar/password saves and error recovery, administrator editing/reset/revocation, and focus restoration. Their stale admin button selector was updated to the current tab role in the ignored fixture script.
 - Browser checks use isolated API/media fixtures. Live server saves/playback, cross-browser behavior, and physical touch devices were not verified. Backend code was unchanged. Vite build/test subprocesses and Chromium needed execution outside the restricted sandbox.
+
+## Resizable playback panel (2026-10-09)
+
+- TypeScript/production build and all 18 tests across eight files passed, including constraints, viewport clamping, invalid sizes, and minimum dimensions. Formatting and diff checks passed.
+- Chromium API/media fixtures passed at 1440, 1280, 1100, 900, 390, and 320px widths for pointer dragging, keyboard increments/reset/min/max, expand/restore, library/panel minima, queue/lyrics shared sizing, close/reopen, reload persistence, responsive breakpoint changes, and no runtime errors or horizontal page overflow. Desktop and phone lyrics screenshots were visually reviewed.
+- Short viewport checks at 390x500 and 1280x260 passed for minimum heights, reachable player controls, and unavailable browser storage. Existing lyrics fixtures passed at desktop/phone widths for highlighting, seeking while paused, scrolling/follow, plain/instrumental/missing/error/retry states, track changes, and stale response protection.
+- Browser checks use fixtures; live backend/media, cross-browser testing, and physical touch dragging were not verified. Backend code and dependencies were unchanged.

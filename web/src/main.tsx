@@ -14,6 +14,8 @@ import {
   Heart,
   Home,
   ListMusic,
+  Maximize2,
+  Minimize2,
   Mic2,
   Music2,
   Pause,
@@ -56,6 +58,8 @@ import { usePlaybackResume } from "./usePlaybackResume";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackActions } from "./TrackActions";
 import { PlaylistPicker } from "./PlaylistPicker";
+import { usePanelResize } from "./usePanelResize";
+import { Button } from "./components/ui/button";
 import "./style.css";
 
 function Artwork({
@@ -231,6 +235,7 @@ function App() {
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+  const panelResize = usePanelResize(queueOpen);
   const [queueTab, setQueueTab] = useState<"queue" | "lyrics">("queue");
   const queuePanel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -576,7 +581,16 @@ function App() {
       </div>
     );
   return (
-    <div className={`app ${queueOpen ? "queue-open" : ""}`}>
+    <div
+      ref={panelResize.app}
+      className={`app ${queueOpen ? "queue-open" : ""} ${panelResize.dragging ? "panel-resizing" : ""}`}
+      data-panel-mode={panelResize.mode}
+      style={
+        {
+          "--playback-panel-size": `${panelResize.size}px`,
+        } as React.CSSProperties
+      }
+    >
       <a
         className="skip-link"
         href="#main-content"
@@ -1136,14 +1150,58 @@ function App() {
             if (event.key === "Escape") setQueueOpen(false);
           }}
         >
-          <div className="row">
+          <div
+            className="panel-resize-handle"
+            role="separator"
+            tabIndex={0}
+            aria-label={
+              panelResize.mode === "side"
+                ? "Resize playback panel width"
+                : "Resize playback panel height"
+            }
+            aria-orientation={
+              panelResize.mode === "side" ? "vertical" : "horizontal"
+            }
+            aria-controls="play-queue"
+            aria-valuemin={panelResize.bounds.min}
+            aria-valuemax={panelResize.bounds.max}
+            aria-valuenow={panelResize.size}
+            aria-valuetext={`${Math.round(panelResize.size)} pixels`}
+            title="Drag to resize. Arrow keys resize; Home/End choose minimum/maximum; Enter resets."
+            {...panelResize.handle}
+          />
+          <div className="row playback-panel-heading">
             <h2>{queueTab === "queue" ? "Play queue" : "Lyrics"}</h2>
-            <button
-              aria-label={queueTab === "queue" ? "Close queue" : "Close lyrics"}
-              onClick={() => setQueueOpen(false)}
-            >
-              <X />
-            </button>
+            <div className="playback-panel-actions">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={
+                  panelResize.expanded
+                    ? "Restore playback panel size"
+                    : "Expand playback panel"
+                }
+                aria-pressed={panelResize.expanded}
+                onClick={panelResize.toggleExpanded}
+                title={panelResize.expanded ? "Restore size" : "Expand panel"}
+              >
+                {panelResize.expanded ? (
+                  <Minimize2 size={18} />
+                ) : (
+                  <Maximize2 size={18} />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={
+                  queueTab === "queue" ? "Close queue" : "Close lyrics"
+                }
+                onClick={() => setQueueOpen(false)}
+              >
+                <X size={20} />
+              </Button>
+            </div>
           </div>
           <div
             className="playback-tabs"
