@@ -55,6 +55,7 @@ import { canMoveQueueItem } from "./queue";
 import { LyricsPanel } from "./LyricsPanel";
 import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import { usePlaybackResume } from "./usePlaybackResume";
+import { ArtistProfile } from "./ArtistProfile";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackActions } from "./TrackActions";
 import { PlaylistPicker } from "./PlaylistPicker";
@@ -874,6 +875,14 @@ function App() {
                 </p>
               </div>
             </div>
+            {selectedArtist && (
+              <ArtistProfile
+                key={selectedArtist}
+                artist={selectedArtist}
+                admin={session.user.admin}
+                onExpired={expire}
+              />
+            )}
             {view === "home" && (
               <div className="welcome-strip">
                 <div>

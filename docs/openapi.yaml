@@ -1273,6 +1273,149 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /artists/profile:
+    get:
+      summary: Read the saved profile for an accessible library artist
+      tags:
+        - Music
+      security:
+        - session: []
+      parameters:
+        - name: artist
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 300
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: &a1
+                type: object
+                properties:
+                  profile:
+                    $ref: "#/components/schemas/ArtistProfile"
+                    nullable: true
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sign in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: CSRF, origin, or role rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found or excluded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/artists/profile:
+    post:
+      summary: Fetch and save an accessible artist profile from MusicBrainz and Wikimedia
+      tags:
+        - Administration
+      security:
+        - session: []
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema: *a1
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sign in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: CSRF, origin, or role rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not found or excluded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "502":
+          description: External lookup unavailable or artist match requires a MusicBrainz ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: External lookup unavailable or artist match requires a MusicBrainz ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - artist
+              properties:
+                artist:
+                  type: string
+                  maxLength: 300
+                mbid:
+                  type: string
+                  description: Optional MusicBrainz artist UUID to resolve ambiguous names
   /artists:
     get:
       summary: Permission-filtered artists and counts
@@ -2333,6 +2476,10 @@ paths:
                   type: boolean
                   default: false
                   description: Re-probe unchanged files unless missingOnly is enabled.
+                artist:
+                  type: string
+                  maxLength: 300
+                  description: Optional accessible artist name. Only that performer’s songs are refreshed, including comma-separated credits. Accepted artist corrections are respected.
                 missingOnly:
                   type: boolean
                   default: false
@@ -3313,6 +3460,46 @@ components:
       in: cookie
       name: cadence_session
   schemas:
+    ArtistProfile:
+      type: object
+      properties:
+        name:
+          type: string
+        mbid:
+          type: string
+        type:
+          type: string
+        country:
+          type: string
+        description:
+          type: string
+        biography:
+          type: string
+        image:
+          type: string
+        imageSource:
+          type: string
+        wikipedia:
+          type: string
+        warning:
+          type: string
+        updated:
+          type: string
+          format: date-time
+        genres:
+          type: array
+          items:
+            type: string
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              url:
+                type: string
+                format: uri
     PlaybackCheckpoint:
       type: object
       required: [trackId, position, revision, writer, sequence]

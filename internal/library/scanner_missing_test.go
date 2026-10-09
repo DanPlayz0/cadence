@@ -4,9 +4,12 @@ package library
 import (
 	"context"
 	"errors"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"cadence/internal/domain"
@@ -20,10 +23,11 @@ type missingScanRepo struct {
 	finished    domain.Scan
 	lookupError error
 	cleaned     bool
+	enrichment  bool
 }
 
 func (r *missingScanRepo) Settings(context.Context) (map[string]bool, error) {
-	return map[string]bool{}, nil
+	return map[string]bool{"enrichment": r.enrichment}, nil
 }
 func (r *missingScanRepo) TrackByPath(_ context.Context, p string) (domain.Track, error) {
 	if r.lookupError != nil {
@@ -140,10 +144,50 @@ func TestMissingOnlyScan(t *testing.T) {
 			t.Fatalf("scan failed: %+v", repo.finished)
 		}
 	}
+	scoped := &missingScanRepo{tracks: tracks, seen: map[string]bool{}}
+	artistScanner := Scanner{Repo: scoped, Roots: []string{root}, ArtDir: t.TempDir()}
+	artistScanner.run(context.Background(), domain.Scan{ID: "artist"}, ScanOptions{Full: true, Artist: "Artist"})
+	if len(scoped.indexed) != 2 {
+		t.Fatalf("accepted artist selection must survive probe fallback: %+v", scoped.indexed)
+	}
+	enriched := &missingScanRepo{tracks: tracks, seen: map[string]bool{}, enrichment: true}
+	lookupCount := 0
+	enricher := &Enricher{UserAgent: "Cadence test/contact", Repo: enriched, Client: &http.Client{Transport: transportFunc(func(req *http.Request) (*http.Response, error) {
+		lookupCount++
+		if !strings.Contains(req.URL.Query().Get("query"), "artist:\"Artist\"") {
+			t.Fatalf("accepted artist not used for enrichment: %s", req.URL)
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"releases":[]}`)), Header: make(http.Header)}, nil
+	})}}
+	enrichedScanner := Scanner{Repo: enriched, Roots: []string{root}, ArtDir: t.TempDir(), Enricher: enricher}
+	enrichedScanner.run(context.Background(), domain.Scan{ID: "artist-enriched"}, ScanOptions{Full: true, Artist: "Artist"})
+	if lookupCount == 0 {
+		t.Fatal("artist-scoped enrichment skipped accepted artist")
+	}
+	otherTracks := map[string]domain.Track{}
+	for path, track := range tracks {
+		otherTracks[path] = track
+	}
+	otherPath := filepath.ToSlash(filepath.Join(root, "complete.wav"))
+	other := otherTracks[otherPath]
+	other.Artist = "Other artist"
+	otherTracks[otherPath] = other
+	otherRepo := &missingScanRepo{tracks: otherTracks, seen: map[string]bool{}}
+	otherScanner := Scanner{Repo: otherRepo, Roots: []string{root}, ArtDir: t.TempDir()}
+	otherScanner.run(context.Background(), domain.Scan{ID: "artist-selection"}, ScanOptions{Full: true, Artist: "Artist"})
+	if len(otherRepo.indexed) != 1 || !otherRepo.seen[otherPath] {
+		t.Fatalf("unrelated artist was rescanned or not kept seen: %+v", otherRepo.indexed)
+	}
 	repo := &missingScanRepo{tracks: tracks, seen: map[string]bool{}, lookupError: errors.New("database unavailable")}
 	scanner := Scanner{Repo: repo, Roots: []string{root}, ArtDir: t.TempDir()}
 	scanner.run(context.Background(), domain.Scan{ID: "error"}, ScanOptions{MissingOnly: true})
 	if repo.cleaned || len(repo.indexed) != 0 || repo.finished.Status != "complete_with_errors" {
 		t.Fatal("lookup failures must not hide or re-probe tracks")
+	}
+}
+
+func TestArtistMatches(t *testing.T) {
+	if !ArtistMatches("First Artist, Second Artist", "Second Artist") || ArtistMatches("Artist Other", "Artist") || ArtistMatches("First Artist", "Second Artist") {
+		t.Fatal("artist filter must match whole individual credits")
 	}
 }

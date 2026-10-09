@@ -68,6 +68,7 @@ func ResolveFile(roots []string, path string) (string, error) {
 type ScanOptions struct {
 	Full        bool
 	MissingOnly bool
+	Artist      string
 }
 
 func MissingMetadata(t domain.Track) bool {
@@ -155,15 +156,17 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 				addErr(path + ": stat failed")
 				return nil
 			}
-			if options.MissingOnly {
+			matchedArtist := false
+			if options.MissingOnly || options.Artist != "" {
 				track, lookupErr := s.Repo.TrackByPath(ctx, path)
 				if lookupErr != nil && !errors.Is(lookupErr, domain.ErrNotFound) {
 					complete = false
 					addErr("Database: " + lookupErr.Error())
 					return nil
 				}
+				matchedArtist = lookupErr == nil && ArtistMatches(track.Artist, options.Artist)
 				// New files are incomplete; existing complete files still need to be marked seen.
-				if lookupErr == nil && !MissingMetadata(track) {
+				if lookupErr == nil && ((options.Artist != "" && !ArtistMatches(track.Artist, options.Artist)) || (options.MissingOnly && !MissingMetadata(track))) {
 					if err = s.Repo.MarkSeen(ctx, path, v.ID); err != nil {
 						complete = false
 						addErr("Database: " + err.Error())
@@ -195,6 +198,9 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 				addErr(path + ": " + err.Error())
 				return nil
 			}
+			if options.Artist != "" && !matchedArtist && !ArtistMatches(t.Artist, options.Artist) {
+				return nil
+			}
 			t.Root = root
 			t.Size = info.Size()
 			t.Modified = info.ModTime().UnixNano()
@@ -216,7 +222,15 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 				}
 			}
 			if settings["enrichment"] && s.Enricher != nil {
-				if err = s.Enricher.Suggest(ctx, t, tags); err != nil {
+				enrichmentTrack := t
+				if options.Artist != "" {
+					enrichmentTrack, err = s.Repo.TrackByPath(ctx, path)
+					if err != nil {
+						addErr("Metadata catalog: " + err.Error())
+						return nil
+					}
+				}
+				if err = s.Enricher.Suggest(ctx, enrichmentTrack, tags); err != nil {
 					addErr("Metadata " + t.Title + ": " + err.Error())
 				}
 			}
@@ -362,4 +376,13 @@ func (s *Scanner) art(ctx context.Context, path string, _ map[string]string, mod
 		return ""
 	}
 	return dest
+}
+
+func ArtistMatches(credit, artist string) bool {
+	for _, name := range strings.Split(credit, ",") {
+		if strings.TrimSpace(name) == artist {
+			return true
+		}
+	}
+	return false
 }

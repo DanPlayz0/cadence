@@ -40,3 +40,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Optional artist profile content
+
+Artist facts and links are retrieved from MusicBrainz under its applicable [data licenses](https://musicbrainz.org/doc/About/Data_License). Optional biographies from Wikipedia retain contributor/article attribution and a [CC BY-SA license link](https://creativecommons.org/licenses/by-sa/4.0/). Wikimedia image thumbnails are displayed with a link to their file description page for individual author and license information; image licenses vary. These fetched assets are separate from project code, and are not bundled in the source repository.

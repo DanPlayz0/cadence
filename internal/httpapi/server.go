@@ -153,6 +153,8 @@ func (s *Server) Handler() http.Handler {
 		}
 		write(w, 200, v)
 	})
+	m.HandleFunc("GET /api/v1/artists/profile", s.artistProfile)
+	m.HandleFunc("POST /api/v1/admin/artists/profile", s.fetchArtistProfile)
 	m.HandleFunc("GET /api/v1/artists", func(w http.ResponseWriter, r *http.Request) {
 		l, o := pagination(r)
 		v, e := s.Repo.Artists(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), l, o)
@@ -266,13 +268,22 @@ func (s *Server) Handler() http.Handler {
 	})
 	m.HandleFunc("POST /api/v1/admin/scans", func(w http.ResponseWriter, r *http.Request) {
 		var v struct {
-			Full        bool `json:"full"`
-			MissingOnly bool `json:"missingOnly"`
+			Full        bool   `json:"full"`
+			MissingOnly bool   `json:"missingOnly"`
+			Artist      string `json:"artist"`
 		}
 		if !decode(w, r, &v) {
 			return
 		}
-		id, ok := s.Scanner.StartWithOptions(library.ScanOptions{Full: v.Full, MissingOnly: v.MissingOnly})
+		v.Artist = strings.TrimSpace(v.Artist)
+		if utf8.RuneCountInString(v.Artist) > 300 {
+			write(w, 400, map[string]string{"error": "Artist name is too long"})
+			return
+		}
+		if v.Artist != "" && !s.artistAccessible(w, r, v.Artist) {
+			return
+		}
+		id, ok := s.Scanner.StartWithOptions(library.ScanOptions{Full: v.Full, MissingOnly: v.MissingOnly, Artist: v.Artist})
 		if !ok {
 			write(w, 409, map[string]string{"error": "A scan is already running or could not start"})
 			return

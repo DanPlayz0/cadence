@@ -39,6 +39,9 @@ var playbackMigration string
 //go:embed 007_artist_credits.sql
 var artistCreditsMigration string
 
+//go:embed 008_artist_profiles.sql
+var artistProfilesMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -154,6 +157,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(7)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=8)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, artistProfilesMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(8)"); err != nil {
 			return err
 		}
 	}
@@ -714,5 +728,24 @@ func (s *Store) Settings(ctx context.Context) (map[string]bool, error) {
 }
 func (s *Store) SetEnrichment(ctx context.Context, b bool) error {
 	_, err := s.pool.Exec(ctx, "UPDATE settings SET enabled=$1 WHERE key='enrichment'", b)
+	return err
+}
+
+func (s *Store) ArtistProfile(ctx context.Context, artist string) (domain.ArtistProfile, error) {
+	var data []byte
+	var profile domain.ArtistProfile
+	err := s.pool.QueryRow(ctx, "SELECT profile FROM artist_profiles WHERE artist=$1", artist).Scan(&data)
+	if err != nil {
+		return profile, mapped(err)
+	}
+	err = json.Unmarshal(data, &profile)
+	return profile, err
+}
+func (s *Store) SaveArtistProfile(ctx context.Context, artist string, profile domain.ArtistProfile) error {
+	data, err := json.Marshal(profile)
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, "INSERT INTO artist_profiles(artist,profile) VALUES($1,$2) ON CONFLICT(artist) DO UPDATE SET profile=excluded.profile", artist, data)
 	return err
 }

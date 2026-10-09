@@ -78,6 +78,26 @@ type Album struct {
 	Tracks  int    `json:"tracks"`
 	CoverID string `json:"coverId"`
 }
+type ArtistLink struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+type ArtistProfile struct {
+	Name        string       `json:"name"`
+	MBID        string       `json:"mbid"`
+	Type        string       `json:"type"`
+	Country     string       `json:"country"`
+	Description string       `json:"description"`
+	Biography   string       `json:"biography"`
+	Image       string       `json:"image"`
+	ImageSource string       `json:"imageSource"`
+	Wikipedia   string       `json:"wikipedia"`
+	Genres      []string     `json:"genres"`
+	Links       []ArtistLink `json:"links"`
+	Warning     string       `json:"warning"`
+	Updated     time.Time    `json:"updated"`
+}
+
 type Artist struct {
 	Name   string `json:"name"`
 	Tracks int    `json:"tracks"`
@@ -147,6 +167,8 @@ type LibraryRepository interface {
 	ScanFinish(context.Context, Scan) error
 	Scans(context.Context) ([]Scan, error)
 	RawTracks(context.Context, int, int) ([]Track, error)
+	ArtistProfile(context.Context, string) (ArtistProfile, error)
+	SaveArtistProfile(context.Context, string, ArtistProfile) error
 }
 type PersonalRepository interface {
 	Playback(context.Context, string) (Playback, error)
