@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { api, APIError, uploadAvatar, type User } from "./api";
 import { Checkbox } from "./Checkbox";
 import { UserAvatar } from "./UserAvatar";
+import { useDialogDismiss } from "./useDialogDismiss";
 
 type Group = { id: string; name: string };
 type EditorProps = {
@@ -320,11 +321,13 @@ export function UserEditorDialog({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
+  const dismiss = useDialogDismiss(busy);
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
   return (
     <dialog
+      {...dismiss}
       className="account-dialog user-editor-dialog"
       ref={dialog}
       aria-labelledby="user-editor-title"

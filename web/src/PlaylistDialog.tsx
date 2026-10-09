@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useEffect, useRef, useState } from "react";
+import { useDialogDismiss } from "./useDialogDismiss";
 import {
   Disc3,
   Headphones,
@@ -42,6 +43,7 @@ export function PlaylistDialog({
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("music");
   const [busy, setBusy] = useState(false);
+  const dismiss = useDialogDismiss(busy);
   const [error, setError] = useState("");
   useEffect(() => {
     if (open) {
@@ -53,6 +55,7 @@ export function PlaylistDialog({
   }, [open]);
   return (
     <dialog
+      {...dismiss}
       className="account-dialog playlist-dialog"
       ref={dialog}
       aria-labelledby="playlist-dialog-title"

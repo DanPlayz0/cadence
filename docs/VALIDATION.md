@@ -38,6 +38,11 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Frontend tests, TypeScript/production build, and Prettier checks passed. Chromium fixture checks at 1280 × 844 and 390 × 844 passed for profile name/avatar changes, immediate header updates, password confirmation and current-password errors, password-field clearing on success, clickable user rows, group/username edits, save-error recovery, administrator reset without current password, session revocation, avatar removal, focus restoration, account refresh on focus, self-reset sign-out, and no page overflow/runtime errors. Profile and user-editor screenshots were visually reviewed.
 - Browser requests used isolated fixtures; backend account checks used real PostgreSQL. Cross-browser, physical-device avatar picking, and simultaneous multi-device UI refresh remain outside this update. Temporary scripts, images, and databases were excluded from Git.
 
+## Modal dismissal update (2026-10-09)
+
+- Account/profile, listening settings, user editor, and playlist dialogs now dismiss on an outside click or tap. Both ends of a pointer gesture must be outside; dialog padding, scrollbars, and drags from inside do not dismiss. Pending saves continue to block dismissal.
+- Frontend tests, TypeScript/production build, formatting, and diff checks passed. Chromium fixture checks at desktop and phone widths passed for dismissal, focus restoration, padding, drag gestures, and pending-save protection. The desktop-only playlist trigger was invoked programmatically at phone width to check its dialog. Cross-browser and physical touchscreen checks were not run.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.

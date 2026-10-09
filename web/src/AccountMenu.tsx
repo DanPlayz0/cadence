@@ -16,6 +16,7 @@ import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { volumeLabel } from "./volume";
 import { AccountEditor } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
+import { useDialogDismiss } from "./useDialogDismiss";
 
 export function AccountMenu({
   user,
@@ -51,6 +52,7 @@ export function AccountMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const dismiss = useDialogDismiss(editingBusy);
 
   useEffect(() => {
     if (!open) return;
@@ -179,6 +181,7 @@ export function AccountMenu({
         </div>
       )}
       <dialog
+        {...dismiss}
         className="account-dialog"
         ref={dialog}
         aria-labelledby="account-title"
