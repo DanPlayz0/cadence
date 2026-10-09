@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, RefreshCw, Shield, Trash2, X } from "lucide-react";
 import { api, User } from "./api";
+import { Checkbox } from "./Checkbox";
 type Group = { id: string; name: string };
 type Exclusion = { id: string; groupId: string; kind: string; target: string };
 type Suggestion = {
@@ -247,9 +248,12 @@ export function Admin({ report }: { report: (s: string) => void }) {
                   autoComplete="new-password"
                 />
               </label>
-              <label className="checkbox">
-                <input name="admin" type="checkbox" /> Administrator
-              </label>
+              <Checkbox
+                name="admin"
+                label="Administrator"
+                description="Can manage listeners, library scans, and instance settings."
+                disabled={loading}
+              />
               <button className="primary" disabled={loading}>
                 Create account
               </button>

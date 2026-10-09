@@ -26,6 +26,11 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Chromium fixture checks passed at 1280 × 844, 900 × 844, and 390 × 844: actual audio-element gain, volume popup, mute/unmute, keyboard quality selection, nested Escape dismissal, playlist icon/name selection, failed-save recovery, creation and reload, independently scrolling queue, and narrow-screen queue layout. No horizontal page overflow or browser runtime errors occurred. Dialogs, dropdowns, popups, and desktop/mobile queue layouts were visually reviewed.
 - UI checks used isolated API fixtures; backend playlist checks used real PostgreSQL. Cross-browser and physical-device listening checks remain outside this update. Temporary browser scripts, screenshots, and test data stay in ignored `.local/`.
 
+## People administrator checkbox update (2026-10-09)
+
+- Replaced the administrator field with a themed checkbox component: 24-pixel check indicator, a larger clickable label, permission description, visible keyboard focus, and disabled styling. Native checkbox semantics and FormData behavior are preserved.
+- Five frontend tests, TypeScript/production build, and Prettier checks passed. Chromium fixture checks at 1280 × 844 and 390 × 844 passed for label and Space-key toggling, visual checked state, disabling during submission, true/false administrator payloads, form reset, and no horizontal overflow or runtime errors. Desktop and mobile screenshots were reviewed. Account creation responses were fixtures; backend behavior was unchanged.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.
