@@ -102,7 +102,7 @@ function App() {
   const [notice, setNotice] = useState("");
   useEffect(() => {
     if (!notice) return;
-    const timer = window.setTimeout(() => setNotice(""), 4000);
+    const timer = window.setTimeout(() => setNotice(""), 6000);
     return () => window.clearTimeout(timer);
   }, [notice]);
   const expire = useCallback(() => {
@@ -425,8 +425,10 @@ function App() {
       ) {
         e.preventDefault();
         setQueueOpen(false);
-        searchInput.current?.focus();
-        searchInput.current?.select();
+        window.requestAnimationFrame(() => {
+          searchInput.current?.focus();
+          searchInput.current?.select();
+        });
         return;
       }
       if (
@@ -539,7 +541,11 @@ function App() {
       <a
         className="skip-link"
         href="#main-content"
-        onClick={() => setQueueOpen(false)}
+        onClick={(event) => {
+          event.preventDefault();
+          setQueueOpen(false);
+          window.requestAnimationFrame(() => mainElement.current?.focus());
+        }}
       >
         Skip to content
       </a>
@@ -831,12 +837,12 @@ function App() {
             <div className="section-heading">
               <h2>
                 {albumView
-                  ? "On the record"
+                  ? "Albums in your library"
                   : artistView
-                    ? "The people behind the music"
+                    ? "Artists"
                     : selectedAlbum
                       ? "Tracks"
-                      : "Made for your listening"}
+                      : "Songs"}
               </h2>
               <div className="row">
                 {!albumView && !artistView && tracks.length > 0 && (
@@ -1202,6 +1208,7 @@ function App() {
           <div className="controls">
             <button
               title="Shuffle"
+              aria-label="Shuffle"
               aria-pressed={player.shuffle}
               className={player.shuffle ? "enabled" : ""}
               onClick={() => player.setShuffle((v) => !v)}

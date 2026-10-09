@@ -10,8 +10,9 @@
   background: #141514;
   font-synthesis: none;
   font-weight: 400;
+  font-size: 14px;
   --accent: #dfaa71;
-  --muted: #92968d;
+  --muted: #a4aa9f;
   --line: #2b2e28;
   --surface: #1b1d19;
 }
@@ -994,19 +995,7 @@ main {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.track-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-.track-actions button {
-  color: #7d886f;
-  padding: 4px;
-}
-.enabled,
-.track-actions button.enabled {
-  color: var(--accent) !important;
-}
+
 .cached {
   color: #9dae81 !important;
 }
@@ -1753,9 +1742,7 @@ main,
   .track-header > span:last-child {
     display: none;
   }
-  .track-actions {
-    display: none;
-  }
+
   .track-title .art {
     display: none;
   }
@@ -1777,15 +1764,7 @@ main,
     margin-left: 0;
     max-width: 100%;
   }
-  .track-row:focus-within .track-actions,
-  .track-row:hover .track-actions {
-    position: absolute;
-    right: 0;
-    background: #252d1f;
-    display: flex;
-    padding: 8px;
-    border-radius: 5px;
-  }
+
   .player {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 50px 43px;
@@ -1960,34 +1939,6 @@ main,
   .sidebar-bottom {
     padding-top: 12px;
     gap: 7px;
-  }
-}
-.track-menu-trigger {
-  display: none;
-}
-@media (max-width: 700px) {
-  .track-menu-trigger {
-    display: flex;
-    grid-column: 3;
-    font-size: 13px;
-    letter-spacing: 1px;
-    padding: 8px 0;
-  }
-  .track-duration {
-    display: none;
-  }
-  .track-row .track-actions.open {
-    position: absolute;
-    right: 33px;
-    background: #2b3522;
-    display: flex;
-    padding: 10px;
-    border-radius: 6px;
-    z-index: 2;
-  }
-  .track-row:hover .track-actions:not(.open),
-  .track-row:focus-within .track-actions:not(.open) {
-    display: none;
   }
 }
 .suggestion-art {
@@ -2519,4 +2470,514 @@ main,
   font-size: 10px;
   color: var(--muted);
   margin-top: 5px;
+}
+
+/* Shared hierarchy and interaction sizes across library, settings, and player. */
+.subtitle,
+.track-title span,
+.track-album,
+.track-duration,
+.now-playing span,
+.timeline span,
+.nav-label,
+.nav-empty,
+.instance,
+.track-number,
+.track-header,
+.content-footer,
+.old-value,
+.queue-credit .artist-links,
+.tabs button,
+.controls > button,
+.player-extras,
+.lyrics-heading span,
+.lyrics-source,
+.lyrics-tools {
+  color: var(--muted);
+}
+input::placeholder {
+  color: #a4aa9f;
+}
+.search {
+  width: 440px;
+}
+.search input {
+  font-size: 14px;
+  min-height: 44px;
+}
+.search > svg {
+  flex-shrink: 0;
+}
+.search button {
+  min-width: 28px;
+  min-height: 32px;
+}
+.sidebar nav button {
+  min-height: 44px;
+}
+.sidebar nav button[aria-current="page"] {
+  background: #262b22;
+  color: #eeefea;
+}
+.sidebar nav button[aria-current="page"] svg {
+  color: var(--accent);
+}
+.nav-label {
+  font-size: 11px;
+  letter-spacing: 1.2px;
+}
+.nav-label button {
+  min-width: 32px;
+  min-height: 32px;
+}
+.instance {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.subtitle,
+.panel p,
+.account-dialog .muted {
+  font-size: 14px;
+}
+.track-header {
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.track-number {
+  min-height: 40px;
+  font-size: 12px;
+}
+.track-title button {
+  font-size: 14px;
+  min-height: 24px;
+}
+.track-title span,
+.track-album,
+.track-duration {
+  font-size: 12px;
+}
+.track-title > div {
+  gap: 2px;
+}
+.track-title .artist-links {
+  line-height: 24px;
+}
+.album-card strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.album-card > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.welcome-strip p {
+  font-size: 14px;
+}
+.primary,
+.subtle,
+.load-more {
+  min-height: 40px;
+  font-size: 14px;
+}
+.small {
+  font-size: 13px;
+}
+.toast {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.toast button {
+  min-width: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+.toast > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.toast svg {
+  flex-shrink: 0;
+}
+.panel {
+  background: var(--surface);
+  border-color: var(--line);
+}
+.panel h2 {
+  font-size: 20px;
+}
+.panel code,
+.suggestion small,
+.badge {
+  font-size: 12px;
+}
+.panel code {
+  color: #c2c9b9;
+}
+.auth label,
+.admin-form label,
+.metadata-search,
+.setting-field,
+.listening-settings label {
+  font-size: 14px;
+}
+.tabs {
+  gap: 18px;
+  overflow-x: auto;
+}
+.tabs button {
+  font-size: 14px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.tabs .selected {
+  color: var(--accent);
+}
+.suggestion strong,
+.user-row > .row,
+.exclusion {
+  font-size: 14px;
+}
+.suggestion > .row > button,
+.exclusion > button,
+.queue-track > button,
+.lyrics-tools button {
+  min-width: 36px;
+  min-height: 36px;
+}
+.queue-credit .artist-links {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.queue-credit > button {
+  font-size: 14px;
+  min-height: 32px;
+}
+.queue-panel {
+  background: var(--surface);
+  border-color: var(--line);
+}
+.account-menu button {
+  min-height: 44px;
+  font-size: 14px;
+}
+.account-summary span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.dialog-heading button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.account-dialog {
+  scroll-padding: 16px;
+}
+.form-error {
+  color: #f2b991;
+}
+.app {
+  grid-template-rows: minmax(0, 1fr) 112px;
+}
+.player {
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, 1.2fr) auto;
+  gap: 20px;
+}
+.now-playing strong {
+  font-size: 14px;
+}
+.now-playing span {
+  font-size: 12px;
+}
+.controls {
+  gap: 12px;
+  margin-bottom: 2px;
+}
+.controls > button,
+.player-extras > button,
+.volume-control > button {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 8px;
+}
+.controls .play-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.controls > button:hover:not(:disabled),
+.player-extras > button:hover:not(:disabled) {
+  background: #2c3227;
+}
+.controls .play-button:hover:not(:disabled) {
+  background: #fff;
+}
+.controls .enabled,
+.player-extras .enabled {
+  color: var(--accent);
+}
+.controls small {
+  font-size: 11px;
+  right: 2px;
+}
+.timeline span {
+  font-size: 12px;
+  min-width: 34px;
+}
+.timeline input[type="range"] {
+  height: 24px;
+}
+.player-extras {
+  gap: 6px;
+}
+.quality-select.compact .quality-trigger {
+  min-height: 40px;
+}
+input[type="range"] {
+  border-radius: 0;
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  .app {
+    grid-template-rows: minmax(0, 1fr) 156px;
+  }
+  .player {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 1.3fr);
+    grid-template-rows: auto 40px;
+    gap: 8px 20px;
+  }
+  .player-extras {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+}
+@media (max-width: 700px) {
+  .app {
+    grid-template-rows: minmax(0, 1fr) calc(208px + env(safe-area-inset-bottom));
+  }
+  .sidebar {
+    padding: 20px 7px 12px;
+  }
+  .sidebar .brand {
+    margin-bottom: 22px;
+  }
+  .nav-label {
+    font-size: 0;
+  }
+  .instance {
+    font-size: 0;
+  }
+  .topbar {
+    padding: 0 12px;
+  }
+  .search {
+    max-width: none;
+  }
+  .search input {
+    font-size: 16px;
+  }
+  .content {
+    padding: 22px 16px;
+  }
+  .page-heading {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+  }
+  .subtitle,
+  .welcome-strip p,
+  .panel p {
+    font-size: 13px;
+  }
+  .mobile-nav > select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .section-heading {
+    gap: 12px;
+  }
+  .section-heading h2 {
+    font-size: 19px;
+  }
+  .section-heading > .row {
+    flex-wrap: wrap;
+  }
+  .album-card strong {
+    font-size: 14px;
+  }
+  .album-card > span {
+    font-size: 12px;
+  }
+  .track-header,
+  .track-row {
+    grid-template-columns: 24px minmax(0, 1fr) 42px 44px;
+    gap: 4px;
+  }
+  .track-duration {
+    display: block;
+    font-size: 12px;
+  }
+  .track-title button {
+    font-size: 14px;
+  }
+  .track-title span {
+    font-size: 12px;
+  }
+  .panel {
+    padding: 18px 14px;
+  }
+  .panel h2 {
+    font-size: 19px;
+  }
+  .admin .page-heading > svg {
+    display: none;
+  }
+  .tabs {
+    gap: 12px;
+  }
+  .tabs button {
+    font-size: 14px;
+  }
+  .admin-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-dialog
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  .admin-form input,
+  .auth input {
+    font-size: 16px;
+  }
+  .player {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px 76px 44px;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+  .now-playing {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 12px;
+  }
+  .now-playing strong {
+    font-size: 14px;
+  }
+  .now-playing span {
+    font-size: 12px;
+  }
+  .now-playing .art {
+    width: 44px;
+  }
+  .transport {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .controls {
+    position: static;
+    justify-content: center;
+    gap: 12px;
+    margin: 0;
+    height: 44px;
+  }
+  .controls > button:first-child,
+  .controls > button:last-child {
+    display: inline-flex;
+  }
+  .controls > button,
+  .controls .play-button {
+    width: 44px;
+    min-height: 44px;
+  }
+  .controls > button svg {
+    width: 20px;
+  }
+  .timeline {
+    height: 32px;
+  }
+  .player-extras {
+    display: flex;
+    position: static;
+    grid-column: 1;
+    grid-row: 3;
+    transform: none;
+    justify-content: center;
+    gap: 4px;
+  }
+  .player-extras > button,
+  .volume-control > button {
+    width: 44px;
+    min-height: 44px;
+  }
+  .player-extras > button svg {
+    width: 20px;
+    height: 20px;
+  }
+  .player .quality-select.compact .quality-trigger {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .player-extras .volume-control {
+    display: flex;
+    gap: 0;
+  }
+  .player-extras .volume-range {
+    display: none;
+  }
+  .quality-options {
+    max-height: min(360px, 60dvh);
+    overflow-y: auto;
+  }
+}
+@media (pointer: coarse) {
+  .queue-credit > button {
+    min-height: 44px;
+  }
+  .song-actions button,
+  .back-buttons button,
+  .search button,
+  .suggestion > .row > button,
+  .exclusion > button,
+  .queue-track > button,
+  .lyrics-tools button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .primary,
+  .subtle,
+  .load-more {
+    min-height: 44px;
+  }
+  input[type="range"] {
+    min-height: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  button,
+  input,
+  select,
+  .panel,
+  .checkbox-box {
+    border: 1px solid ButtonText;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
+  .themed-checkbox input:checked + .checkbox-box {
+    background: Highlight;
+    color: HighlightText;
+  }
+  nav button[aria-current="page"],
+  [role="tab"][aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }

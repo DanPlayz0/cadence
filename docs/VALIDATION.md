@@ -115,3 +115,12 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 ![Desktop](screenshots/cadence-desktop.jpg)
 
 ![Mobile](screenshots/cadence-mobile.jpg)
+
+## Whole-frontend design and accessibility pass (2026-10-09)
+
+- Frontend unit tests: 15 passed across seven files. TypeScript checking, Vite production build, Prettier, and whitespace checks passed.
+- Chromium API-fixture checks passed at 1280, 900, 390, and 320 pixels: skip link, heading focus, Cmd/Ctrl+K, app/browser Back, protected playback shortcuts, keyboard administrator tabs, song menus, outside/Escape dismissal, playlist search/addition, and creating a playlist then returning to the originating song.
+- Automated axe-core checks using WCAG 2 A/AA, 2.1 AA, and 2.2 AA tags reported no violations on the 13 library/admin routes and eight account/dialog/player surfaces at 1280, 390, and 320 pixels. Queue title targets and mobile seek spacing were corrected based on the initial failures. Further checks passed for the administrator user editor, expanded password reset/change forms, inline display-name editing, quality options, and sign-in.
+- Verified Cmd/Ctrl+K from the mobile queue, reduced-motion rendering, and visible focus under forced colors. Safari-style null-blur regression checks passed at desktop and phone widths for account/quality menus and administrator navigation.
+- Screenshots of desktop/phone song views, narrow administrator views, compact profiles, and lyrics were visually reviewed. Browser fixtures and downloaded QA dependencies remain ignored under `.local`; no generated tools or screenshots were committed.
+- These are automated Chromium and fixture checks, not a certification of WCAG conformance. VoiceOver/NVDA and physical Safari/iOS/Android testing, real account mutations, live lyrics-provider responses, and real playback on these devices were not exercised in this pass. Backend behavior was unchanged.
