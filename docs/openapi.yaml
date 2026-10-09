@@ -2265,7 +2265,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     post:
-      summary: Start background scan; full re-probes unchanged files
+      summary: Start background scan; optionally re-probe all or only incomplete tracks
       tags:
         - Administration
       security:
@@ -2331,6 +2331,12 @@ paths:
               properties:
                 full:
                   type: boolean
+                  default: false
+                  description: Re-probe unchanged files unless missingOnly is enabled.
+                missingOnly:
+                  type: boolean
+                  default: false
+                  description: Re-probe only tracks with missing core metadata or artwork, including unchanged files. New files are indexed. Complete tracks are skipped even when full is true. Optional year, genre, and track/disc numbers do not determine completeness.
   /admin/users:
     get:
       summary: Accounts and group memberships

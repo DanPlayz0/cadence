@@ -62,6 +62,7 @@ export function Admin({
   const [enrichment, setEnrichment] = useState(false);
   const [loading, setLoading] = useState(false);
   const [full, setFull] = useState(false);
+  const [missingOnly, setMissingOnly] = useState(false);
   const [suggestionOffset, setSuggestionOffset] = useState(0);
   const [suggestionRevision, setSuggestionRevision] = useState(0);
   const [acceptFields, setAcceptFields] = useState<string[]>(
@@ -211,7 +212,17 @@ export function Admin({
                 <Checkbox
                   label="Re-read all files and generate metadata suggestions"
                   checked={full}
+                  disabled={missingOnly}
                   onChange={(e) => setFull(e.target.checked)}
+                />
+                <Checkbox
+                  label="Rescan only missing metadata or artwork"
+                  description="Recheck tracks with missing titles, artists, albums, album artists, or artwork, plus new files. Complete tracks are skipped."
+                  checked={missingOnly}
+                  onChange={(e) => {
+                    setMissingOnly(e.target.checked);
+                    if (e.target.checked) setFull(false);
+                  }}
                 />
                 <button
                   className="primary"
@@ -219,7 +230,9 @@ export function Admin({
                     loading || scans.some((s) => s.status === "running")
                   }
                   onClick={() =>
-                    void perform(() => api("/admin/scans", "POST", { full }))
+                    void perform(() =>
+                      api("/admin/scans", "POST", { full, missingOnly }),
+                    )
                   }
                 >
                   <RefreshCw size={16} /> Scan library
@@ -231,7 +244,8 @@ export function Admin({
               <p className="muted">
                 MusicBrainz and Cover Art Archive can suggest catalog changes.
                 Set METADATA_USER_AGENT with contact information on the server.
-                Enable this, then run a full scan to include existing files.
+                Enable this, then rescan missing metadata or run a full scan to
+                include existing files.
               </p>
               <Checkbox
                 label="Enable external lookups"

@@ -402,6 +402,10 @@ func (s *Store) UpsertTrack(ctx context.Context, t domain.Track, scan string) (s
 	err := s.pool.QueryRow(ctx, `INSERT INTO tracks(id,path,root,size,modified,seen,title,artist,album_artist,album,album_id,number,disc,year,genre,duration,codec,mime,art_path) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) ON CONFLICT(path) DO UPDATE SET root=excluded.root,size=excluded.size,modified=excluded.modified,seen=excluded.seen,available=true,title=excluded.title,artist=excluded.artist,album_artist=excluded.album_artist,album=excluded.album,album_id=excluded.album_id,number=excluded.number,disc=excluded.disc,year=excluded.year,genre=excluded.genre,duration=excluded.duration,codec=excluded.codec,mime=excluded.mime,art_path=excluded.art_path RETURNING id`, ID(), t.Path, t.Root, t.Size, t.Modified, scan, t.Title, t.Artist, t.AlbumArtist, t.Album, t.AlbumID, t.Number, t.Disc, t.Year, t.Genre, t.Duration, t.Codec, t.MIME, t.ArtPath).Scan(&id)
 	return id, err
 }
+func (s *Store) TrackByPath(ctx context.Context, path string) (domain.Track, error) {
+	return readTrack(s.pool.QueryRow(ctx, "SELECT "+columns+" FROM tracks t WHERE t.path=$1", path))
+}
+
 func (s *Store) FileStamp(ctx context.Context, path string) (int64, int64, error) {
 	var size, mod int64
 	err := s.pool.QueryRow(ctx, "SELECT size,modified FROM tracks WHERE path=$1", path).Scan(&size, &mod)

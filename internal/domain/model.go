@@ -139,6 +139,7 @@ type LibraryRepository interface {
 	Artists(context.Context, string, string, int, int) ([]Artist, error)
 	UpsertTrack(context.Context, Track, string) (string, error)
 	FileStamp(context.Context, string) (int64, int64, error)
+	TrackByPath(context.Context, string) (Track, error)
 	MarkSeen(context.Context, string, string) error
 	FinishRoot(context.Context, string, string) error
 	AddSuggestion(context.Context, Suggestion) error

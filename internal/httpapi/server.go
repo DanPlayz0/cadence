@@ -266,12 +266,13 @@ func (s *Server) Handler() http.Handler {
 	})
 	m.HandleFunc("POST /api/v1/admin/scans", func(w http.ResponseWriter, r *http.Request) {
 		var v struct {
-			Full bool `json:"full"`
+			Full        bool `json:"full"`
+			MissingOnly bool `json:"missingOnly"`
 		}
 		if !decode(w, r, &v) {
 			return
 		}
-		id, ok := s.Scanner.Start(v.Full)
+		id, ok := s.Scanner.StartWithOptions(library.ScanOptions{Full: v.Full, MissingOnly: v.MissingOnly})
 		if !ok {
 			write(w, 409, map[string]string{"error": "A scan is already running or could not start"})
 			return

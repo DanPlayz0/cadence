@@ -64,7 +64,31 @@ func ResolveFile(roots []string, path string) (string, error) {
 	}
 	return "", errors.New("file outside library or unavailable")
 }
+
+type ScanOptions struct {
+	Full        bool
+	MissingOnly bool
+}
+
+func MissingMetadata(t domain.Track) bool {
+	for _, value := range []string{t.Title, t.Artist, t.Album, t.AlbumArtist} {
+		value = strings.TrimSpace(value)
+		if value == "" || strings.EqualFold(value, "Unknown artist") || strings.EqualFold(value, "Unknown album") {
+			return true
+		}
+	}
+	if t.ArtPath == "" {
+		return true
+	}
+	info, err := os.Stat(t.ArtPath)
+	return err != nil || !info.Mode().IsRegular()
+}
+
 func (s *Scanner) Start(full bool) (string, bool) {
+	return s.StartWithOptions(ScanOptions{Full: full})
+}
+
+func (s *Scanner) StartWithOptions(options ScanOptions) (string, bool) {
 	if !s.busy.CompareAndSwap(false, true) {
 		return "", false
 	}
@@ -79,10 +103,10 @@ func (s *Scanner) Start(full bool) (string, bool) {
 		slog.Error("start scan", "error", err)
 		return "", false
 	}
-	go s.run(ctx, v, full)
+	go s.run(ctx, v, options)
 	return id, true
 }
-func (s *Scanner) run(ctx context.Context, v domain.Scan, full bool) {
+func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 	defer s.busy.Store(false)
 	settings, err := s.Repo.Settings(ctx)
 	if err != nil {
@@ -131,8 +155,24 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, full bool) {
 				addErr(path + ": stat failed")
 				return nil
 			}
+			if options.MissingOnly {
+				track, lookupErr := s.Repo.TrackByPath(ctx, path)
+				if lookupErr != nil && !errors.Is(lookupErr, domain.ErrNotFound) {
+					complete = false
+					addErr("Database: " + lookupErr.Error())
+					return nil
+				}
+				// New files are incomplete; existing complete files still need to be marked seen.
+				if lookupErr == nil && !MissingMetadata(track) {
+					if err = s.Repo.MarkSeen(ctx, path, v.ID); err != nil {
+						complete = false
+						addErr("Database: " + err.Error())
+					}
+					return nil
+				}
+			}
 			size, mod, err := s.Repo.FileStamp(ctx, path)
-			if !full && err == nil && size == info.Size() && mod == info.ModTime().UnixNano() {
+			if !options.Full && !options.MissingOnly && err == nil && size == info.Size() && mod == info.ModTime().UnixNano() {
 				if err = s.Repo.MarkSeen(ctx, path, v.ID); err != nil {
 					complete = false
 					addErr("Database: " + err.Error())
