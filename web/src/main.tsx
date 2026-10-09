@@ -1410,20 +1410,6 @@ function App() {
         </div>
         <div className="player-extras">
           <button
-            aria-label="Open mini player"
-            title={miniPlayer.error || "Open mini player"}
-            disabled={!player.current}
-            onClick={() => void miniPlayer.open()}
-          >
-            <PictureInPicture2 size={18} />
-          </button>
-          {player.offline && <WifiOff size={17} />}
-          <QualitySelect
-            value={player.quality}
-            onChange={player.changeQuality}
-            compact
-          />
-          <button
             aria-label="Live lyrics"
             title="Live lyrics"
             aria-expanded={queueOpen && queueTab === "lyrics"}
@@ -1449,7 +1435,21 @@ function App() {
           >
             <ListMusic size={20} />
           </button>
+          {player.offline && <WifiOff size={17} />}
+          <QualitySelect
+            value={player.quality}
+            onChange={player.changeQuality}
+            compact
+          />
           <VolumeControl value={player.volume} onChange={player.setVolume} />
+          <button
+            aria-label="Open mini player"
+            title={miniPlayer.error || "Open mini player"}
+            disabled={!player.current}
+            onClick={() => void miniPlayer.open()}
+          >
+            <PictureInPicture2 size={18} />
+          </button>
         </div>
       </footer>
     </div>
