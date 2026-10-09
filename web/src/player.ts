@@ -426,7 +426,10 @@ export function usePlayer(
     remove,
     move,
     seek: (n: number) => {
-      audio.current.currentTime = n;
+      if (!Number.isFinite(n)) return;
+      const target = Math.max(0, Math.min(n, length || n));
+      audio.current.currentTime = target;
+      setPosition(target);
     },
     enqueue: (t: Track) => setQueue((q) => [...q, t]),
     cached: (id: string) => cache.current.has(id),

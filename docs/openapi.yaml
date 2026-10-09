@@ -1093,6 +1093,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /tracks/{id}/lyrics:
+    get:
+      summary: Fetch LRCLIB lyrics for an accessible song's current metadata
+      tags:
+        - Music
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matched lyrics, instrumental status, or found=false when no match exists
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [found, instrumental, plainLyrics, syncedLyrics, source]
+                properties:
+                  found:
+                    type: boolean
+                  instrumental:
+                    type: boolean
+                  plainLyrics:
+                    type: string
+                  syncedLyrics:
+                    type: string
+                  source:
+                    type: string
+                    enum: [LRCLIB]
+        "401":
+          description: Sign in required
+        "404":
+          description: Song unavailable or excluded
+        "503":
+          description: Lyrics provider unavailable, rate-limited, or request timed out
   /albums:
     get:
       summary: Permission-filtered albums and counts

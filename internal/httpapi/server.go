@@ -25,6 +25,7 @@ import (
 
 	"cadence/internal/domain"
 	"cadence/internal/library"
+	"cadence/internal/lyrics"
 	"cadence/internal/media"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -41,6 +42,7 @@ type Server struct {
 	Config          Config
 	limiter         loginLimiter
 	passwordLimiter loginLimiter
+	Lyrics          *lyrics.Client
 }
 type sessionKey struct{}
 
@@ -110,6 +112,12 @@ func pagination(r *http.Request) (int, int) {
 	return limit, offset
 }
 func (s *Server) Handler() http.Handler {
+	if s.Lyrics == nil {
+		s.Lyrics = lyrics.New()
+		if s.Config.PublicURL != "" {
+			s.Lyrics.UserAgent = "Cadence/0.1.0 (" + s.Config.PublicURL + ")"
+		}
+	}
 	m := http.NewServeMux()
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -163,6 +171,25 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/tracks/{id}/stream", s.stream)
 	m.HandleFunc("HEAD /api/v1/tracks/{id}/stream", s.stream)
 	m.HandleFunc("GET /api/v1/tracks/{id}/art", s.art)
+	m.HandleFunc("GET /api/v1/tracks/{id}/lyrics", func(w http.ResponseWriter, r *http.Request) {
+		track, err := s.Repo.Track(r.Context(), current(r).User.ID, r.PathValue("id"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+		result, err := s.Lyrics.Lookup(ctx, track)
+		if err != nil {
+			write(w, 503, map[string]string{"error": "Lyrics are temporarily unavailable. Try again later."})
+			return
+		}
+		if _, err = s.Repo.Track(r.Context(), current(r).User.ID, track.ID); err != nil {
+			failure(w, err)
+			return
+		}
+		write(w, 200, result)
+	})
 	m.HandleFunc("GET /api/v1/playlists", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.Repo.Playlists(r.Context(), current(r).User.ID)
 		if e != nil {

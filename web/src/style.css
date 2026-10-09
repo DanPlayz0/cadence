@@ -1035,6 +1035,72 @@ main,
   font-size: 20px;
   margin: 0;
 }
+.playback-tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  margin: 16px 0;
+}
+.playback-tabs button {
+  padding: 10px 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+}
+.playback-tabs button[aria-selected="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.lyrics-heading {
+  display: grid;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+.lyrics-heading span,
+.lyrics-source,
+.lyrics-tools {
+  color: var(--muted);
+  font-size: 12px;
+}
+.lyrics-source a {
+  color: var(--accent);
+}
+.lyrics-tools {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 10px;
+}
+.lyrics-tools button {
+  font-size: 11px;
+  padding: 6px;
+}
+.lyrics-scroll {
+  position: relative;
+  max-height: calc(100dvh - 440px);
+  min-height: 100px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  padding: 12px 4px;
+}
+.lyric-line {
+  display: block;
+  width: 100%;
+  padding: 12px 0;
+  text-align: left;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #8e9885;
+  overflow-wrap: anywhere;
+}
+.lyric-line.active {
+  color: var(--accent);
+}
+.plain-lyrics {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
 .queue-track {
   display: flex;
   align-items: center;

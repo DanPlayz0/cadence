@@ -14,6 +14,7 @@ import {
   Heart,
   Home,
   ListMusic,
+  Mic2,
   Music2,
   Pause,
   Play,
@@ -48,6 +49,7 @@ import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
 import { useNavigation } from "./useNavigation";
 import { canMoveQueueItem } from "./queue";
+import { LyricsPanel } from "./LyricsPanel";
 import "./style.css";
 
 function Artwork({
@@ -203,6 +205,7 @@ function App() {
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [queueTab, setQueueTab] = useState<"queue" | "lyrics">("queue");
   const queuePanel = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!queueOpen) return;
@@ -600,7 +603,10 @@ function App() {
             onQuality={player.changeQuality}
             onVolume={player.setVolume}
             onAdmin={() => browse("admin")}
-            onQueue={() => setQueueOpen(true)}
+            onQueue={() => {
+              setQueueTab("queue");
+              setQueueOpen(true);
+            }}
             onLogout={logout}
             onUpdated={userUpdated}
             onExpired={expire}
@@ -934,60 +940,118 @@ function App() {
           className="queue-panel"
           ref={queuePanel}
           id="play-queue"
-          aria-label="Play queue"
+          aria-label={queueTab === "queue" ? "Play queue" : "Lyrics"}
           onKeyDown={(event) => {
             if (event.key === "Escape") setQueueOpen(false);
           }}
         >
           <div className="row">
-            <h2>Play queue</h2>
+            <h2>{queueTab === "queue" ? "Play queue" : "Lyrics"}</h2>
             <button
-              aria-label="Close queue"
+              aria-label={queueTab === "queue" ? "Close queue" : "Close lyrics"}
               onClick={() => setQueueOpen(false)}
             >
               <X />
             </button>
           </div>
-          {player.queue.map((t, i) => (
-            <div
-              key={`${t.id}:${i}`}
-              className={`queue-track ${i === player.index ? "current" : ""}`}
+          <div
+            className="playback-tabs"
+            role="tablist"
+            aria-label="Playback panel"
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                event.preventDefault();
+                const next = queueTab === "queue" ? "lyrics" : "queue";
+                setQueueTab(next);
+                event.currentTarget
+                  .querySelector<HTMLButtonElement>(`[id="${next}-tab"]`)
+                  ?.focus();
+              }
+            }}
+          >
+            <button
+              id="queue-tab"
+              role="tab"
+              aria-selected={queueTab === "queue"}
+              aria-controls="queue-content"
+              tabIndex={queueTab === "queue" ? 0 : -1}
+              onClick={() => setQueueTab("queue")}
             >
-              <button
-                className="queue-title"
-                onClick={() => player.play(player.queue, i)}
-              >
-                {t.title}
-                <small>{t.artist}</small>
-              </button>
-              <button
-                aria-label="Move up"
-                disabled={
-                  !canMoveQueueItem(i, -1, player.index, player.queue.length)
-                }
-                onClick={() => player.move(i, -1)}
-              >
-                <ArrowUp size={14} />
-              </button>
-              <button
-                aria-label="Move down"
-                disabled={
-                  !canMoveQueueItem(i, 1, player.index, player.queue.length)
-                }
-                onClick={() => player.move(i, 1)}
-              >
-                <ArrowDown size={14} />
-              </button>
-              <button
-                aria-label="Remove from queue"
-                onClick={() => player.remove(i)}
-              >
-                <X size={14} />
-              </button>
+              Queue
+            </button>
+            <button
+              id="lyrics-tab"
+              role="tab"
+              aria-selected={queueTab === "lyrics"}
+              aria-controls="lyrics-content"
+              tabIndex={queueTab === "lyrics" ? 0 : -1}
+              onClick={() => setQueueTab("lyrics")}
+            >
+              Lyrics
+            </button>
+          </div>
+          {queueTab === "lyrics" ? (
+            <div
+              id="lyrics-content"
+              role="tabpanel"
+              aria-labelledby="lyrics-tab"
+            >
+              <LyricsPanel
+                track={player.current}
+                position={player.position}
+                onSeek={player.seek}
+                onExpired={expire}
+              />
             </div>
-          ))}
-          {!player.queue.length && (
-            <p className="muted">Add a song to get started.</p>
+          ) : (
+            <div id="queue-content" role="tabpanel" aria-labelledby="queue-tab">
+              {player.queue.map((t, i) => (
+                <div
+                  key={`${t.id}:${i}`}
+                  className={`queue-track ${i === player.index ? "current" : ""}`}
+                >
+                  <button
+                    className="queue-title"
+                    onClick={() => player.play(player.queue, i)}
+                  >
+                    {t.title}
+                    <small>{t.artist}</small>
+                  </button>
+                  <button
+                    aria-label="Move up"
+                    disabled={
+                      !canMoveQueueItem(
+                        i,
+                        -1,
+                        player.index,
+                        player.queue.length,
+                      )
+                    }
+                    onClick={() => player.move(i, -1)}
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    aria-label="Move down"
+                    disabled={
+                      !canMoveQueueItem(i, 1, player.index, player.queue.length)
+                    }
+                    onClick={() => player.move(i, 1)}
+                  >
+                    <ArrowDown size={14} />
+                  </button>
+                  <button
+                    aria-label="Remove from queue"
+                    onClick={() => player.remove(i)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              {!player.queue.length && (
+                <p className="muted">Add a song to get started.</p>
+              )}
+            </div>
           )}
         </aside>
       )}
@@ -1095,12 +1159,28 @@ function App() {
             compact
           />
           <button
+            aria-label="Live lyrics"
+            title="Live lyrics"
+            aria-expanded={queueOpen && queueTab === "lyrics"}
+            aria-controls="play-queue"
+            className={queueOpen && queueTab === "lyrics" ? "enabled" : ""}
+            onClick={() => {
+              setQueueTab("lyrics");
+              setQueueOpen(!(queueOpen && queueTab === "lyrics"));
+            }}
+          >
+            <Mic2 size={20} />
+          </button>
+          <button
             title={`Queue · Session cache ${(player.cacheBytes / 1048576).toFixed(0)} MB`}
             aria-label="Play queue"
-            aria-expanded={queueOpen}
+            aria-expanded={queueOpen && queueTab === "queue"}
             aria-controls="play-queue"
-            className={queueOpen ? "enabled" : ""}
-            onClick={() => setQueueOpen((v) => !v)}
+            className={queueOpen && queueTab === "queue" ? "enabled" : ""}
+            onClick={() => {
+              setQueueTab("queue");
+              setQueueOpen(!(queueOpen && queueTab === "queue"));
+            }}
           >
             <ListMusic size={20} />
           </button>
