@@ -1378,6 +1378,7 @@ function App() {
                   <div className="queue-credit">
                     <button
                       className="queue-title"
+                      title={t.title}
                       onClick={() => player.play(player.queue, i)}
                     >
                       {t.title}

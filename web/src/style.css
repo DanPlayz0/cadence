@@ -1254,6 +1254,11 @@ main,
   border-bottom: 1px solid #2d3825;
   padding: 14px 0;
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+.queue-track > button {
+  flex-shrink: 0;
 }
 .queue-track.current {
   color: var(--accent);
@@ -1268,6 +1273,7 @@ main,
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0;
+  width: 100%;
 }
 .queue-title small {
   display: block;
@@ -2476,8 +2482,13 @@ main,
 .queue-credit {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 .queue-credit .artist-links {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10px;
   color: var(--muted);
   margin-top: 5px;
@@ -3104,6 +3115,10 @@ input[type="range"] {
   overflow-y: auto;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+}
+#queue-content {
+  min-width: 0;
+  overflow-x: hidden;
 }
 .queue-panel #lyrics-content {
   display: flex;
