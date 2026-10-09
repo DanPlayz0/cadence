@@ -1354,7 +1354,7 @@ function App() {
             </button>
             <button
               aria-label="Previous track"
-              disabled={!player.queue.length}
+              disabled={player.queue.length <= 1}
               onClick={() => player.next(true)}
             >
               <SkipBack size={20} fill="currentColor" />
@@ -1373,7 +1373,7 @@ function App() {
             </button>
             <button
               aria-label="Next track"
-              disabled={!player.queue.length}
+              disabled={player.queue.length <= 1}
               onClick={() => player.next()}
             >
               <SkipForward size={20} fill="currentColor" />
