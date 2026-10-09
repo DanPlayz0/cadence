@@ -185,7 +185,8 @@ function App() {
       live = false;
     };
   }, []);
-  const { route, navigate } = useNavigation();
+  const { route, navigate, canGoBack, back } = useNavigation();
+  const searchInput = useRef<HTMLInputElement>(null);
   const view = route.view;
   const query = route.query || "";
   const [debounced, setDebounced] = useState(query);
@@ -224,6 +225,17 @@ function App() {
   const [reload, setReload] = useState(0);
   const request = useRef(0);
   const mainElement = useRef<HTMLElement>(null);
+  const focusRoute = `${view}:${selectedAlbumId || ""}:${selectedArtist}`;
+  const previousView = useRef(focusRoute);
+  useEffect(() => {
+    if (
+      previousView.current !== focusRoute &&
+      document.activeElement !== searchInput.current
+    ) {
+      mainElement.current?.querySelector<HTMLElement>("h1")?.focus();
+    }
+    previousView.current = focusRoute;
+  }, [focusRoute]);
   useEffect(() => {
     mainElement.current?.scrollTo({ top: 0 });
   }, [view, selectedAlbumId, selectedArtist, debounced]);
@@ -401,7 +413,28 @@ function App() {
   }
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest("input,textarea,select,button"))
+      if (!session || document.querySelector("dialog[open]") || e.repeat)
+        return;
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        e.key.toLowerCase() === "k"
+      ) {
+        e.preventDefault();
+        setQueueOpen(false);
+        searchInput.current?.focus();
+        searchInput.current?.select();
+        return;
+      }
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.shiftKey ||
+        (e.target as HTMLElement).closest(
+          "input,textarea,select,button,a,summary,[contenteditable],[role=menu],[role=slider]",
+        )
+      )
         return;
       if (e.code === "Space" && session) {
         e.preventDefault();
@@ -500,46 +533,63 @@ function App() {
     );
   return (
     <div className={`app ${queueOpen ? "queue-open" : ""}`}>
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={() => setQueueOpen(false)}
+      >
+        Skip to content
+      </a>
       <aside className="sidebar">
         <div className="brand">
           <Headphones /> cadence<span className="dot">.</span>
         </div>
-        <nav>
+        <nav aria-label="Browse music">
           <button
             className={view === "home" ? "active" : ""}
+            aria-current={view === "home" ? "page" : undefined}
             onClick={() => browse("home")}
           >
             <Home /> Home
           </button>
           <button
             className={view === "songs" ? "active" : ""}
+            aria-current={view === "songs" ? "page" : undefined}
             onClick={() => browse("songs")}
           >
             <Music2 /> Songs
           </button>
           <button
             className={view === "albums" ? "active" : ""}
+            aria-current={
+              view === "albums" || view === "album" ? "page" : undefined
+            }
             onClick={() => browse("albums")}
           >
             <AlbumIcon /> Albums
           </button>
           <button
             className={view === "artists" ? "active" : ""}
+            aria-current={
+              view === "artists" || view === "artist" ? "page" : undefined
+            }
             onClick={() => browse("artists")}
           >
             <Users /> Artists
           </button>
         </nav>
         <div className="nav-label">YOUR LIBRARY</div>
-        <nav>
+        <nav aria-label="Your library">
           <button
             className={view === "likes" ? "active" : ""}
+            aria-current={view === "likes" ? "page" : undefined}
             onClick={() => browse("likes")}
           >
             <Heart /> Liked songs
           </button>
           <button
             className={view === "history" ? "active" : ""}
+            aria-current={view === "history" ? "page" : undefined}
             onClick={() => browse("history")}
           >
             <Clock /> Recently played
@@ -549,16 +599,18 @@ function App() {
           PLAYLISTS
           <button
             title="Create playlist"
+            aria-label="Create playlist"
             onClick={() => setAddingPlaylist(true)}
           >
             <Plus size={17} />
           </button>
         </div>
-        <nav className="playlist-nav">
+        <nav className="playlist-nav" aria-label="Playlists">
           {playlists.map((p) => (
             <button
               key={p.id}
               className={view === `playlist:${p.id}` ? "active" : ""}
+              aria-current={view === `playlist:${p.id}` ? "page" : undefined}
               onClick={() => browse(`playlist:${p.id}`)}
             >
               <PlaylistIcon name={p.icon} />
@@ -576,16 +628,22 @@ function App() {
           </div>
         </div>
       </aside>
-      <main ref={mainElement}>
+      <main ref={mainElement} id="main-content" tabIndex={-1}>
         <header className="topbar">
           <div className="back-buttons">
-            <button aria-label="Back to library" onClick={() => browse("home")}>
+            <button
+              aria-label="Go back"
+              title="Go back"
+              disabled={!canGoBack}
+              onClick={back}
+            >
               <ChevronLeft />
             </button>
           </div>
           <div className="search">
             <Search size={18} />
             <input
+              ref={searchInput}
               aria-label="Search music"
               placeholder="Search your collection"
               value={query}
@@ -597,6 +655,9 @@ function App() {
                 setOffset(0);
               }}
             />
+            {!query && (
+              <kbd title="Search: Control K or Command K">⌘ / Ctrl K</kbd>
+            )}
             {query && (
               <button
                 aria-label="Clear search"
@@ -673,7 +734,13 @@ function App() {
             <div className="mobile-nav">
               <select
                 aria-label="Go to collection"
-                value={["album", "artist"].includes(view) ? "albums" : view}
+                value={
+                  view === "album"
+                    ? "albums"
+                    : view === "artist"
+                      ? "artists"
+                      : view
+                }
                 onChange={(e) => {
                   if (e.target.value === "__new") setAddingPlaylist(true);
                   else browse(e.target.value);
@@ -725,7 +792,9 @@ function App() {
                           ? "WELCOME TO CADENCE"
                           : "YOUR COLLECTION"}
                 </p>
-                <h1>{debounced ? `Results for “${debounced}”` : heading}</h1>
+                <h1 tabIndex={-1}>
+                  {debounced ? `Results for “${debounced}”` : heading}
+                </h1>
                 <p className="subtitle">
                   {selectedAlbum
                     ? `${selectedAlbum.artist} · ${total.toLocaleString()} songs`
@@ -909,7 +978,11 @@ function App() {
                 />
               </>
             )}
-            {loading && <p className="empty">Loading your collection…</p>}
+            {loading && (
+              <p className="empty" role="status">
+                Loading your collection…
+              </p>
+            )}
             {!loading &&
               (albumView
                 ? albums.length === 0
@@ -1092,7 +1165,7 @@ function App() {
           )}
         </aside>
       )}
-      <footer className="player">
+      <footer className="player" aria-label="Music player">
         <div className="now-playing">
           {player.current ? (
             <>
@@ -1180,6 +1253,7 @@ function App() {
             <span>{duration(player.position)}</span>
             <input
               aria-label="Seek"
+              aria-valuetext={`${duration(player.position)} of ${duration(player.length)}`}
               disabled={!player.current || !player.length}
               type="range"
               min={0}
@@ -1293,6 +1367,9 @@ function TrackList({
       </div>
       <div
         className="track-scroll"
+        tabIndex={0}
+        role="region"
+        aria-label="Songs. Scroll for more songs."
         ref={ref}
         onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
       >
