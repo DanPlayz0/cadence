@@ -95,6 +95,8 @@ function Artwork({
 }
 function App() {
   const [session, updateSession] = useState<Session | null>(null);
+  const activeUser = useRef<string | undefined>(undefined);
+  activeUser.current = session?.user.id;
   const [ready, setReady] = useState(false);
   const [setup, setSetup] = useState(false);
   const [error, setError] = useState("");
@@ -156,6 +158,7 @@ function App() {
     if (!session) {
       player.clear();
       setTracks([]);
+      setLoadedCollection("");
       setAlbums([]);
       setArtists([]);
       setPlaylists([]);
@@ -199,6 +202,20 @@ function App() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const collectionKey = JSON.stringify([
+    view,
+    selectedAlbumId,
+    selectedArtist,
+    debounced,
+  ]);
+  const [loadedCollection, setLoadedCollection] = useState("");
+  const [collectionError, setCollectionError] = useState<{
+    key: string;
+    message: string;
+  } | null>(null);
+  const collectionReady = loadedCollection === collectionKey;
+  const pendingLikes = useRef(new Set<string>());
+  const [liking, setLiking] = useState<Set<string>>(new Set());
   const albumTrack = tracks.find((track) => track.albumId === selectedAlbumId);
   const selectedAlbum = selectedAlbumId
     ? albums.find((album) => album.id === selectedAlbumId) || {
@@ -279,6 +296,7 @@ function App() {
     const id = ++request.current;
     if (!session || view === "admin") return;
     setLoading(true);
+    setCollectionError(null);
     setOffset(0);
     const params = new URLSearchParams({
       limit: "100",
@@ -297,6 +315,7 @@ function App() {
     promise
       .then((v) => {
         if (id !== request.current) return;
+        setLoadedCollection(collectionKey);
         if (albumView) {
           setAlbums(v as Album[]);
           setMore((v as Album[]).length === 100);
@@ -313,7 +332,7 @@ function App() {
       .catch((e) => {
         if (id === request.current) {
           if (e instanceof APIError && e.status === 401) expire();
-          else setError(e.message);
+          else setCollectionError({ key: collectionKey, message: e.message });
         }
       })
       .finally(() => {
@@ -328,6 +347,7 @@ function App() {
     selectedArtist,
     debounced,
     reload,
+    collectionKey,
     expire,
   ]);
   async function loadMore() {
@@ -368,13 +388,26 @@ function App() {
     }
   }
   async function like(t: Track) {
+    const userID = activeUser.current;
+    if (!userID) return;
+    if (pendingLikes.current.has(t.id)) return;
+    pendingLikes.current.add(t.id);
+    setLiking(new Set(pendingLikes.current));
     try {
       await api(`/tracks/${t.id}/like`, "PUT", { liked: !t.liked });
+      if (activeUser.current !== userID) return;
       setTracks((ts) =>
         ts.map((x) => (x.id === t.id ? { ...x, liked: !x.liked } : x)),
       );
+      setNotice(
+        `${t.liked ? "Removed" : "Added"} “${t.title}” ${t.liked ? "from" : "to"} liked songs.`,
+      );
+      if (view === "likes") setReload((value) => value + 1);
     } catch (e) {
-      setError((e as Error).message);
+      if (activeUser.current === userID) setError((e as Error).message);
+    } finally {
+      pendingLikes.current.delete(t.id);
+      setLiking(new Set(pendingLikes.current));
     }
   }
   async function logout() {
@@ -805,15 +838,19 @@ function App() {
                   {debounced ? `Results for “${debounced}”` : heading}
                 </h1>
                 <p className="subtitle">
-                  {selectedAlbum
-                    ? `${selectedAlbum.artist} · ${total.toLocaleString()} songs`
-                    : selectedArtist
-                      ? `${total.toLocaleString()} songs`
-                      : view === "home"
-                        ? "Old favorites. New obsessions. All yours."
-                        : !albumView && !artistView
-                          ? `${total.toLocaleString()} songs`
-                          : "Find something worth turning up."}
+                  {!collectionReady
+                    ? collectionError?.key === collectionKey
+                      ? "Collection unavailable."
+                      : "Loading collection…"
+                    : selectedAlbum
+                      ? `${selectedAlbum.artist} · ${total.toLocaleString()} songs`
+                      : selectedArtist
+                        ? `${total.toLocaleString()} songs`
+                        : view === "home"
+                          ? "Old favorites. New obsessions. All yours."
+                          : !albumView && !artistView
+                            ? `${total.toLocaleString()} songs`
+                            : "Find something worth turning up."}
                 </p>
               </div>
             </div>
@@ -845,14 +882,18 @@ function App() {
                       : "Songs"}
               </h2>
               <div className="row">
-                {!albumView && !artistView && tracks.length > 0 && (
-                  <button
-                    className="primary small"
-                    onClick={() => player.play(tracks)}
-                  >
-                    <Play size={16} fill="currentColor" /> Play loaded songs
-                  </button>
-                )}
+                {collectionReady &&
+                  !albumView &&
+                  !artistView &&
+                  tracks.length > 0 && (
+                    <button
+                      className="primary small"
+                      disabled={loading}
+                      onClick={() => player.play(tracks)}
+                    >
+                      <Play size={16} fill="currentColor" /> Play loaded songs
+                    </button>
+                  )}
                 {playlist && (
                   <button
                     className="subtle"
@@ -880,7 +921,37 @@ function App() {
                 )}
               </div>
             </div>
-            {albumView ? (
+            {collectionReady && collectionError?.key === collectionKey && (
+              <div className="toast" role="alert">
+                <span>{collectionError.message}</span>
+                <button
+                  disabled={loading}
+                  onClick={() => setReload((value) => value + 1)}
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+            {!collectionReady ? (
+              <div className="collection-placeholder">
+                {collectionError?.key === collectionKey ? (
+                  <div className="empty" role="alert">
+                    <h3>Couldn’t load this collection.</h3>
+                    <p>{collectionError.message}</p>
+                    <button
+                      className="primary"
+                      onClick={() => setReload((value) => value + 1)}
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : (
+                  <p className="empty" role="status">
+                    Loading your collection…
+                  </p>
+                )}
+              </div>
+            ) : albumView ? (
               <div className="album-grid">
                 {albums.map((a) => (
                   <button
@@ -931,6 +1002,7 @@ function App() {
                   currentId={player.current?.id}
                   playing={player.playing}
                   cached={player.cached}
+                  liking={liking}
                   onPlay={(i) => player.play(tracks, i)}
                   onLike={(t) => void like(t)}
                   onQueue={(track) => {
@@ -956,12 +1028,13 @@ function App() {
                 />
               </>
             )}
-            {loading && (
+            {loading && collectionReady && (
               <p className="empty" role="status">
                 Loading your collection…
               </p>
             )}
-            {!loading &&
+            {collectionReady &&
+              !loading &&
               (albumView
                 ? albums.length === 0
                 : artistView
@@ -983,7 +1056,7 @@ function App() {
                   </p>
                 </div>
               )}
-            {more && (
+            {collectionReady && more && (
               <button
                 className="load-more"
                 disabled={loading}
@@ -1325,6 +1398,7 @@ function TrackList({
   currentId,
   playing,
   cached,
+  liking,
   onPlay,
   onArtist,
   onLike,
@@ -1336,6 +1410,7 @@ function TrackList({
   currentId?: string;
   playing: boolean;
   cached: (id: string) => boolean;
+  liking: Set<string>;
   onPlay: (i: number) => void;
   onArtist: (name: string) => void;
   onLike: (t: Track) => void;
@@ -1422,6 +1497,7 @@ function TrackList({
                 <span className="track-duration">{duration(t.duration)}</span>
                 <TrackActions
                   track={t}
+                  liking={liking.has(t.id)}
                   onLike={() => onLike(t)}
                   onQueue={() => onQueue(t)}
                   onAdd={() => onAdd(t)}

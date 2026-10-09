@@ -2473,6 +2473,13 @@ main,
 }
 
 /* Shared hierarchy and interaction sizes across library, settings, and player. */
+.collection-placeholder {
+  min-height: 280px;
+  padding: 28px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
 .subtitle,
 .track-title span,
 .track-album,

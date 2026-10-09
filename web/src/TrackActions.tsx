@@ -7,12 +7,14 @@ import { usePopoverDismiss } from "./usePopoverDismiss";
 
 export function TrackActions({
   track,
+  liking,
   onLike,
   onQueue,
   onAdd,
   onRemove,
 }: {
   track: Track;
+  liking: boolean;
   onLike: () => void;
   onQueue: () => void;
   onAdd: () => void;
@@ -29,7 +31,9 @@ export function TrackActions({
   usePopoverDismiss(!!position, root, () => setPosition(null), menu);
   useEffect(() => {
     if (!position) return;
-    menu.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    menu.current
+      ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+      ?.focus();
     const close = (event: Event) => {
       if (!menu.current?.contains(event.target as Node)) setPosition(null);
     };
@@ -56,6 +60,7 @@ export function TrackActions({
         aria-label={`${track.liked ? "Unlike" : "Like"} ${track.title}`}
         title={track.liked ? "Unlike" : "Like"}
         aria-pressed={track.liked}
+        disabled={liking}
         onClick={onLike}
       >
         <Heart size={18} fill={track.liked ? "currentColor" : "none"} />
@@ -107,7 +112,9 @@ export function TrackActions({
             onDoubleClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => {
               const buttons = Array.from(
-                menu.current!.querySelectorAll<HTMLButtonElement>("button"),
+                menu.current!.querySelectorAll<HTMLButtonElement>(
+                  "button:not(:disabled)",
+                ),
               );
               const index = buttons.indexOf(
                 document.activeElement as HTMLButtonElement,
@@ -134,7 +141,11 @@ export function TrackActions({
               }
             }}
           >
-            <button role="menuitem" onClick={() => choose(onLike)}>
+            <button
+              role="menuitem"
+              disabled={liking}
+              onClick={() => choose(onLike)}
+            >
               <Heart size={18} />
               {track.liked ? "Remove from liked songs" : "Like song"}
             </button>

@@ -124,3 +124,8 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 - Verified Cmd/Ctrl+K from the mobile queue, reduced-motion rendering, and visible focus under forced colors. Safari-style null-blur regression checks passed at desktop and phone widths for account/quality menus and administrator navigation.
 - Screenshots of desktop/phone song views, narrow administrator views, compact profiles, and lyrics were visually reviewed. Browser fixtures and downloaded QA dependencies remain ignored under `.local`; no generated tools or screenshots were committed.
 - These are automated Chromium and fixture checks, not a certification of WCAG conformance. VoiceOver/NVDA and physical Safari/iOS/Android testing, real account mutations, live lyrics-provider responses, and real playback on these devices were not exercised in this pass. Backend behavior was unchanged.
+
+## Collection loading and mutation follow-up (2026-10-09)
+
+- Chromium fixtures at 1280 and 390 pixels deliberately failed/delayed collection requests. Switching collections removed previous rows and their play action immediately; retry showed only the newly requested collection. Delayed/failed likes disabled the like action, repeated clicks issued one request, unrelated menu actions retained keyboard focus, and failed saves left the original liked state intact and recoverable.
+- Build and all 15 frontend tests passed. The full route/dialog accessibility sweep was repeated after introducing loading placeholders and retry controls. QA used controlled API responses; production network behavior and real account changes were not tested.
