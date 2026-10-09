@@ -254,14 +254,21 @@ func Probe(ctx context.Context, path, mime string) (domain.Track, map[string]str
 		return domain.Track{}, tags, errors.New("no audio stream")
 	}
 	t := domain.Track{Path: path, MIME: mime, Codec: codec, Title: tags["title"], Artist: tags["artist"], Album: tags["album"], AlbumArtist: tags["album_artist"], Year: tags["date"], Genre: tags["genre"]}
+	filenameTitle, filenameArtist, filenameAlbum := FilenameMetadata(path)
 	if t.Title == "" {
-		t.Title = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		t.Title = filenameTitle
 	}
 	if t.Artist == "" {
-		t.Artist = "Unknown artist"
+		t.Artist = filenameArtist
+		if t.Artist == "" {
+			t.Artist = "Unknown artist"
+		}
 	}
 	if t.Album == "" {
-		t.Album = filepath.Base(filepath.Dir(path))
+		t.Album = filenameAlbum
+		if t.Album == "" {
+			t.Album = filepath.Base(filepath.Dir(path))
+		}
 	}
 	if t.AlbumArtist == "" {
 		t.AlbumArtist = tags["albumartist"]
