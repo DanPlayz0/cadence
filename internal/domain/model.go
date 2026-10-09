@@ -159,6 +159,7 @@ type AdminRepository interface {
 	Suggestions(context.Context, int, int) ([]Suggestion, error)
 	Suggestion(context.Context, string) (Suggestion, error)
 	ResolveSuggestion(context.Context, string, bool) error
+	AcceptSuggestions(context.Context, []string) (int64, error)
 	ClearOverride(context.Context, string, string) error
 	Settings(context.Context) (map[string]bool, error)
 	SetEnrichment(context.Context, bool) error

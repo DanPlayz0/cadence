@@ -2968,6 +2968,48 @@ paths:
                 value:
                   type: string
                   description: Text up to 500 bytes; title and artist must be nonempty. Track/disc numbers are integers from 0 to 9999. Optional text fields may be empty.
+  /admin/suggestions/accept-all:
+    post:
+      summary: Accept all pending changes in selected metadata fields
+      description: Applies one transactional snapshot across all pages. The newest suggestion wins when a song has conflicting values for the same field.
+      tags:
+        - Administration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              additionalProperties: false
+              properties:
+                fields:
+                  type: array
+                  minItems: 1
+                  maxItems: 9
+                  items:
+                    type: string
+                    enum: [title, artist, album, albumArtist, year, genre, number, disc, artwork]
+      responses:
+        "200":
+          description: All selected pending suggestions accepted atomically
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted:
+                    type: integer
+                    minimum: 0
+        "400":
+          description: Invalid or empty field selection
+        "401":
+          description: Sign in required
+        "403":
+          description: Administrator or CSRF verification required
+        "500":
+          description: Batch failed and was rolled back
   /admin/suggestions/{id}/resolve:
     post:
       summary: Accept into catalog overrides or dismiss; files stay unchanged

@@ -67,6 +67,12 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 - Ten frontend tests, TypeScript/production build, formatting, OpenAPI checks (39 paths), Go vet, and Go race checks passed. Backend tests cover authentication/exclusions even for cached lyrics, permission changes during lookup, metadata encoding, album fallback, positive/negative caching, concurrent request coalescing, instrumental handling, response bounds, and rate-limit backoff. PostgreSQL integration cases were skipped in this run; database code was unchanged.
 - Chromium API-fixture checks at desktop/phone widths passed for synchronized highlights, forward/backward seeking while paused, auto-scroll/follow, keyboard tabs, plain/instrumental/missing/error/retry states, current-song changes, stale responses, and no runtime errors or horizontal overflow. Screenshots were visually reviewed. A read-only live LRCLIB request returned HTTP 503 (server busy); successful live-provider matching and cross-browser/device testing were not verified.
 
+## Field-selectable bulk acceptance update (2026-10-09)
+
+- Added themed metadata field choices, select-all/clear controls, and an Accept all action in Review changes. It covers pending rows beyond pagination, reports the accepted count, keeps unselected fields pending, and refreshes the review/search data. Conflicting suggestions use the newest value. Retry clears the preceding error and preserves field choices.
+- Ten frontend tests, TypeScript/production build, formatting, OpenAPI validation (40 paths), Go vet, and the full Go race suite passed with a disposable PostgreSQL database. Added tests cover authentication/admin/CSRF enforcement, invalid selections, 107 changes beyond the 100-row page, field isolation, newest-value conflicts, repeat acceptance, and transaction rollback without partial updates.
+- Chromium API-fixture checks at desktop/phone widths passed for field choices, disabled empty selection, failed-save retry, busy controls, acceptance of unloaded titles, preservation of artist suggestions, select-all behavior, success counts, and no runtime errors/horizontal overflow. The phone layout was visually reviewed. Cross-browser and live full-stack browser checks were not run.
+
 ## Catalog benchmark
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.

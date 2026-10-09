@@ -353,6 +353,30 @@ func (s *Server) Handler() http.Handler {
 		write(w, 200, v)
 	})
 	m.HandleFunc("POST /api/v1/admin/suggestions", s.suggest)
+	m.HandleFunc("POST /api/v1/admin/suggestions/accept-all", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Fields []string `json:"fields"`
+		}
+		if !decode(w, r, &body) {
+			return
+		}
+		if len(body.Fields) == 0 || len(body.Fields) > 9 {
+			write(w, 400, map[string]string{"error": "Choose at least one metadata field."})
+			return
+		}
+		for _, field := range body.Fields {
+			if !validField(field) {
+				write(w, 400, map[string]string{"error": "Invalid metadata field."})
+				return
+			}
+		}
+		count, err := s.Repo.AcceptSuggestions(r.Context(), body.Fields)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		write(w, 200, map[string]int64{"accepted": count})
+	})
 	m.HandleFunc("GET /api/v1/admin/suggestions/{id}/art", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.Repo.Suggestion(r.Context(), r.PathValue("id"))
 		if e != nil {

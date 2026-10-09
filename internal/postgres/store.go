@@ -624,6 +624,57 @@ func (s *Store) ResolveSuggestion(ctx context.Context, id string, accept bool) e
 func (s *Store) ClearOverride(ctx context.Context, id, field string) error {
 	return affected(s.pool.Exec(ctx, "UPDATE tracks SET overrides=overrides-$2 WHERE id=$1", id, field))
 }
+
+// AcceptSuggestions applies one snapshot of all pending changes in the selected
+// fields, including unpaged rows. Newest suggestions win conflicting values.
+func (s *Store) AcceptSuggestions(ctx context.Context, fields []string) (int64, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(ctx)
+	rows, err := tx.Query(ctx, `SELECT id,track_id FROM suggestions WHERE status='pending' AND field=ANY($1) ORDER BY track_id,field,created,id FOR UPDATE`, fields)
+	if err != nil {
+		return 0, err
+	}
+	ids, tracks := []string{}, []string{}
+	for rows.Next() {
+		var id, track string
+		if err = rows.Scan(&id, &track); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		ids = append(ids, id)
+		tracks = append(tracks, track)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	// Stable track lock order also serializes concurrent single-field acceptance.
+	if _, err = tx.Exec(ctx, `SELECT id FROM tracks WHERE id=ANY($1) ORDER BY id FOR UPDATE`, tracks); err != nil {
+		return 0, err
+	}
+	if _, err = tx.Exec(ctx, `WITH latest AS (
+	 SELECT DISTINCT ON(track_id,field) track_id,field,value FROM suggestions
+	 WHERE id=ANY($1) ORDER BY track_id,field,created DESC,id DESC
+	), changes AS (SELECT track_id,jsonb_object_agg(field,value) AS values FROM latest GROUP BY track_id)
+	UPDATE tracks t SET overrides=t.overrides||changes.values FROM changes WHERE t.id=changes.track_id`, ids); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE suggestions SET status='accepted' WHERE id=ANY($1)`, ids)
+	if err != nil {
+		return 0, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
 func (s *Store) Settings(ctx context.Context) (map[string]bool, error) {
 	var b bool
 	err := s.pool.QueryRow(ctx, "SELECT enabled FROM settings WHERE key='enrichment'").Scan(&b)

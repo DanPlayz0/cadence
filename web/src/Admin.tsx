@@ -25,6 +25,17 @@ type Scan = {
   indexed: number;
   errors: string[];
 };
+const reviewFields = {
+  title: "Titles",
+  artist: "Artists",
+  album: "Albums",
+  albumArtist: "Album artists",
+  year: "Years",
+  genre: "Genres",
+  number: "Track numbers",
+  disc: "Disc numbers",
+  artwork: "Artwork",
+};
 export function Admin({
   report,
   onUpdated,
@@ -53,6 +64,10 @@ export function Admin({
   const [full, setFull] = useState(false);
   const [suggestionOffset, setSuggestionOffset] = useState(0);
   const [suggestionRevision, setSuggestionRevision] = useState(0);
+  const [acceptFields, setAcceptFields] = useState<string[]>(
+    Object.keys(reviewFields),
+  );
+  const [bulkNotice, setBulkNotice] = useState("");
   const [more, setMore] = useState(false);
   const load = useCallback(async () => {
     try {
@@ -98,6 +113,8 @@ export function Admin({
     return () => clearInterval(t);
   }, [load, loadSuggestions]);
   async function perform(fn: () => Promise<unknown>) {
+    if (loading) return;
+    report("");
     setLoading(true);
     try {
       await fn();
@@ -442,6 +459,79 @@ export function Admin({
           />
           <div className="panel">
             <h2>Review changes</h2>
+            <fieldset className="bulk-review" disabled={loading}>
+              <legend>Fields to accept</legend>
+              <div className="bulk-review-fields">
+                {Object.entries(reviewFields).map(([field, label]) => (
+                  <Checkbox
+                    key={field}
+                    label={label}
+                    checked={acceptFields.includes(field)}
+                    onChange={(event) => {
+                      setBulkNotice("");
+                      setAcceptFields((current) =>
+                        event.target.checked
+                          ? [...current, field]
+                          : current.filter((value) => value !== field),
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="row bulk-review-actions">
+                <button
+                  type="button"
+                  className="subtle"
+                  onClick={() => {
+                    setAcceptFields(Object.keys(reviewFields));
+                    setBulkNotice("");
+                  }}
+                >
+                  Select all fields
+                </button>
+                <button
+                  type="button"
+                  className="subtle"
+                  onClick={() => {
+                    setAcceptFields([]);
+                    setBulkNotice("");
+                  }}
+                >
+                  Clear selection
+                </button>
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!acceptFields.length || !suggestions.length}
+                  onClick={() =>
+                    void perform(async () => {
+                      setBulkNotice("");
+                      const result = await api<{ accepted: number }>(
+                        "/admin/suggestions/accept-all",
+                        "POST",
+                        { fields: acceptFields },
+                      );
+                      setBulkNotice(
+                        `${result.accepted} ${result.accepted === 1 ? "change" : "changes"} accepted.`,
+                      );
+                      await loadSuggestions();
+                    })
+                  }
+                >
+                  {loading ? "Working…" : "Accept all selected fields"}
+                </button>
+              </div>
+              <p className="muted">
+                Applies to all pending changes in these fields, including those
+                not loaded below. If a song has conflicting changes for one
+                field, the newest wins.
+              </p>
+            </fieldset>
+            {bulkNotice && (
+              <p className="bulk-review-notice" role="status">
+                {bulkNotice}
+              </p>
+            )}
             {suggestions.map((s) => (
               <div className="suggestion" key={s.id}>
                 <div>
@@ -513,6 +603,7 @@ export function Admin({
             {more && (
               <button
                 className="load-more"
+                disabled={loading}
                 onClick={() => void loadSuggestions(suggestionOffset + 100)}
               >
                 Load more
