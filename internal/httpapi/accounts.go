@@ -3,6 +3,7 @@ package httpapi
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -39,15 +40,20 @@ func (s *Server) updateAdminUser(w http.ResponseWriter, r *http.Request) {
 		Username    *string   `json:"username"`
 		DisplayName *string   `json:"displayName"`
 		Groups      *[]string `json:"groups"`
+		Admin       *bool     `json:"admin"`
 	}
 	if !decode(w, r, &v) {
 		return
 	}
-	if (v.Username == nil && v.DisplayName == nil && v.Groups == nil) || (v.Username != nil && !validName(*v.Username)) || (v.DisplayName != nil && !validName(*v.DisplayName)) || (v.Groups != nil && len(*v.Groups) > 100) {
+	if (v.Username == nil && v.DisplayName == nil && v.Groups == nil && v.Admin == nil) || (v.Username != nil && !validName(*v.Username)) || (v.DisplayName != nil && !validName(*v.DisplayName)) || (v.Groups != nil && len(*v.Groups) > 100) {
 		write(w, 400, map[string]string{"error": "Use valid names and at most 100 groups."})
 		return
 	}
-	u, err := s.Repo.UpdateUser(r.Context(), r.PathValue("id"), domain.UserUpdate{Username: v.Username, DisplayName: v.DisplayName, Groups: v.Groups})
+	u, err := s.Repo.UpdateUser(r.Context(), r.PathValue("id"), domain.UserUpdate{Username: v.Username, DisplayName: v.DisplayName, Groups: v.Groups, Admin: v.Admin})
+	if errors.Is(err, domain.ErrLastAdministrator) {
+		write(w, 400, map[string]string{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		failure(w, err)
 		return

@@ -95,6 +95,15 @@ func TestAccountManagement(t *testing.T) {
 		}
 	}
 	profilePath := "/admin/users/" + listener.ID
+	check(request("PUT", profilePath, "listener", []byte(`{"admin":true}`), true), 403)
+	check(request("PUT", profilePath, "owner", []byte(`{"admin":true}`), false), 403)
+	check(request("PUT", "/admin/users/"+owner.ID, "owner", []byte(`{"admin":false}`), true), 400)
+	check(request("PUT", profilePath, "owner", []byte(`{"admin":true}`), true), 200)
+	check(request("GET", "/admin/users", "listener", nil, false), 200)
+	check(request("PUT", profilePath, "owner", []byte(`{"displayName":"Promoted"}`), true), 200)
+	check(request("GET", "/admin/users", "listener", nil, false), 200)
+	check(request("PUT", profilePath, "owner", []byte(`{"admin":false}`), true), 200)
+	check(request("GET", "/admin/users", "listener", nil, false), 403)
 	check(request("PUT", "/me", "", []byte(`{"displayName":"Edited"}`), true), 401)
 	check(request("PUT", "/me", "listener", []byte(`{"displayName":"Edited"}`), false), 403)
 	check(request("PUT", "/me", "listener", []byte(`{"displayName":"Edited","admin":true}`), true), 400)
@@ -177,4 +186,55 @@ func TestAccountManagement(t *testing.T) {
 	makeSession(u, "revoke-me")
 	check(request("DELETE", profilePath+"/sessions", "owner", nil, true), 200)
 	check(request("GET", "/me", "revoke-me", nil, false), 401)
+}
+
+func TestConcurrentAdministratorDemotions(t *testing.T) {
+	repo, _ := fixture(t)
+	ctx := context.Background()
+	first, err := repo.CreateUser(ctx, domain.User{Username: "first-admin", DisplayName: "First", Password: "hash", Admin: true}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := repo.CreateUser(ctx, domain.User{Username: "second-admin", DisplayName: "Second", Password: "hash", Admin: true}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := make(chan struct{})
+	results := make(chan error, 2)
+	for _, id := range []string{first.ID, second.ID} {
+		go func(id string) {
+			<-start
+			admin := false
+			_, err := repo.UpdateUser(ctx, id, domain.UserUpdate{Admin: &admin})
+			results <- err
+		}(id)
+	}
+	close(start)
+	succeeded, blocked := 0, 0
+	for i := 0; i < 2; i++ {
+		err := <-results
+		if err == nil {
+			succeeded++
+		} else if errors.Is(err, domain.ErrLastAdministrator) {
+			blocked++
+		} else {
+			t.Fatal(err)
+		}
+	}
+	if succeeded != 1 || blocked != 1 {
+		t.Fatalf("demotions: %d succeeded, %d blocked", succeeded, blocked)
+	}
+	users, err := repo.Users(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admins := 0
+	for _, user := range users {
+		if user.Admin {
+			admins++
+		}
+	}
+	if admins != 1 {
+		t.Fatalf("remaining administrators: %d", admins)
+	}
 }

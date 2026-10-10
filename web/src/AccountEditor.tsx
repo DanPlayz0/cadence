@@ -29,6 +29,7 @@ export function AccountEditor({
   const [account, setAccount] = useState(user);
   const [displayName, setDisplayName] = useState(user.displayName);
   const [username, setUsername] = useState(user.username);
+  const [administrator, setAdministrator] = useState(user.admin);
   const [groupIDs, setGroupIDs] = useState(user.groups || []);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -234,16 +235,21 @@ export function AccountEditor({
             const next = await api<User>(path, "PUT", {
               displayName,
               ...(adminMode
-                ? { username: username.trim().toLowerCase(), groups: groupIDs }
+                ? {
+                    username: username.trim().toLowerCase(),
+                    groups: groupIDs,
+                    admin: administrator,
+                  }
                 : {}),
             });
             updated(next);
             setDisplayName(next.displayName);
             setUsername(next.username);
             setGroupIDs(next.groups || []);
+            setAdministrator(next.admin);
             setEditingName(false);
             return adminMode
-              ? "User details and groups saved."
+              ? "User details, role, and groups saved."
               : "Profile saved.";
           });
         }}
@@ -267,6 +273,12 @@ export function AccountEditor({
                     }
                   />
                 </label>
+                <Checkbox
+                  label="Administrator"
+                  description="Can manage users, groups, library scans, and instance settings."
+                  checked={administrator}
+                  onChange={(event) => setAdministrator(event.target.checked)}
+                />
                 <fieldset className="editor-groups">
                   <legend>Groups</legend>
                   {groups.length ? (

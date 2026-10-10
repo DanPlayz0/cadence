@@ -22,9 +22,24 @@ func (s *Store) UpdateUser(ctx context.Context, id string, patch domain.UserUpda
 		return domain.User{}, err
 	}
 	defer tx.Rollback(ctx)
+	// Serialize role changes so concurrent demotions cannot remove every admin.
+	if patch.Admin != nil {
+		if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(78419323)"); err != nil {
+			return domain.User{}, err
+		}
+	}
 	var locked string
 	if err = tx.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 FOR UPDATE", id).Scan(&locked); err != nil {
 		return domain.User{}, mapped(err)
+	}
+	if patch.Admin != nil && !*patch.Admin {
+		var last bool
+		if err = tx.QueryRow(ctx, "SELECT admin AND (SELECT count(*) FROM users WHERE admin)=1 FROM users WHERE id=$1", id).Scan(&last); err != nil {
+			return domain.User{}, err
+		}
+		if last {
+			return domain.User{}, domain.ErrLastAdministrator
+		}
 	}
 	if patch.Username != nil {
 		normalized := strings.ToLower(strings.TrimSpace(*patch.Username))
@@ -34,7 +49,7 @@ func (s *Store) UpdateUser(ctx context.Context, id string, patch domain.UserUpda
 		trimmed := strings.TrimSpace(*patch.DisplayName)
 		patch.DisplayName = &trimmed
 	}
-	if _, err = tx.Exec(ctx, "UPDATE users SET username=coalesce($2,username),display_name=coalesce($3,display_name) WHERE id=$1", id, patch.Username, patch.DisplayName); err != nil {
+	if _, err = tx.Exec(ctx, "UPDATE users SET username=coalesce($2,username),display_name=coalesce($3,display_name),admin=coalesce($4,admin) WHERE id=$1", id, patch.Username, patch.DisplayName, patch.Admin); err != nil {
 		return domain.User{}, mapped(err)
 	}
 	if patch.Groups != nil {

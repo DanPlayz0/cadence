@@ -10,6 +10,7 @@ import (
 
 var ErrNotFound = errors.New("not found")
 var ErrConflict = errors.New("conflict")
+var ErrLastAdministrator = errors.New("At least one administrator must remain")
 
 type User struct {
 	ID            string   `json:"id"`
@@ -23,6 +24,7 @@ type User struct {
 }
 
 type UserUpdate struct {
+	Admin       *bool
 	Username    *string
 	DisplayName *string
 	Groups      *[]string

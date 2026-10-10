@@ -806,6 +806,9 @@ paths:
                 displayName:
                   type: string
                   description: Nonblank name up to 120 UTF-8 bytes; no newlines or null bytes.
+                admin:
+                  type: boolean
+                  description: Grant or remove administrator privileges; the last administrator cannot be demoted
                 groups:
                   type: array
                   maxItems: 100
