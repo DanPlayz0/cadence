@@ -3840,3 +3840,21 @@ input[type="range"] {
 .activity-pagination > span {
   margin-right: auto;
 }
+
+.bulk-metadata-editor {
+  margin-top: 20px;
+}
+.bulk-metadata-editor > .admin-form {
+  margin-top: 20px;
+}
+.bulk-metadata-track {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.bulk-metadata-track span {
+  color: var(--muted);
+  font-size: 12px;
+}

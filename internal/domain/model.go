@@ -262,6 +262,8 @@ type AdminRepository interface {
 	Devices(context.Context) ([]Device, error)
 	Activity(context.Context, string, string, int, int) (ActivityPage, error)
 	RecordActivity(context.Context, ActivityEntry) error
+	MetadataMatches(context.Context, string, string, string, int, int) (Page, error)
+	BulkMetadataSuggestions(context.Context, string, string, string, string, int) (int64, error)
 }
 type Repository interface {
 	AuthRepository

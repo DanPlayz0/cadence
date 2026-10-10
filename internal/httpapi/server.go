@@ -384,6 +384,8 @@ func (s *Server) Handler() http.Handler {
 		}
 		write(w, 200, v)
 	})
+	m.HandleFunc("GET /api/v1/admin/metadata/tracks", s.metadataMatches)
+	m.HandleFunc("POST /api/v1/admin/metadata/bulk", s.bulkMetadataSuggestions)
 	m.HandleFunc("GET /api/v1/admin/library", s.libraryDirectory)
 	m.HandleFunc("GET /api/v1/admin/tracks/{id}/suggestions", s.trackSuggestions)
 	m.HandleFunc("POST /api/v1/admin/tracks/{id}/metadata", s.applyMetadataChoices)

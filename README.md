@@ -16,6 +16,8 @@ Linux containers run as UID/GID 10001; the mounted music directory must be reada
 
 ## Listening and administration
 
+- **Instance settings → Metadata review → Edit song metadata → Attribute filter / bulk edit** matches an attribute’s current catalog value exactly, ignoring case, and previews matching songs. Enter a replacement and save suggestions for every match, including songs on other pages. Leave Album empty to turn incorrectly tagged albums (such as `music`) into singles after accepting the suggestions. Other optional fields can also be cleared; title and artist must stay nonblank, and track/disc numbers must be 0–9999. Library exclusions are respected, files are untouched, and a changed match count requires refreshing the preview.
+
 - Administrators can open a user card under **Instance settings → Users**, change **Administrator**, and click **Save user**. Role changes apply to existing sessions immediately and appear in Activity. The last administrator cannot be demoted.
 
 - **Instance settings → Activity** shows persisted user and system events with All/User/System filters, search, and pages of 25 events. Events include sign-ins, session removal (sign-out, revocation, or expiration), failed logins, account/group/access changes, branding/enrichment changes, recorded plays, and library scan results. User events identify the affected listener, not necessarily the administrator who made the change. Play events mean a play was recorded in listening history, not a playback start or stop. Existing records are not backfilled. Activity survives session/user deletion; no passwords, session tokens, or CSRF values are stored. Scan details remain under **Scan activity**.

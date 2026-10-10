@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useEffect, useState } from "react";
 import { api, type Track, type Page } from "./api";
+import { BulkMetadataEditor } from "./BulkMetadataEditor";
 import { LibraryMetadataBrowser } from "./LibraryMetadataBrowser";
 import { MetadataChooser } from "./MetadataChooser";
 import { Button } from "./components/ui/button";
@@ -43,7 +44,9 @@ export function TrackMetadataEditor({
   const [error, setError] = useState("");
   const [searchError, setSearchError] = useState("");
   const [notice, setNotice] = useState("");
-  const [mode, setMode] = useState<"search" | "folders">("folders");
+  const [mode, setMode] = useState<"search" | "folders" | "attributes">(
+    "folders",
+  );
   const [selectedPath, setSelectedPath] = useState("");
   const [chooser, setChooser] = useState(false);
   const dirty =
@@ -151,6 +154,14 @@ export function TrackMetadataEditor({
         >
           Search songs
         </Button>
+        <Button
+          variant="outline"
+          aria-pressed={mode === "attributes"}
+          disabled={busy || dirty}
+          onClick={() => setMode("attributes")}
+        >
+          Attribute filter / bulk edit
+        </Button>
       </div>
       {dirty && (
         <p role="status">
@@ -164,7 +175,13 @@ export function TrackMetadataEditor({
           </Button>
         </p>
       )}
-      {mode === "folders" ? (
+      {mode === "attributes" ? (
+        <BulkMetadataEditor
+          onSuggestions={onSuggestions}
+          revision={revision}
+          disabled={busy || dirty}
+        />
+      ) : mode === "folders" ? (
         <LibraryMetadataBrowser
           onSelect={(id, path) => void selectTrack(id, path)}
           busy={busy || dirty}
@@ -239,7 +256,7 @@ export function TrackMetadataEditor({
           {searchError}
         </p>
       )}
-      {selected && draft && baseline && (
+      {mode !== "attributes" && selected && draft && baseline && (
         <form
           className="admin-form metadata-form"
           aria-busy={busy}

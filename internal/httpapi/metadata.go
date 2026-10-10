@@ -5,6 +5,7 @@ import (
 	"cadence/internal/domain"
 	"errors"
 	"net/http"
+	"strings"
 )
 
 func (s *Server) libraryDirectory(w http.ResponseWriter, r *http.Request) {
@@ -69,4 +70,52 @@ func (s *Server) applyMetadataChoices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 200, map[string]int{"accepted": len(input.Choices)})
+}
+
+func metadataFilter(field, value string) bool {
+	switch field {
+	case "title", "artist", "album", "albumArtist", "year", "genre", "number", "disc":
+	default:
+		return false
+	}
+	return len(value) <= 500 && !strings.ContainsRune(value, 0)
+}
+func (s *Server) metadataMatches(w http.ResponseWriter, r *http.Request) {
+	field, value := r.URL.Query().Get("field"), r.URL.Query().Get("value")
+	if !metadataFilter(field, value) {
+		write(w, 400, map[string]string{"error": "Choose a valid metadata attribute and a value up to 500 bytes"})
+		return
+	}
+	limit, offset := pagination(r)
+	result, err := s.Repo.MetadataMatches(r.Context(), current(r).User.ID, field, value, limit, offset)
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, result)
+}
+func (s *Server) bulkMetadataSuggestions(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Field         string `json:"field"`
+		Match         string `json:"match"`
+		Value         string `json:"value"`
+		ExpectedCount int    `json:"expectedCount"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	if !metadataFilter(input.Field, input.Match) || !validSuggestion(input.Field, input.Value) || strings.ContainsRune(input.Value, 0) || input.ExpectedCount < 1 {
+		write(w, 400, map[string]string{"error": "Choose a valid attribute and replacement. Title and artist cannot be empty; track and disc numbers must be 0–9999."})
+		return
+	}
+	count, err := s.Repo.BulkMetadataSuggestions(r.Context(), current(r).User.ID, input.Field, input.Match, input.Value, input.ExpectedCount)
+	if errors.Is(err, domain.ErrConflict) {
+		write(w, 409, map[string]string{"error": "Matching songs changed. Refresh the preview before saving again."})
+		return
+	}
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, map[string]int64{"saved": count})
 }
