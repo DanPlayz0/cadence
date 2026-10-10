@@ -57,7 +57,7 @@ const sections = [
   },
   {
     id: "permissions",
-    label: "Access control",
+    label: "Groups",
     icon: LockKeyhole,
     description: "Manage groups and library exclusions.",
   },

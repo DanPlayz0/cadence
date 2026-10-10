@@ -286,7 +286,7 @@ export function AccountEditor({
                     ))
                   ) : (
                     <p className="muted">
-                      Create groups in Permissions to assign them here.
+                      Create a group on the Groups page to assign it here.
                     </p>
                   )}
                 </fieldset>
