@@ -255,7 +255,7 @@ export function MiniPlayer({
       <div className="mini-player-controls">
         <button
           aria-label="Previous track"
-          disabled={player.queue.length <= 1}
+          disabled={!player.canPrevious}
           onClick={() => player.next(true)}
         >
           <SkipBack size={21} />
@@ -269,7 +269,7 @@ export function MiniPlayer({
         </button>
         <button
           aria-label="Next track"
-          disabled={player.queue.length <= 1}
+          disabled={!player.canNext}
           onClick={() => player.next()}
         >
           <SkipForward size={21} />

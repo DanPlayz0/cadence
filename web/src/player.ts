@@ -3,7 +3,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, APIError, cover, stream, Track } from "./api";
 import { volumeGain } from "./volume";
 import { completeBlob, SessionCache } from "./cache";
-import { canMoveQueueItem } from "./queue";
+import {
+  advanceQueue,
+  emptyQueue,
+  hasNext,
+  jumpQueue,
+  previousQueue,
+  queueEntries,
+  queueEntry,
+  removeQueueEntry,
+  reorderQueue,
+  retainQueue,
+  shuffleRemaining,
+  startQueue,
+  type PlaybackQueue,
+  type PlaybackSource,
+  type QueueSection,
+} from "./queue";
 export type Quality = "auto" | "high" | "saver";
 type Resume = {
   position: number;
@@ -27,21 +43,27 @@ export function usePlayer(
   const [sessionCache] = useState(() => new SessionCache());
   const audio = useRef(audioElement);
   const cache = useRef(sessionCache);
-  const [queue, setQueue] = useState<Track[]>([]);
-  const [index, setIndex] = useState(-1);
+  const [queue, setQueue] = useState(emptyQueue);
+  const queueRef = useRef(queue);
+  const updateQueue = useCallback((value: PlaybackQueue) => {
+    queueRef.current = value;
+    setQueue(value);
+    return value;
+  }, []);
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [length, setLength] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [quality, setQuality] = useState<Quality>("auto");
-  const [shuffle, setShuffle] = useState(false);
+  const [shuffle, storeShuffle] = useState(false);
   const [repeat, setRepeat] = useState<"off" | "all" | "one">("off");
   const [offline, setOffline] = useState(!navigator.onLine);
   const [cacheVersion, setCacheVersion] = useState(0);
   const [checkpointVersion, setCheckpointVersion] = useState(0);
-  const state = useRef({ queue, index, quality, shuffle, repeat });
-  state.current = { queue, index, quality, shuffle, repeat };
+  const state = useRef({ quality, shuffle, repeat });
+  state.current = { quality, shuffle, repeat };
   const loadSeq = useRef(0);
+  const sessionGeneration = useRef(0);
   const active = useRef<{
     track: Track;
     mode: string;
@@ -55,7 +77,7 @@ export function usePlayer(
   const pending = useRef(new Map<string, AbortController>());
   const callbacks = useRef({ onError, onExpired });
   callbacks.current = { onError, onExpired };
-  const current = queue[index];
+  const current = queue.current?.track;
   const modeFor = useCallback(
     (t: Track, q: Quality) =>
       q === "auto"
@@ -84,13 +106,12 @@ export function usePlayer(
     }
   }, []);
   const start = useCallback(
-    async (t: Track, idx: number, forced?: string, resume?: Resume) => {
+    async (t: Track, forced?: string, resume?: Resume) => {
       const seq = ++loadSeq.current;
       audio.current.pause();
       audio.current.onloadedmetadata = null;
       setPosition(resume?.position ?? 0);
       setLength(t.duration);
-      setIndex(idx);
       let mode = forced ?? modeFor(t, state.current.quality);
       let cached = cache.current.get(`${t.id}:${mode}`);
       if (!cached && state.current.quality === "auto" && !navigator.onLine) {
@@ -164,42 +185,60 @@ export function usePlayer(
   );
   const next = useCallback(
     (back = false) => {
-      const s = state.current;
-      if (!s.queue.length) return;
-      let idx = s.index + (back ? -1 : 1);
-      if (s.shuffle && s.queue.length > 1) {
-        do {
-          idx = Math.floor(Math.random() * s.queue.length);
-        } while (idx === s.index);
-      }
-      if (idx >= s.queue.length) {
-        if (s.repeat === "all") idx = 0;
-        else {
-          audio.current.pause();
-          return;
+      const q = queueRef.current;
+      if (
+        back &&
+        q.current &&
+        (audio.current.currentTime >= 3 || !q.history.length)
+      ) {
+        audio.current.currentTime = 0;
+        if (active.current) {
+          active.current.last = 0;
+          active.current.restorePosition = null;
         }
+        setPosition(0);
+        setCheckpointVersion((v) => v + 1);
+        return;
       }
-      if (idx < 0) idx = s.queue.length - 1;
-      void start(s.queue[idx], idx);
+      const value = back
+        ? previousQueue(q)
+        : advanceQueue(
+            q,
+            state.current.repeat === "all",
+            state.current.shuffle,
+          );
+      if (value === q) {
+        if (!back) audio.current.pause();
+        return;
+      }
+      updateQueue(value);
+      if (value.current) void start(value.current.track);
     },
-    [start],
+    [start, updateQueue],
   );
   const play = useCallback(
-    (tracks: Track[], idx = 0) => {
-      if (!tracks[idx]) return;
-      state.current.queue = tracks;
-      state.current.index = idx;
-      setQueue(tracks);
-      void start(tracks[idx], idx);
+    (tracks: Track[], idx = 0, source?: PlaybackSource) => {
+      const value = startQueue(
+        queueRef.current,
+        tracks,
+        idx,
+        source,
+        state.current.shuffle,
+      );
+      if (value === queueRef.current) return;
+      updateQueue(value);
+      if (value.current) void start(value.current.track);
     },
-    [start],
+    [start, updateQueue],
   );
   const restore = useCallback(
     (track: Track, position: number) => {
-      state.current.queue = [track];
-      state.current.index = 0;
-      setQueue([track]);
-      void start(track, 0, undefined, {
+      updateQueue({
+        ...emptyQueue(),
+        manual: queueRef.current.manual,
+        current: queueEntry(track),
+      });
+      void start(track, undefined, {
         position,
         autoplay: false,
         event: eventID(),
@@ -207,7 +246,16 @@ export function usePlayer(
         recorded: false,
       });
     },
-    [start],
+    [start, updateQueue],
+  );
+  const jump = useCallback(
+    (section: QueueSection, id: string, keepEarlier = false) => {
+      const value = jumpQueue(queueRef.current, section, id, keepEarlier);
+      if (value === queueRef.current) return;
+      updateQueue(value);
+      if (value.current) void start(value.current.track);
+    },
+    [start, updateQueue],
   );
   const snapshot = useCallback(() => {
     const v = active.current;
@@ -221,14 +269,19 @@ export function usePlayer(
   }, []);
   const generation = useCallback(() => loadSeq.current, []);
   const toggle = useCallback(() => {
+    if (!queueRef.current.current) {
+      next();
+      return;
+    }
     if (!audio.current.src) return;
     if (audio.current.paused)
       void audio.current
         .play()
         .catch((e) => callbacks.current.onError(e.message));
     else audio.current.pause();
-  }, []);
+  }, [next]);
   const clear = useCallback(() => {
+    sessionGeneration.current++;
     loadSeq.current++;
     audio.current.pause();
     audio.current.removeAttribute("src");
@@ -236,21 +289,23 @@ export function usePlayer(
     cache.current.clear();
     for (const c of pending.current.values()) c.abort();
     pending.current.clear();
-    state.current.queue = [];
-    state.current.index = -1;
-    setQueue([]);
-    setIndex(-1);
+    updateQueue(emptyQueue());
+    setPosition(0);
+    setLength(0);
+    setPlaying(false);
     active.current = null;
     setCacheVersion((v) => v + 1);
-  }, []);
+  }, [updateQueue]);
   const refresh = useCallback(async () => {
     if (!navigator.onLine) return;
     const ids = [
       ...new Set([
         ...cache.current.keys(),
-        ...state.current.queue.map((t) => t.id),
+        ...queueEntries(queueRef.current).map((entry) => entry.track.id),
       ]),
     ];
+    const checked = new Set(ids);
+    const checkedSession = sessionGeneration.current;
     try {
       const allowed = new Set<string>();
       for (let i = 0; i < ids.length; i += 500) {
@@ -261,36 +316,47 @@ export function usePlayer(
         );
         v.allowed.forEach((id) => allowed.add(id));
       }
-      cache.current.retain(allowed);
+      // Apply checks to the latest queue without discarding entries added during the request.
+      if (checkedSession !== sessionGeneration.current) return;
+      cache.current.retain(
+        new Set([
+          ...allowed,
+          ...cache.current.keys().filter((id) => !checked.has(id)),
+        ]),
+      );
       for (const [key, c] of pending.current)
-        if (!allowed.has(key.split(":")[0])) {
+        if (checked.has(key.split(":")[0]) && !allowed.has(key.split(":")[0])) {
           c.abort();
           pending.current.delete(key);
         }
-      const old = state.current;
-      const nextQueue = old.queue.filter((t) => allowed.has(t.id));
-      const activeId = active.current?.track.id;
-      setQueue(nextQueue);
-      setIndex(
-        activeId && allowed.has(activeId) && old.index >= 0
-          ? old.queue.slice(0, old.index).filter((t) => allowed.has(t.id))
-              .length
-          : -1,
+      updateQueue(
+        retainQueue(
+          queueRef.current,
+          (id) => !checked.has(id) || allowed.has(id),
+        ),
       );
-      if (activeId && !allowed.has(activeId)) {
+      const activeId = active.current?.track.id;
+      if (activeId && checked.has(activeId) && !allowed.has(activeId)) {
+        loadSeq.current++;
         audio.current.pause();
+        audio.current.onloadedmetadata = null;
         audio.current.removeAttribute("src");
+        audio.current.load();
         active.current = null;
+        setPlaying(false);
+        setPosition(0);
+        setLength(0);
         callbacks.current.onError("Access to the current track has changed.");
       }
       setCacheVersion((v) => v + 1);
     } catch (e) {
+      if (checkedSession !== sessionGeneration.current) return;
       if (e instanceof APIError && e.status === 401) {
         clear();
         callbacks.current.onExpired();
       }
     }
-  }, [clear]);
+  }, [clear, updateQueue]);
   useEffect(() => {
     const a = audio.current;
     const time = () => {
@@ -324,14 +390,14 @@ export function usePlayer(
     const pause = () => setPlaying(false);
     const ended = () => {
       const s = state.current;
-      if (s.repeat === "one" && s.queue[s.index])
-        void start(s.queue[s.index], s.index);
+      if (s.repeat === "one" && queueRef.current.current)
+        void start(queueRef.current.current.track);
       else next();
     };
     const error = () => {
       const v = active.current;
       if (v && v.mode === "original" && !v.fallback && navigator.onLine) {
-        void start(v.track, state.current.index, "high", {
+        void start(v.track, "high", {
           position: a.currentTime,
           autoplay: true,
           event: v.event,
@@ -380,7 +446,20 @@ export function usePlayer(
     };
   }, [refresh, clear]);
   useEffect(() => {
-    if (!("mediaSession" in navigator) || !current) return;
+    if (!("mediaSession" in navigator)) return;
+    if (!current) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+      for (const action of [
+        "play",
+        "pause",
+        "nexttrack",
+        "previoustrack",
+        "seekto",
+      ] as MediaSessionAction[])
+        navigator.mediaSession.setActionHandler(action, null);
+      return;
+    }
     navigator.mediaSession.metadata = new MediaMetadata({
       title: current.title,
       artist: current.artist,
@@ -396,7 +475,10 @@ export function usePlayer(
     navigator.mediaSession.setActionHandler("pause", () =>
       audio.current.pause(),
     );
-    navigator.mediaSession.setActionHandler("nexttrack", () => next());
+    navigator.mediaSession.setActionHandler(
+      "nexttrack",
+      hasNext(queue, repeat === "all") ? () => next() : null,
+    );
     navigator.mediaSession.setActionHandler("previoustrack", () => next(true));
     navigator.mediaSession.setActionHandler("seekto", (d) => {
       if (d.seekTime !== undefined && Number.isFinite(d.seekTime)) {
@@ -410,14 +492,25 @@ export function usePlayer(
       }
     });
     navigator.mediaSession.playbackState = playing ? "playing" : "paused";
-  }, [current, next, playing, length]);
+    return () => {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+      for (const action of [
+        "play",
+        "pause",
+        "nexttrack",
+        "previoustrack",
+        "seekto",
+      ] as MediaSessionAction[])
+        navigator.mediaSession.setActionHandler(action, null);
+    };
+  }, [current, next, playing, length, queue, repeat]);
   function changeQuality(q: Quality) {
     state.current.quality = q;
     setQuality(q);
-    const s = state.current;
     const v = active.current;
-    if (s.queue[s.index] && v)
-      void start(s.queue[s.index], s.index, undefined, {
+    if (queueRef.current.current && v)
+      void start(queueRef.current.current.track, undefined, {
         position: audio.current.currentTime,
         autoplay: !audio.current.paused,
         event: v.event,
@@ -425,29 +518,32 @@ export function usePlayer(
         recorded: v.recorded,
       });
   }
-  function remove(idx: number) {
-    if (idx === state.current.index) {
-      audio.current.pause();
-      active.current = null;
-      setIndex(-1);
-    } else if (idx < state.current.index) setIndex((i) => i - 1);
-    setQueue((q) => q.filter((_, i) => i !== idx));
+  function remove(section: QueueSection, id: string) {
+    updateQueue(removeQueueEntry(queueRef.current, section, id));
   }
-  function move(idx: number, direction: number) {
-    const q = [...state.current.queue];
-    const target = idx + direction;
-    if (!canMoveQueueItem(idx, direction, state.current.index, q.length))
-      return;
-    [q[idx], q[target]] = [q[target], q[idx]];
-    const i = state.current.index;
-    setQueue(q);
-    if (i === idx) setIndex(target);
-    else if (i === target) setIndex(idx);
+  function reorder(section: QueueSection, id: string, targetId: string) {
+    updateQueue(reorderQueue(queueRef.current, section, id, targetId));
+  }
+  function move(section: QueueSection, id: string, direction: number) {
+    if (direction !== -1 && direction !== 1) return;
+    const entries = queueRef.current[section];
+    const index = entries.findIndex((entry) => entry.id === id);
+    const target = entries[index + direction];
+    if (index >= 0 && target) reorder(section, id, target.id);
+  }
+  function setShuffle(value: boolean | ((previous: boolean) => boolean)) {
+    const enabled =
+      typeof value === "function" ? value(state.current.shuffle) : value;
+    if (enabled === state.current.shuffle) return;
+    state.current.shuffle = enabled;
+    storeShuffle(enabled);
+    updateQueue(shuffleRemaining(queueRef.current, enabled));
   }
   return {
     queue,
-    index,
     current,
+    canPrevious: !!current,
+    canNext: hasNext(queue, repeat === "all"),
     playing,
     position,
     length,
@@ -472,6 +568,8 @@ export function usePlayer(
     refresh,
     remove,
     move,
+    reorder,
+    jump,
     seek: (n: number) => {
       if (!Number.isFinite(n)) return;
       const target = Math.max(0, Math.min(n, length || n));
@@ -480,7 +578,11 @@ export function usePlayer(
       setPosition(target);
       setCheckpointVersion((v) => v + 1);
     },
-    enqueue: (t: Track) => setQueue((q) => [...q, t]),
+    enqueue: (t: Track) =>
+      updateQueue({
+        ...queueRef.current,
+        manual: [...queueRef.current.manual, queueEntry(t)],
+      }),
     cached: (id: string) => cache.current.has(id),
     cacheBytes: cache.current.size,
   };

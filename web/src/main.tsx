@@ -3,8 +3,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Album as AlbumIcon,
-  ArrowDown,
-  ArrowUp,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -51,7 +49,7 @@ import { AccountMenu } from "./AccountMenu";
 import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
 import { useNavigation } from "./useNavigation";
-import { canMoveQueueItem } from "./queue";
+import { QueuePanel } from "./QueuePanel";
 import { LyricsPanel } from "./LyricsPanel";
 import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import { usePlaybackResume } from "./usePlaybackResume";
@@ -1033,7 +1031,12 @@ function App() {
                     <button
                       className="primary small"
                       disabled={loading}
-                      onClick={() => player.play(tracks)}
+                      onClick={() =>
+                        player.play(tracks, 0, {
+                          name: heading,
+                          route: { ...route },
+                        })
+                      }
                     >
                       <Play size={16} fill="currentColor" /> Play loaded songs
                     </button>
@@ -1147,7 +1150,12 @@ function App() {
                   playing={player.playing}
                   cached={player.cached}
                   liking={liking}
-                  onPlay={(i) => player.play(tracks, i)}
+                  onPlay={(i) =>
+                    player.play(tracks, i, {
+                      name: heading,
+                      route: { ...route },
+                    })
+                  }
                   onLike={(t) => void like(t)}
                   onQueue={(track) => {
                     player.enqueue(track);
@@ -1391,61 +1399,15 @@ function App() {
             </div>
           ) : (
             <div id="queue-content" role="tabpanel" aria-labelledby="queue-tab">
-              {player.queue.map((t, i) => (
-                <div
-                  key={`${t.id}:${i}`}
-                  className={`queue-track ${i === player.index ? "current" : ""}`}
-                >
-                  <div className="queue-credit">
-                    <button
-                      className="queue-title"
-                      title={t.title}
-                      onClick={() => player.play(player.queue, i)}
-                    >
-                      {t.title}
-                    </button>
-                    <ArtistLinks
-                      credit={t.artist}
-                      featuredArtists={t.featuredArtists}
-                      videoGuests={t.videoGuests}
-                      onNavigate={browseArtist}
-                      single={!t.album}
-                    />
-                  </div>
-                  <button
-                    aria-label="Move up"
-                    disabled={
-                      !canMoveQueueItem(
-                        i,
-                        -1,
-                        player.index,
-                        player.queue.length,
-                      )
-                    }
-                    onClick={() => player.move(i, -1)}
-                  >
-                    <ArrowUp size={14} />
-                  </button>
-                  <button
-                    aria-label="Move down"
-                    disabled={
-                      !canMoveQueueItem(i, 1, player.index, player.queue.length)
-                    }
-                    onClick={() => player.move(i, 1)}
-                  >
-                    <ArrowDown size={14} />
-                  </button>
-                  <button
-                    aria-label="Remove from queue"
-                    onClick={() => player.remove(i)}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-              {!player.queue.length && (
-                <p className="muted">Add a song to get started.</p>
-              )}
+              <QueuePanel
+                player={player}
+                onArtist={browseArtist}
+                onNavigate={(next) => {
+                  navigate(next);
+                  setOffset(0);
+                }}
+                onAdded={(title) => setNotice(`Added “${title}” to the queue.`)}
+              />
             </div>
           )}
         </aside>
@@ -1500,7 +1462,7 @@ function App() {
             </button>
             <button
               aria-label="Previous track"
-              disabled={player.queue.length <= 1}
+              disabled={!player.canPrevious}
               onClick={() => player.next(true)}
             >
               <SkipBack size={20} fill="currentColor" />
@@ -1508,7 +1470,7 @@ function App() {
             <button
               className="play-button"
               aria-label={player.playing ? "Pause" : "Play"}
-              disabled={!player.current}
+              disabled={!player.current && !player.canNext}
               onClick={player.toggle}
             >
               {player.playing ? (
@@ -1519,7 +1481,7 @@ function App() {
             </button>
             <button
               aria-label="Next track"
-              disabled={player.queue.length <= 1}
+              disabled={!player.canNext}
               onClick={() => player.next()}
             >
               <SkipForward size={20} fill="currentColor" />
