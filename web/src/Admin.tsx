@@ -21,6 +21,7 @@ import { ActivityLog } from "./ActivityLog";
 import { describeClient } from "./devices";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
+import "./Admin.css";
 import { UserEditorDialog } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
 import { TrackMetadataEditor } from "./TrackMetadataEditor";
@@ -172,8 +173,7 @@ export function Admin({
   const [roots, setRoots] = useState<string[]>([]);
   const [enrichment, setEnrichment] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [full, setFull] = useState(false);
-  const [missingOnly, setMissingOnly] = useState(false);
+  const [scanMode, setScanMode] = useState("incremental");
   const [suggestionOffset, setSuggestionOffset] = useState(0);
   const [suggestionRevision, setSuggestionRevision] = useState(0);
   const [acceptFields, setAcceptFields] = useState<string[]>(
@@ -549,21 +549,35 @@ export function Admin({
                   <code key={r}>{r}</code>
                 ))}
                 <div className="row scan-controls">
-                  <Checkbox
-                    label="Re-read all files and generate metadata suggestions"
-                    checked={full}
-                    disabled={missingOnly}
-                    onChange={(e) => setFull(e.target.checked)}
-                  />
-                  <Checkbox
-                    label="Rescan only missing metadata or artwork"
-                    description="Recheck tracks with missing titles, artists, albums, album artists, or artwork, plus new files. Complete tracks are skipped."
-                    checked={missingOnly}
-                    onChange={(e) => {
-                      setMissingOnly(e.target.checked);
-                      if (e.target.checked) setFull(false);
-                    }}
-                  />
+                  <div className="scan-mode">
+                    <label htmlFor="library-scan-mode">Refresh mode</label>
+                    <select
+                      id="library-scan-mode"
+                      aria-describedby="library-scan-description"
+                      value={scanMode}
+                      disabled={
+                        loading || scans.some((s) => s.status === "running")
+                      }
+                      onChange={(e) => setScanMode(e.target.value)}
+                    >
+                      <option value="incremental">
+                        Scan for new and updated files
+                      </option>
+                      <option value="missing">Search for missing metadata</option>
+                      <option value="full">Replace all metadata</option>
+                    </select>
+                    <p id="library-scan-description" className="muted">
+                      {scanMode === "incremental"
+                        ? "Index new files and re-read changed files. Unchanged files are skipped."
+                        : scanMode === "missing"
+                          ? "Recheck songs with missing metadata or artwork, plus new files. Complete songs are skipped."
+                          : "Re-read metadata and artwork for every file, even if unchanged. Accepted catalog edits stay preserved."}
+                    </p>
+                    <p className="muted">
+                      External lookups run when metadata enrichment is enabled.
+                      Review suggested changes before applying them.
+                    </p>
+                  </div>
                   <button
                     className="primary"
                     disabled={
@@ -571,7 +585,10 @@ export function Admin({
                     }
                     onClick={() =>
                       void perform(() =>
-                        api("/admin/scans", "POST", { full, missingOnly }),
+                        api("/admin/scans", "POST", {
+                          full: scanMode === "full",
+                          missingOnly: scanMode === "missing",
+                        }),
                       )
                     }
                   >
@@ -588,8 +605,8 @@ export function Admin({
                 <p className="muted">
                   MusicBrainz and Cover Art Archive can suggest catalog changes.
                   Set METADATA_USER_AGENT with contact information on the
-                  server. Enable this, then rescan missing metadata or run a
-                  full scan to include existing files.
+                  server. Enable this, then choose Search for missing metadata or
+                  Replace all metadata in Library to include existing files.
                 </p>
                 <Checkbox
                   label="Enable external lookups"
