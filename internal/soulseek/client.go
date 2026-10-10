@@ -82,6 +82,9 @@ func (c *Client) call(ctx context.Context, method, p string, body, out any, toke
 		return ErrUnavailable
 	}
 	defer res.Body.Close()
+	if res.StatusCode >= 500 {
+		return ErrUnavailable
+	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return &APIError{res.StatusCode}
 	}
@@ -194,6 +197,7 @@ func (c *Client) SyncShares(ctx context.Context, old, wanted []string) error {
 		return errors.New("Unable to read Soulseek sharing configuration")
 	}
 	if len(doc.Content) == 0 {
+		doc.Kind = yaml.DocumentNode
 		doc.Content = []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}
 	}
 	root := doc.Content[0]
@@ -201,6 +205,9 @@ func (c *Client) SyncShares(ctx context.Context, old, wanted []string) error {
 		return errors.New("Invalid Soulseek sharing configuration")
 	}
 	shares := yamlField(root, "shares", yaml.MappingNode)
+	if shares.Kind != yaml.MappingNode {
+		return errors.New("Invalid Soulseek shares configuration")
+	}
 	dirs := yamlField(shares, "directories", yaml.SequenceNode)
 	if dirs.Kind != yaml.SequenceNode {
 		return errors.New("Invalid Soulseek shares list")
@@ -222,6 +229,22 @@ func (c *Client) SyncShares(ctx context.Context, old, wanted []string) error {
 		if !found {
 			dirs.Content = append(dirs.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: p})
 		}
+	}
+	// A shared import folder can receive later retries. Hide unpublished copies
+	// while retaining every operator-defined share filter.
+	filters := yamlField(shares, "filters", yaml.SequenceNode)
+	if filters.Kind != yaml.SequenceNode {
+		return errors.New("Invalid Soulseek share filters")
+	}
+	const temporaryFilter = `\.cadence-[^\\/]+\.part$`
+	found := false
+	for _, n := range filters.Content {
+		if n.Value == temporaryFilter {
+			found = true
+		}
+	}
+	if !found {
+		filters.Content = append(filters.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: temporaryFilter})
 	}
 	encoded, err := yaml.Marshal(&doc)
 	if err != nil {

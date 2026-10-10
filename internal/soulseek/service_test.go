@@ -68,12 +68,13 @@ func (m *memory) SoulseekRequests(_ context.Context, user string, active bool, l
 
 type fakeRemote struct {
 	Remote
-	batches    map[string]Batch
-	enqueues   int
-	cancels    int
-	err        error
-	shares     []string
-	shareError error
+	batches      map[string]Batch
+	enqueues     int
+	cancels      int
+	err          error
+	shares       []string
+	shareError   error
+	enqueueError error
 }
 
 func (f *fakeRemote) Batch(_ context.Context, id string) (Batch, error) {
@@ -93,7 +94,7 @@ func (f *fakeRemote) Enqueue(_ context.Context, r domain.SoulseekRequest) error 
 		b.Transfers = append(b.Transfers, Transfer{ID: ID(), Filename: file.Filename, State: "Queued"})
 	}
 	f.batches[r.BatchID] = b
-	return nil
+	return f.enqueueError
 }
 func (f *fakeRemote) Cancel(context.Context, string, string) error { f.cancels++; return nil }
 func (f *fakeRemote) SyncShares(_ context.Context, old, wanted []string) error {

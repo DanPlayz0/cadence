@@ -56,7 +56,7 @@ func (s *Server) soulseekCapabilities(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	write(w, 200, map[string]any{"configured": s.Soulseek.Configured, "enabled": cfg.Enabled, "allowed": cfg.Allows(current(r).User), "presentation": cfg.Presentation})
+	write(w, 200, map[string]any{"configured": s.Soulseek.Configured, "enabled": cfg.Enabled, "allowed": s.Soulseek.Configured && cfg.Allows(current(r).User), "presentation": cfg.Presentation})
 }
 func (s *Server) soulseekSettings(w http.ResponseWriter, r *http.Request) {
 	if s.Soulseek == nil {
@@ -225,7 +225,12 @@ func publicSoulseekRequest(v domain.SoulseekRequest, u domain.User) domain.Souls
 	return v
 }
 func (s *Server) soulseekRequests(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.soulseekAccess(w, r); !ok {
+	if r.Method == "GET" && current(r).User.Admin {
+		if s.Soulseek == nil {
+			write(w, 503, map[string]string{"error": "Soulseek settings unavailable"})
+			return
+		}
+	} else if _, ok := s.soulseekAccess(w, r); !ok {
 		return
 	}
 	u := current(r).User

@@ -53,6 +53,7 @@ func unpackSoulseek(b []byte, revision int64) (domain.SoulseekRequest, error) {
 	err := json.Unmarshal(b, &stored)
 	v := stored.SoulseekRequest
 	v.Revision = revision
+	v.PreviousBatches = stored.PreviousBatches
 	for i := range v.Files {
 		if i < len(stored.ImportedPaths) {
 			v.Files[i].ImportedPath = stored.ImportedPaths[i]
@@ -94,7 +95,7 @@ func (s *Store) SoulseekRequests(ctx context.Context, user string, active bool, 
 	return out, rows.Err()
 }
 func (s *Store) SaveSoulseekRequest(ctx context.Context, v *domain.SoulseekRequest) error {
-	stored := domain.SoulseekStoredRequest{SoulseekRequest: *v}
+	stored := domain.SoulseekStoredRequest{SoulseekRequest: *v, PreviousBatches: v.PreviousBatches}
 	for _, f := range v.Files {
 		stored.ImportedPaths = append(stored.ImportedPaths, f.ImportedPath)
 		stored.Digests = append(stored.Digests, f.Digest)

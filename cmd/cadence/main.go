@@ -105,7 +105,10 @@ func run() error {
 	remote := soulseek.NewClient(os.Getenv("SLSKD_URL"), os.Getenv("SLSKD_API_KEY"), env("SLSKD_USERNAME", "cadence"), os.Getenv("SLSKD_PASSWORD"))
 	soul := &soulseek.Service{Repo: repo, Libraries: repo, Activity: repo.RecordActivity, Remote: remote, Configured: remote.Configured() && stage != "", Roots: roots, WritableRoots: writable, Stage: stage, Scan: scanner.RequestScan}
 	if stage != "" {
-		p, e := filepath.Abs(stage)
+		p, e := library.Canonical(stage)
+		if e != nil {
+			p, e = filepath.Abs(stage)
+		}
 		if e != nil {
 			return e
 		}

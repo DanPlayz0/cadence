@@ -49,11 +49,28 @@ type Service struct {
 	Scan                 func()
 	ValidateAudio        func(context.Context, *os.File) error
 	mu                   sync.Mutex
+	jobs                 [64]sync.Mutex
+}
+
+func (s *Service) requestLock(id string) func() {
+	h := sha256.Sum256([]byte(id))
+	m := &s.jobs[int(h[0])%len(s.jobs)]
+	m.Lock()
+	return m.Unlock
 }
 
 func (s *Service) Event(ctx context.Context, user, name string) {
 	if s.Activity != nil {
-		if e := s.Activity(ctx, domain.ActivityEntry{Level: "info", UserID: user, Name: name, Overview: name, Type: "soulseek"}); e != nil {
+		userName := ""
+		if actors, ok := s.Repo.(domain.AuthRepository); ok && user != "" {
+			if u, e := actors.UserByID(ctx, user); e == nil {
+				userName = u.DisplayName
+				if userName == "" {
+					userName = u.Username
+				}
+			}
+		}
+		if e := s.Activity(ctx, domain.ActivityEntry{Level: "info", UserID: user, UserName: userName, Name: name, Overview: name, Type: "soulseek"}); e != nil {
 			slog.Error("Soulseek activity", "error", e)
 		}
 	}
@@ -247,8 +264,8 @@ func validRemoteFile(f domain.SoulseekFile) bool {
 	return base != "" && !strings.ContainsAny(base, `:*?"<>|`) && !strings.HasSuffix(base, ".") && !strings.HasSuffix(base, " ")
 }
 func (s *Service) Create(ctx context.Context, u domain.User, id, peer, folder string, files []domain.SoulseekFile) (domain.SoulseekRequest, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock := s.requestLock(id)
+	defer unlock()
 	if !ValidID(id) || len(files) == 0 || len(files) > 500 || strings.TrimSpace(peer) == "" || len(peer) > 500 {
 		return domain.SoulseekRequest{}, errors.New("Choose one to 500 audio files and a valid request ID")
 	}
@@ -291,8 +308,8 @@ func (s *Service) Create(ctx context.Context, u domain.User, id, peer, folder st
 	return r, e
 }
 func (s *Service) Action(ctx context.Context, u domain.User, id, action string, rule domain.SoulseekRule) (domain.SoulseekRequest, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock := s.requestLock(id)
+	defer unlock()
 	r, e := s.Repo.SoulseekRequest(ctx, id)
 	if e != nil {
 		return r, e
@@ -344,15 +361,18 @@ func (s *Service) Action(ctx context.Context, u domain.User, id, action string, 
 			}
 			r.State = "importing"
 		} else {
-			for _, f := range r.Files {
-				if f.TransferID != "" {
-					e = s.Remote.Cancel(ctx, r.Username, f.TransferID)
-					var ae *APIError
-					if e != nil && !(errors.As(e, &ae) && ae.Status == 404) {
-						return r, e
-					}
+			// A partial enqueue may have succeeded before transfer IDs were saved.
+			batch, batchErr := s.Remote.Batch(ctx, r.BatchID)
+			var ae *APIError
+			if batchErr != nil && !(errors.As(batchErr, &ae) && ae.Status == 404) {
+				return r, batchErr
+			}
+			for _, transfer := range batch.Transfers {
+				if e = s.Remote.Cancel(ctx, r.Username, transfer.ID); e != nil && !(errors.As(e, &ae) && ae.Status == 404) {
+					return r, e
 				}
 			}
+			r.PreviousBatches = append(r.PreviousBatches, r.BatchID)
 			r.BatchID = ID()
 			r.State = "queued"
 			if !r.Approved && r.ReviewTiming == "before" {
@@ -379,8 +399,13 @@ func (s *Service) Action(ctx context.Context, u domain.User, id, action string, 
 			return r, e
 		}
 		defer root.Close()
-		if e = root.RemoveAll(r.BatchID); e != nil {
-			return r, e
+		for _, batch := range append(append([]string{}, r.PreviousBatches...), r.BatchID) {
+			if !ValidID(batch) {
+				return r, domain.ErrConflict
+			}
+			if e = root.RemoveAll(batch); e != nil {
+				return r, e
+			}
 		}
 		r.State = "deleted"
 	default:
@@ -406,8 +431,6 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 func (s *Service) Tick(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	cfg, e := s.Repo.SoulseekSettings(ctx)
 	if e != nil {
 		return e
@@ -427,20 +450,43 @@ func (s *Service) Tick(ctx context.Context) error {
 			break
 		}
 	}
-	for _, r := range jobs {
+	for _, snapshot := range jobs {
+		cfg, e = s.Repo.SoulseekSettings(ctx)
+		if e != nil {
+			return e
+		}
+		unlock := s.requestLock(snapshot.ID)
+		r, loadErr := s.Repo.SoulseekRequest(ctx, snapshot.ID)
+		if loadErr != nil {
+			unlock()
+			if errors.Is(loadErr, domain.ErrNotFound) {
+				continue
+			}
+			return loadErr
+		}
 		if !cfg.Enabled && r.State != "cancelling" {
+			unlock()
+			continue
+		}
+		if !slices.Contains([]string{"queued", "downloading", "importing", "cancelling"}, r.State) {
+			unlock()
 			continue
 		}
 		if ctx.Err() != nil {
+			unlock()
 			return ctx.Err()
 		}
-		if e = s.reconcile(ctx, &r); e != nil {
+		e = s.reconcile(ctx, &r)
+		unlock()
+		if e != nil {
 			if errors.Is(e, ErrUnavailable) {
 				continue
 			}
 			return e
 		}
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.syncShares(ctx)
 }
 func (s *Service) reconcile(ctx context.Context, r *domain.SoulseekRequest) error {
@@ -568,7 +614,7 @@ func (s *Service) reconcile(ctx context.Context, r *domain.SoulseekRequest) erro
 func probeAudio(ctx context.Context, f *os.File) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", "-i", "pipe:0")
+	cmd := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-protocol_whitelist", "pipe", "-show_entries", "stream=codec_type", "-of", "json", "-i", "pipe:0")
 	cmd.Stdin = f
 	data, e := cmd.Output()
 	if e != nil {
@@ -638,7 +684,11 @@ func (s *Service) importFile(ctx context.Context, id, batch, dest string, f doma
 	}
 	defer root.Remove(temp)
 	h := sha256.New()
-	_, e = io.Copy(io.MultiWriter(out, h), &contextReader{ctx: ctx, r: in})
+	written, copyErr := io.Copy(io.MultiWriter(out, h), &contextReader{ctx: ctx, r: in})
+	e = copyErr
+	if e == nil && written != f.Size {
+		e = errors.New("Downloaded file changed during import")
+	}
 	if e == nil {
 		e = out.Sync()
 	}

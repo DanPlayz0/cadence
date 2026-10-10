@@ -90,26 +90,28 @@ type SoulseekRequestFile struct {
 	Digest           string `json:"-"`
 }
 type SoulseekRequest struct {
-	ID           string                `json:"id"`
-	UserID       string                `json:"userId"`
-	Username     string                `json:"username"`
-	Folder       string                `json:"folder"`
-	Files        []SoulseekRequestFile `json:"files"`
-	Rule         SoulseekRule          `json:"rule"`
-	ReviewTiming string                `json:"reviewTiming"`
-	Approved     bool                  `json:"approved"`
-	State        string                `json:"state"`
-	Error        string                `json:"error"`
-	BatchID      string                `json:"batchId"`
-	Created      time.Time             `json:"created"`
-	Revision     int64                 `json:"revision"`
+	ID              string                `json:"id"`
+	UserID          string                `json:"userId"`
+	Username        string                `json:"username"`
+	Folder          string                `json:"folder"`
+	Files           []SoulseekRequestFile `json:"files"`
+	Rule            SoulseekRule          `json:"rule"`
+	ReviewTiming    string                `json:"reviewTiming"`
+	Approved        bool                  `json:"approved"`
+	State           string                `json:"state"`
+	Error           string                `json:"error"`
+	BatchID         string                `json:"batchId"`
+	PreviousBatches []string              `json:"-"`
+	Created         time.Time             `json:"created"`
+	Revision        int64                 `json:"revision"`
 }
 
 // Storage JSON must include private importer fields without exposing them over HTTP.
 type SoulseekStoredRequest struct {
 	SoulseekRequest
-	ImportedPaths []string `json:"importedPaths"`
-	Digests       []string `json:"digests"`
+	ImportedPaths   []string `json:"importedPaths"`
+	Digests         []string `json:"digests"`
+	PreviousBatches []string `json:"previousBatches"`
 }
 type SoulseekRepository interface {
 	SoulseekSettings(context.Context) (SoulseekSettings, error)
