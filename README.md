@@ -16,6 +16,8 @@ Linux containers run as UID/GID 10001; the mounted music directory must be reada
 
 ## Listening and administration
 
+- **Instance settings → Devices** lists all listeners’ signed-in sessions, ordered by last activity, with browser/app versions, operating system, Cadence web version, and expandable user agents. Search by listener or client. Existing sessions appear when they next make an authenticated request; signing out, revoking sessions, or session expiration removes them. Activity is updated at most once per minute. Clients report their own identifying details.
+
 - **Instance settings → Branding** lets administrators rename the instance. The name is saved in PostgreSQL and appears on the login screen, in the app header, and in the browser title. Names can contain 1–120 characters; surrounding whitespace is removed.
 
 - Open your avatar for profile details, listening settings, the play queue, and sign-out. Administrators also find **Instance settings** here. Volume and playback quality changes apply immediately in the current tab.

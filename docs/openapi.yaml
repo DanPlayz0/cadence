@@ -2240,6 +2240,45 @@ paths:
                   maxItems: 500
                   items:
                     type: string
+  /admin/devices:
+    get:
+      summary: List signed-in devices for all users (administrator only)
+      description: One row per unexpired session that has reported authenticated activity. Last activity updates at most once per minute. Client details are self-reported. Session tokens and CSRF values are never returned.
+      tags: [Administration]
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Devices ordered by most recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, user, userAgent, clientVersion, lastActive]
+                  properties:
+                    id:
+                      type: string
+                      description: Public device record identifier
+                    user:
+                      $ref: "#/components/schemas/User"
+                    userAgent:
+                      type: string
+                      maxLength: 2048
+                    clientVersion:
+                      type: string
+                      maxLength: 120
+                      description: Cadence web version reported by X-Cadence-Client-Version
+                    lastActive:
+                      type: string
+                      format: date-time
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator required
+        "500":
+          description: Server failure
   /admin/branding:
     get:
       summary: Read instance branding (administrator only)

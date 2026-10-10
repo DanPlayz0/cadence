@@ -73,3 +73,5 @@ func TestBranding(t *testing.T) {
 		}
 	}
 }
+
+func (r *brandingRepo) RecordDevice(context.Context, string, string, string) error { return nil }

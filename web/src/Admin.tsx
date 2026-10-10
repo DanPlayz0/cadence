@@ -14,7 +14,10 @@ import {
   X,
   Pencil,
   Palette,
+  Monitor,
+  Search,
 } from "lucide-react";
+import { describeClient } from "./devices";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
 import { UserEditorDialog } from "./AccountEditor";
@@ -27,6 +30,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "./components/ui/dialog";
+type Device = {
+  id: string;
+  user: User;
+  userAgent: string;
+  clientVersion: string;
+  lastActive: string;
+};
 type Group = { id: string; name: string };
 type Exclusion = { id: string; groupId: string; kind: string; target: string };
 type Suggestion = {
@@ -90,6 +100,12 @@ const sections = [
     description: "Review and apply catalog changes.",
   },
   {
+    id: "devices",
+    label: "Devices",
+    icon: Monitor,
+    description: "See signed-in clients across all listeners.",
+  },
+  {
     id: "activity",
     label: "Scan activity",
     icon: Activity,
@@ -126,6 +142,10 @@ export function Admin({
   tab: string;
   onTab: (tab: string) => void;
 }) {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [deviceQuery, setDeviceQuery] = useState("");
+  const [deviceError, setDeviceError] = useState("");
+  const [devicesLoaded, setDevicesLoaded] = useState(false);
   const [brandingNotice, setBrandingNotice] = useState("");
   const [brandingName, setBrandingName] = useState(instanceName);
   useEffect(() => {
@@ -197,6 +217,28 @@ export function Admin({
     const t = setInterval(() => void load(), 5000);
     return () => clearInterval(t);
   }, [load, loadSuggestions]);
+  useEffect(() => {
+    if (tab !== "devices") return;
+    let live = true;
+    const refresh = async () => {
+      try {
+        const items = await api<Device[]>("/admin/devices");
+        if (live) {
+          setDevices(items);
+          setDevicesLoaded(true);
+          setDeviceError("");
+        }
+      } catch (error) {
+        if (live) setDeviceError((error as Error).message);
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 15000);
+    return () => {
+      live = false;
+      window.clearInterval(timer);
+    };
+  }, [tab]);
   async function perform(fn: () => Promise<unknown>) {
     if (loading) return;
     report("");
@@ -271,6 +313,106 @@ export function Admin({
               </button>
             )}
           </div>
+          {tab === "devices" && (
+            <div className="panel devices-panel">
+              <label className="device-search">
+                <Search size={18} />
+                <input
+                  aria-label="Search devices"
+                  placeholder="Search users, devices, or clients"
+                  value={deviceQuery}
+                  onChange={(event) => setDeviceQuery(event.target.value)}
+                />
+              </label>
+              <p className="muted">
+                Each row represents a signed-in session. Client details are
+                reported by the device; last activity updates at most once per
+                minute. Signed-out and expired sessions are removed.
+              </p>
+              {deviceError && <p role="alert">{deviceError}</p>}
+              {!devicesLoaded && !deviceError ? (
+                <p role="status">Loading devices…</p>
+              ) : (
+                <div className="device-table-scroll">
+                  <table className="device-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Last active</th>
+                        <th scope="col">Device</th>
+                        <th scope="col">Client</th>
+                        <th scope="col">User</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {devices
+                        .filter((device) =>
+                          `${device.user.displayName} ${device.user.username} ${device.userAgent} ${device.clientVersion} ${describeClient(device.userAgent).name}`
+                            .toLowerCase()
+                            .includes(deviceQuery.toLowerCase()),
+                        )
+                        .map((device) => {
+                          const client = describeClient(device.userAgent);
+                          return (
+                            <tr key={device.id}>
+                              <td>
+                                <time dateTime={device.lastActive}>
+                                  {new Date(device.lastActive).toLocaleString()}
+                                </time>
+                              </td>
+                              <td>
+                                <strong>
+                                  {client.name}
+                                  {client.version ? ` ${client.version}` : ""}
+                                </strong>
+                                {client.platform && (
+                                  <small>{client.platform}</small>
+                                )}
+                              </td>
+                              <td>
+                                <span>
+                                  {device.clientVersion
+                                    ? `Cadence Web ${device.clientVersion}`
+                                    : `${client.name}${client.version ? ` ${client.version}` : ""}`}
+                                </span>
+                                <details>
+                                  <summary>User agent</summary>
+                                  <code>
+                                    {device.userAgent || "Not provided"}
+                                  </code>
+                                </details>
+                              </td>
+                              <td>
+                                <button
+                                  className="device-user"
+                                  onClick={() => setSelectedUser(device.user)}
+                                >
+                                  <UserAvatar user={device.user} />
+                                  <span>
+                                    <strong>{device.user.displayName}</strong>
+                                    <small>@{device.user.username}</small>
+                                  </span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  {!devices.length && (
+                    <p className="muted">
+                      No signed-in devices have reported activity yet.
+                    </p>
+                  )}
+                  {devices.length > 0 &&
+                    !devices.some((device) =>
+                      `${device.user.displayName} ${device.user.username} ${device.userAgent} ${device.clientVersion} ${describeClient(device.userAgent).name}`
+                        .toLowerCase()
+                        .includes(deviceQuery.toLowerCase()),
+                    ) && <p className="muted">No devices match your search.</p>}
+                </div>
+              )}
+            </div>
+          )}
           {tab === "branding" && (
             <div className="panel">
               <h2>Instance name</h2>

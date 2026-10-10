@@ -109,3 +109,5 @@ func TestPlaybackAuthenticationValidationAndHiddenTracks(t *testing.T) {
 		t.Fatal(w.Code)
 	}
 }
+
+func (r *playbackRepo) RecordDevice(context.Context, string, string, string) error { return nil }

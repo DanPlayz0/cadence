@@ -9,6 +9,7 @@ export type Route = {
 export const adminTabs = [
   "dashboard",
   "branding",
+  "devices",
   "library",
   "people",
   "permissions",

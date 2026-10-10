@@ -250,6 +250,14 @@ func (s *Server) Handler() http.Handler {
 		write(w, 200, map[string]string{"name": name})
 	})
 	m.HandleFunc("PUT /api/v1/admin/branding", s.updateBranding)
+	m.HandleFunc("GET /api/v1/admin/devices", func(w http.ResponseWriter, r *http.Request) {
+		devices, err := s.Repo.Devices(r.Context())
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		write(w, 200, devices)
+	})
 	m.HandleFunc("GET /api/v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
 		settings, e := s.Repo.Settings(r.Context())
 		if e != nil {
@@ -494,6 +502,10 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 				write(w, 403, map[string]string{"error": "Administrator required"})
 				return
 			}
+			if err := s.recordDevice(r, tokenHash(cookie.Value)); err != nil {
+				failure(w, err)
+				return
+			}
 			r = r.WithContext(context.WithValue(r.Context(), sessionKey{}, v))
 		}
 		next.ServeHTTP(w, r)
@@ -578,6 +590,11 @@ func (s *Server) newSession(w http.ResponseWriter, r *http.Request, u domain.Use
 	expires := time.Now().Add(30 * 24 * time.Hour)
 	if e := s.Repo.SaveSession(r.Context(), tokenHash(token), u.ID, csrf, expires, u.Password); e != nil {
 		failure(w, e)
+		return
+	}
+	if err := s.recordDevice(r, tokenHash(token)); err != nil {
+		_ = s.Repo.DeleteSession(r.Context(), tokenHash(token))
+		failure(w, err)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "cadence_session", Value: token, Path: "/", HttpOnly: true, Secure: s.Config.SecureCookie, SameSite: http.SameSiteStrictMode, Expires: expires})
@@ -942,4 +959,16 @@ func (s *Server) updateBranding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 200, map[string]string{"name": v.Name})
+}
+
+func (s *Server) recordDevice(r *http.Request, token string) error {
+	agent := r.UserAgent()
+	version := r.Header.Get("X-Cadence-Client-Version")
+	if len(agent) > 2048 {
+		agent = agent[:2048]
+	}
+	if len(version) > 120 {
+		version = version[:120]
+	}
+	return s.Repo.RecordDevice(r.Context(), token, strings.ToValidUTF8(agent, ""), strings.ToValidUTF8(version, ""))
 }

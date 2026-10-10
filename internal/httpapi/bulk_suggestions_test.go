@@ -63,3 +63,5 @@ func TestBulkSuggestionsAuthorizationAndValidation(t *testing.T) {
 		t.Fatal("invalid requests mutated suggestions", repo.calls, repo.fields)
 	}
 }
+
+func (r *bulkRepo) RecordDevice(context.Context, string, string, string) error { return nil }

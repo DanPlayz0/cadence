@@ -84,3 +84,5 @@ func TestLyricsRecheckAccessAfterProviderRequest(t *testing.T) {
 		t.Fatal("permission change during lookup", w.Code, w.Body.String())
 	}
 }
+
+func (r *lyricsRepo) RecordDevice(context.Context, string, string, string) error { return nil }

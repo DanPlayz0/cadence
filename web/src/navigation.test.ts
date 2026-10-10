@@ -20,6 +20,7 @@ describe("page URLs", () => {
     for (const adminTab of [
       "dashboard",
       "branding",
+      "devices",
       "library",
       "people",
       "permissions",

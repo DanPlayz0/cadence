@@ -27,6 +27,14 @@ type UserUpdate struct {
 	DisplayName *string
 	Groups      *[]string
 }
+type Device struct {
+	ID            string    `json:"id"`
+	User          User      `json:"user"`
+	UserAgent     string    `json:"userAgent"`
+	ClientVersion string    `json:"clientVersion"`
+	LastActive    time.Time `json:"lastActive"`
+}
+
 type Session struct {
 	User    User
 	CSRF    string
@@ -233,6 +241,8 @@ type AdminRepository interface {
 	SetEnrichment(context.Context, bool) error
 	InstanceName(context.Context) (string, error)
 	SetInstanceName(context.Context, string) error
+	RecordDevice(context.Context, string, string, string) error
+	Devices(context.Context) ([]Device, error)
 }
 type Repository interface {
 	AuthRepository

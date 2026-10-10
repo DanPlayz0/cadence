@@ -3731,3 +3731,65 @@ input[type="range"] {
 .brand > svg {
   flex-shrink: 0;
 }
+
+.device-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+}
+.device-search input {
+  min-width: 0;
+  width: 100%;
+}
+.device-table-scroll {
+  overflow-x: auto;
+}
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.device-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.device-table td,
+.device-table th {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.device-table time {
+  white-space: nowrap;
+}
+.device-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.device-table details {
+  margin-top: 8px;
+  max-width: 400px;
+}
+.device-table summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.device-table code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.device-user {
+  display: flex;
+  gap: 10px;
+  padding: 0;
+  text-align: left;
+}
+.device-user .user-avatar {
+  flex-shrink: 0;
+}
+.device-user:hover strong {
+  color: var(--accent);
+}

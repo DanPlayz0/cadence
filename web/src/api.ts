@@ -42,6 +42,7 @@ export type Page = {
   offset: number;
 };
 export type Session = { user: User; csrf: string };
+declare const __CLIENT_VERSION__: string;
 let csrf = "";
 export function setSession(s: Session | null) {
   csrf = s?.csrf ?? "";
@@ -67,6 +68,8 @@ export async function api<T>(
     signal: AbortSignal.timeout(15000),
     headers: {
       "Content-Type": "application/json",
+      "X-Cadence-Client-Version":
+        typeof __CLIENT_VERSION__ === "string" ? __CLIENT_VERSION__ : "",
       ...(csrf ? { "X-CSRF-Token": csrf } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
