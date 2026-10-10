@@ -69,6 +69,8 @@ music.example.com {
 
 When the proxy runs in Docker, connect it to the app's network and proxy to `app:8080`. Configure sufficient proxy read timeouts for conversion. LAN-only HTTP can use `BIND_ADDRESS=0.0.0.0` and a matching HTTP `PUBLIC_URL`; use HTTPS for internet access. Authentication throttling uses the direct peer address, so proxy users share that rate limit. Use proxy-side login throttling for per-client controls.
 
+By default, `ALLOW_ANY_ORIGIN=false` restricts mutation requests (including login/setup) to `PUBLIC_URL`, or the request's own origin when `PUBLIC_URL` is empty. To access the same instance through multiple addresses, such as `http://192.168.0.29` and `http://localhost`, set `ALLOW_ANY_ORIGIN=true` in `.env` and rebuild/recreate the app with `docker compose up -d --build app`. Use the actual port in each address if it is not port 80. This opt-in disables the mutation origin check for every origin; authentication, administrator permissions, CSRF tokens, and SameSite cookies still apply. It does not add cross-origin API/CORS support: open the app at the desired address and it calls its API at that same address. `PUBLIC_URL` still controls Secure cookies, so an HTTPS `PUBLIC_URL` requires HTTPS access through every hostname. Sessions are separate for each hostname.
+
 ## Development
 
 Requires Go 1.26.9+, Node 22.16+, PostgreSQL 17+, FFmpeg and FFprobe on PATH. Go automatically selects the patched toolchain declared by go.mod.

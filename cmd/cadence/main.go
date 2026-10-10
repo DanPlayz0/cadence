@@ -50,6 +50,10 @@ func run() error {
 	if err := httpapi.ValidatePublicURL(public); err != nil {
 		return err
 	}
+	allowAnyOrigin, err := strconv.ParseBool(env("ALLOW_ANY_ORIGIN", "false"))
+	if err != nil {
+		return fmt.Errorf("ALLOW_ANY_ORIGIN must be a boolean: %w", err)
+	}
 	data := env("DATA_DIR", "./.local/data")
 	art := filepath.Join(data, "artwork")
 	if err := os.MkdirAll(art, 0750); err != nil {
@@ -90,7 +94,7 @@ func run() error {
 	}
 	enricher := &library.Enricher{Repo: repo, ArtDir: art, UserAgent: os.Getenv("METADATA_USER_AGENT")}
 	scanner := &library.Scanner{Repo: repo, Roots: roots, ManagedLibraries: true, ArtDir: art, Enricher: enricher, Context: ctx}
-	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://")}}
+	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://"), AllowAnyOrigin: allowAnyOrigin}}
 	server := &http.Server{Addr: env("LISTEN_ADDR", ":8080"), Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	go func() {
 		ticker := time.NewTicker(time.Duration(number("SCAN_INTERVAL_MINUTES", 60)) * time.Minute)

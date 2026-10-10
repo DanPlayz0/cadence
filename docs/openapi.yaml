@@ -7,7 +7,9 @@ info:
     url: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
   description:
     Same-origin API. Authenticated mutations require X-CSRF-Token from
-    /me or login. Excluded tracks return 404. Mounted storage boundaries are configured by
+    /me or login. Mutation origins are restricted to PUBLIC_URL (or the request origin
+    when unset) unless ALLOW_ANY_ORIGIN=true; this does not enable cross-origin CORS.
+    Excluded tracks return 404. Mounted storage boundaries are configured by
     environment; library folders and sharing are configured in the UI. Music files are never modified.
 servers:
   - url: /api/v1

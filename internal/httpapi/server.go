@@ -33,6 +33,7 @@ import (
 type Config struct {
 	PublicURL, WebDir, ArtDir string
 	SecureCookie              bool
+	AllowAnyOrigin            bool
 	Roots                     []string
 }
 type Server struct {
@@ -494,7 +495,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", "no-store")
 		}
 		mutating := r.Method != "GET" && r.Method != "HEAD" && r.Method != "OPTIONS"
-		if mutating {
+		if mutating && !s.Config.AllowAnyOrigin {
 			origin := r.Header.Get("Origin")
 			expected := strings.TrimRight(s.Config.PublicURL, "/")
 			if expected == "" {
