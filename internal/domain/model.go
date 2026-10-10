@@ -27,6 +27,21 @@ type UserUpdate struct {
 	DisplayName *string
 	Groups      *[]string
 }
+type ActivityEntry struct {
+	ID       int64     `json:"id"`
+	Created  time.Time `json:"created"`
+	Level    string    `json:"level"`
+	UserID   string    `json:"userId"`
+	UserName string    `json:"userName"`
+	Name     string    `json:"name"`
+	Overview string    `json:"overview"`
+	Type     string    `json:"type"`
+}
+type ActivityPage struct {
+	Items []ActivityEntry `json:"items"`
+	Total int             `json:"total"`
+}
+
 type Device struct {
 	ID            string    `json:"id"`
 	User          User      `json:"user"`
@@ -243,6 +258,8 @@ type AdminRepository interface {
 	SetInstanceName(context.Context, string) error
 	RecordDevice(context.Context, string, string, string) error
 	Devices(context.Context) ([]Device, error)
+	Activity(context.Context, string, string, int, int) (ActivityPage, error)
+	RecordActivity(context.Context, ActivityEntry) error
 }
 type Repository interface {
 	AuthRepository

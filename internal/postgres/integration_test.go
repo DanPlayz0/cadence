@@ -438,7 +438,8 @@ func TestUserNameMigration(t *testing.T) {
 			r, c := fixture(t)
 			ctx := context.Background()
 			r.Close()
-			_, e := c.Exec(ctx, `ALTER TABLE users DROP CONSTRAINT users_username_normalized;
+			_, e := c.Exec(ctx, `ALTER TABLE users DISABLE TRIGGER user_activity;
+			 ALTER TABLE users DROP CONSTRAINT users_username_normalized;
 			 ALTER TABLE users DROP COLUMN display_name;
 			 ALTER TABLE users RENAME COLUMN username TO name;
 			 DELETE FROM schema_migrations WHERE version=2;
@@ -479,6 +480,9 @@ func TestUserNameMigration(t *testing.T) {
 				t.Fatal(e)
 			}
 			defer migrated.Close()
+			if _, e = c.Exec(ctx, "ALTER TABLE users ENABLE TRIGGER user_activity"); e != nil {
+				t.Fatal(e)
+			}
 			u, e := migrated.UserByUsername(ctx, "DANNY")
 			if e != nil || u.ID != "legacy" || u.Username != "danny" || u.DisplayName != "Danny" || u.Password != "hash" {
 				t.Fatal("legacy identity lost", u, e)
@@ -537,7 +541,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 8 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 11 {
 		t.Fatal("migration reapplied", e)
 	}
 	checkpoint, e := reopened.Playback(ctx, u.ID)

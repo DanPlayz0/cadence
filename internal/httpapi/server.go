@@ -250,6 +250,7 @@ func (s *Server) Handler() http.Handler {
 		write(w, 200, map[string]string{"name": name})
 	})
 	m.HandleFunc("PUT /api/v1/admin/branding", s.updateBranding)
+	m.HandleFunc("GET /api/v1/admin/activity", s.activity)
 	m.HandleFunc("GET /api/v1/admin/devices", func(w http.ResponseWriter, r *http.Request) {
 		devices, err := s.Repo.Devices(r.Context())
 		if err != nil {
@@ -580,6 +581,14 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	valid := bcrypt.CompareHashAndPassword([]byte(hash), []byte(v.Password)) == nil
 	if e != nil || !valid {
+		entry := domain.ActivityEntry{Level: "Warning", Name: "Sign-in failed", Type: "AuthenticationFailed", Overview: "Invalid username or password"}
+		if e == nil {
+			entry.UserID = u.ID
+			entry.UserName = u.DisplayName
+		}
+		if err := s.Repo.RecordActivity(r.Context(), entry); err != nil {
+			slog.Error("record failed login activity", "error", err)
+		}
 		write(w, 401, map[string]string{"error": "Invalid credentials"})
 		return
 	}
@@ -971,4 +980,30 @@ func (s *Server) recordDevice(r *http.Request, token string) error {
 		version = version[:120]
 	}
 	return s.Repo.RecordDevice(r.Context(), token, strings.ToValidUTF8(agent, ""), strings.ToValidUTF8(version, ""))
+}
+
+func (s *Server) activity(w http.ResponseWriter, r *http.Request) {
+	filter := r.URL.Query().Get("filter")
+	if filter == "" {
+		filter = "all"
+	}
+	if filter != "all" && filter != "user" && filter != "system" {
+		write(w, 400, map[string]string{"error": "Unknown activity filter"})
+		return
+	}
+	query := r.URL.Query().Get("q")
+	if len(query) > 500 {
+		write(w, 400, map[string]string{"error": "Search is too long"})
+		return
+	}
+	limit, offset := pagination(r)
+	if limit > 100 {
+		limit = 100
+	}
+	result, err := s.Repo.Activity(r.Context(), filter, query, limit, offset)
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, result)
 }

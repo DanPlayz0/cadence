@@ -17,6 +17,7 @@ import {
   Monitor,
   Search,
 } from "lucide-react";
+import { ActivityLog } from "./ActivityLog";
 import { describeClient } from "./devices";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
@@ -107,6 +108,12 @@ const sections = [
   },
   {
     id: "activity",
+    label: "Activity",
+    icon: Activity,
+    description: "Review user and system events across your instance.",
+  },
+  {
+    id: "scans",
     label: "Scan activity",
     icon: Activity,
     description: "View scans and reported issues.",
@@ -503,7 +510,7 @@ export function Admin({
                   <button className="primary" onClick={() => onTab("library")}>
                     <RefreshCw size={16} /> Manage library
                   </button>
-                  <button onClick={() => onTab("activity")}>
+                  <button onClick={() => onTab("scans")}>
                     View scan activity
                   </button>
                 </div>
@@ -599,7 +606,8 @@ export function Admin({
               </div>
             </>
           )}
-          {tab === "activity" && (
+          {tab === "activity" && <ActivityLog />}
+          {tab === "scans" && (
             <>
               <div className="panel">
                 <h2>Recent scans</h2>

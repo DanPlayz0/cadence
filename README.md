@@ -16,6 +16,8 @@ Linux containers run as UID/GID 10001; the mounted music directory must be reada
 
 ## Listening and administration
 
+- **Instance settings → Activity** shows persisted user and system events with All/User/System filters, search, and pages of 25 events. Events include sign-ins, session removal (sign-out, revocation, or expiration), failed logins, account/group/access changes, branding/enrichment changes, recorded plays, and library scan results. User events identify the affected listener, not necessarily the administrator who made the change. Play events mean a play was recorded in listening history, not a playback start or stop. Existing records are not backfilled. Activity survives session/user deletion; no passwords, session tokens, or CSRF values are stored. Scan details remain under **Scan activity**.
+
 - **Instance settings → Devices** lists all listeners’ signed-in sessions, ordered by last activity, with browser/app versions, operating system, Cadence web version, and expandable user agents. Search by listener or client. Existing sessions appear when they next make an authenticated request; signing out, revoking sessions, or session expiration removes them. Activity is updated at most once per minute. Clients report their own identifying details.
 
 - **Instance settings → Branding** lets administrators rename the instance. The name is saved in PostgreSQL and appears on the login screen, in the app header, and in the browser title. Names can contain 1–120 characters; surrounding whitespace is removed.

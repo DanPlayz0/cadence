@@ -3793,3 +3793,50 @@ input[type="range"] {
 .device-user:hover strong {
   color: var(--accent);
 }
+
+.activity-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.activity-filters {
+  display: flex;
+  gap: 4px;
+}
+.activity-filters .selected {
+  color: var(--accent);
+  background: var(--line);
+}
+.activity-toolbar .device-search {
+  flex: 1;
+  min-width: 160px;
+}
+.activity-level {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  background: #193d4b;
+  color: #8cdbf4;
+}
+.activity-level-warning {
+  background: #483b1b;
+  color: #f1d18c;
+}
+.activity-level-error {
+  background: #492525;
+  color: #ffacac;
+}
+.activity-table td:nth-child(4),
+.activity-table td:nth-child(5) {
+  min-width: 180px;
+  overflow-wrap: anywhere;
+  max-width: 400px;
+}
+.activity-pagination {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.activity-pagination > span {
+  margin-right: auto;
+}

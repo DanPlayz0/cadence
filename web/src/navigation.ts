@@ -16,6 +16,7 @@ export const adminTabs = [
   "metadata",
   "suggestions",
   "activity",
+  "scans",
 ];
 const pages = ["home", "songs", "albums", "artists", "likes", "history"];
 

@@ -27,6 +27,7 @@ describe("page URLs", () => {
       "metadata",
       "suggestions",
       "activity",
+      "scans",
     ]) {
       const route = { view: "admin", adminTab };
       expect(
