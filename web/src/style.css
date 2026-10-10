@@ -4120,3 +4120,315 @@ input[type="range"] {
     padding-block: 0;
   }
 }
+
+/* Mobile music navigation and playback. */
+.mobile-chrome,
+.phone-page-title {
+  display: none;
+}
+.find-pane[hidden] {
+  display: none;
+}
+.library-overview > h1 {
+  margin: 0 0 20px;
+}
+.library-overview .library-switcher {
+  display: flex;
+  margin: 0 0 24px;
+  max-width: 100%;
+}
+.library-destinations {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 28px;
+}
+.library-destinations > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  min-height: 48px;
+}
+.library-destinations > button > span:not(:last-child) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.library-destinations > button > span:last-child {
+  margin-left: auto;
+}
+.now-playing-view {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 4px;
+}
+.now-playing-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 340px, 38dvh);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+  align-self: center;
+  background: #292e24;
+  border-radius: 16px;
+  color: var(--accent);
+  overflow: hidden;
+}
+.now-playing-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.now-playing-credit {
+  display: grid;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+.now-playing-credit strong {
+  font-size: 22px;
+}
+.now-playing-view .controls {
+  height: 56px;
+  flex-shrink: 0;
+}
+.now-playing-view .controls .play-button {
+  width: 56px;
+  min-height: 56px;
+}
+.now-playing-utilities {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+.now-playing-utilities > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.now-playing-view .timeline {
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .app.phone-app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) calc(64px + env(safe-area-inset-bottom));
+    min-height: 0;
+  }
+  .app.phone-app.has-current-track {
+    grid-template-rows: minmax(0, 1fr) calc(128px + env(safe-area-inset-bottom));
+  }
+  .app.phone-app.focused-view {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .phone-app > .sidebar,
+  .phone-app > .player,
+  .phone-app .mobile-nav {
+    display: none;
+  }
+  .phone-app > main {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+  .phone-app .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 64px;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .phone-page-title {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .phone-app .topbar .search {
+    display: none;
+  }
+  .phone-app .topbar .search.phone-search-visible {
+    display: flex;
+    order: 4;
+    flex-basis: 100%;
+  }
+  .phone-app .topbar .search kbd {
+    display: none;
+  }
+  .phone-app .topbar .back-buttons {
+    display: flex;
+  }
+  .phone-app .topbar .back-buttons button {
+    width: 44px;
+    min-height: 44px;
+  }
+  .phone-app .topbar .back-buttons:has(button:disabled) {
+    display: none;
+  }
+  .mobile-chrome {
+    display: flex;
+    flex-direction: column;
+    grid-row: 2;
+    grid-column: 1;
+    background: #141514;
+    padding-bottom: env(safe-area-inset-bottom);
+    min-width: 0;
+  }
+  .mobile-tabs {
+    height: 64px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mobile-tabs a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12px;
+  }
+  .mobile-tabs a[aria-current="page"] {
+    color: var(--accent);
+  }
+  .compact-player {
+    height: 64px;
+    display: flex;
+    gap: 8px;
+    padding: 6px 10px;
+    margin: 0 8px;
+    background: #2b3025;
+    border-radius: 10px;
+    min-width: 0;
+    align-items: center;
+  }
+  .compact-track {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    text-align: left;
+    padding: 0;
+  }
+  .compact-track img,
+  .compact-art {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 5px;
+    object-fit: cover;
+  }
+  .compact-art {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+  }
+  .compact-track > span:last-child {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+  .compact-track strong,
+  .compact-track small {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .compact-track small {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .compact-player > button:last-child {
+    width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  .ui-dialog-content:not(.playback-sheet) {
+    inset: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    padding: max(16px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+  body:has(.ui-dialog-content) .mobile-chrome {
+    visibility: hidden;
+  }
+  .ui-dialog-content:not(.playback-sheet) .dialog-heading {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface);
+    padding-bottom: 12px;
+  }
+  .phone-app .toast {
+    bottom: auto;
+  }
+}
+@media (max-width: 700px) and (max-height: 500px) {
+  .now-playing-view {
+    gap: 12px;
+    padding-top: 4px;
+  }
+  .now-playing-art {
+    width: 100px;
+  }
+  .now-playing-credit strong {
+    font-size: 18px;
+  }
+}
+.now-playing-art .compact-art {
+  width: 100%;
+  height: 100%;
+}
+.combined-find-pane {
+  padding: 0 16px 24px;
+}
+@media (max-width: 700px) {
+  .ui-dialog-content:not(.playback-sheet) .dialog-heading {
+    flex-wrap: wrap;
+  }
+  .ui-dialog-content .dialog-heading h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+.tab-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+.now-playing-art .compact-art {
+  background: transparent;
+}
+.now-playing-art .compact-art svg {
+  width: 80px;
+  height: 80px;
+}

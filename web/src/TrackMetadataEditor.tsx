@@ -442,16 +442,18 @@ export function TrackMetadataEditor({
       }}
     >
       <DialogContent className="metadata-chooser" busy={busy || dirty}>
-        <DialogTitle>
-          Edit song{selected ? ` — ${selected.title}` : ""}
-        </DialogTitle>
+        <div className="row dialog-heading">
+          <DialogTitle>
+            Edit song{selected ? ` — ${selected.title}` : ""}
+          </DialogTitle>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
+            {dirty ? "Discard edits and close" : "Close"}
+          </Button>
+        </div>
         <DialogDescription>
           Edit album, artist, and other metadata, or choose suggested artwork.
         </DialogDescription>
         {content}
-        <Button variant="outline" disabled={busy} onClick={onClose}>
-          {dirty ? "Discard edits and close" : "Close"}
-        </Button>
       </DialogContent>
     </Dialog>
   );

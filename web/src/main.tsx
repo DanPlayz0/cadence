@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
 import { createRoot } from "react-dom/client";
 import {
   Album as AlbumIcon,
@@ -60,6 +66,8 @@ import { TrackActions } from "./TrackActions";
 import { PlaylistPicker } from "./PlaylistPicker";
 import { usePanelResize } from "./usePanelResize";
 import { Button } from "./components/ui/button";
+import { MobileTabs, CompactPlayer, LibraryOverview } from "./MobileMusic";
+import { tabRoute, type MobileTab } from "./mobileNavigation";
 import "./style.css";
 
 function Artwork({
@@ -296,7 +304,16 @@ function App() {
       live = false;
     };
   }, []);
-  const { route, navigate, canGoBack, back } = useNavigation();
+  const {
+    route,
+    navigate,
+    canGoBack,
+    back,
+    mobileTab,
+    remembered,
+    roots,
+    restoreScroll,
+  } = useNavigation(session?.user.id);
   const searchInput = useRef<HTMLInputElement>(null);
   const currentRoute = useRef(route);
   currentRoute.current = route;
@@ -319,7 +336,7 @@ function App() {
     view,
     selectedAlbumId,
     selectedArtist,
-    debounced,
+    query,
     libraryId,
   ]);
   const [loadedCollection, setLoadedCollection] = useState("");
@@ -346,10 +363,67 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const panelResize = usePanelResize(queueOpen);
-  const [queueTab, setQueueTab] = useState<"queue" | "lyrics">("queue");
+  const [queueTab, setQueueTab] = useState<"queue" | "lyrics" | "now">("queue");
   const mobilePlayback = useMobilePlayback();
+  const [fromNowPlaying, setFromNowPlaying] = useState(false);
+  useEffect(() => {
+    if (!mobilePlayback && queueTab === "now") {
+      setQueueOpen(false);
+      setQueueTab("queue");
+    }
+  }, [mobilePlayback, queueTab]);
   const [reload, setReload] = useState(0);
   const request = useRef(0);
+  const collectionCache = useRef(
+    new Map<
+      string,
+      {
+        albums: Album[];
+        artists: Artist[];
+        tracks: Track[];
+        total: number;
+        offset: number;
+        more: boolean;
+      }
+    >(),
+  );
+  useEffect(() => {
+    collectionCache.current.clear();
+  }, [session?.user.id, reload]);
+  useEffect(() => {
+    setLoadedCollection("");
+    setTracks([]);
+    setAlbums([]);
+    setArtists([]);
+    setTotal(0);
+    setOffset(0);
+    setMore(false);
+  }, [session?.user.id]);
+  useEffect(() => {
+    if (!collectionReady || loading) return;
+    collectionCache.current.set(collectionKey, {
+      albums,
+      artists,
+      tracks,
+      total,
+      offset,
+      more,
+    });
+    if (collectionCache.current.size > 20)
+      collectionCache.current.delete(
+        collectionCache.current.keys().next().value!,
+      );
+  }, [
+    collectionReady,
+    collectionKey,
+    albums,
+    artists,
+    tracks,
+    total,
+    offset,
+    more,
+    loading,
+  ]);
   useEffect(() => {
     const userId = session?.user.id;
     if (!userId) {
@@ -367,6 +441,7 @@ function App() {
         if (selected && !next.some((item) => item.id === selected)) {
           navigate({ ...currentRoute.current, libraryId: undefined }, true);
         }
+        collectionCache.current.clear();
         setLoadedCollection("");
         setAlbums([]);
         setArtists([]);
@@ -396,13 +471,21 @@ function App() {
       previousView.current !== focusRoute &&
       document.activeElement !== searchInput.current
     ) {
-      mainElement.current?.querySelector<HTMLElement>("h1")?.focus();
+      mainElement.current
+        ?.querySelector<HTMLElement>("h1")
+        ?.focus({ preventScroll: true });
     }
     previousView.current = focusRoute;
   }, [focusRoute]);
-  useEffect(() => {
-    mainElement.current?.scrollTo({ top: 0 });
-  }, [view, selectedAlbumId, selectedArtist, debounced]);
+  useLayoutEffect(() => {
+    if (
+      (collectionReady && debounced === query) ||
+      view === "library" ||
+      view === "find" ||
+      view === "admin"
+    )
+      restoreScroll();
+  }, [collectionReady, route, view, debounced, query, restoreScroll]);
   const [addingTrack, setAddingTrack] = useState<Track | null>(null);
   const playlistReturnTrack = useRef<Track | null>(null);
   useEffect(() => {
@@ -439,7 +522,34 @@ function App() {
   const artistView = view === "artists";
   useEffect(() => {
     const id = ++request.current;
-    if (!session || view === "admin" || view === "find") return;
+    if (!session || view === "admin" || view === "find" || view === "library") {
+      setLoading(false);
+      return;
+    }
+    if (debounced !== query) {
+      setLoading(true);
+      return;
+    }
+    if (view === "search" && !debounced) {
+      setTracks([]);
+      setTotal(0);
+      setMore(false);
+      setLoading(false);
+      setLoadedCollection(collectionKey);
+      return;
+    }
+    const cached = collectionCache.current.get(collectionKey);
+    if (cached) {
+      setAlbums(cached.albums);
+      setArtists(cached.artists);
+      setTracks(cached.tracks);
+      setTotal(cached.total);
+      setOffset(cached.offset);
+      setMore(cached.more);
+      setLoading(false);
+      setLoadedCollection(collectionKey);
+      return;
+    }
     setLoading(true);
     setCollectionError(null);
     setOffset(0);
@@ -492,6 +602,7 @@ function App() {
     selectedAlbumId,
     selectedArtist,
     debounced,
+    query,
     reload,
     collectionKey,
     expire,
@@ -549,6 +660,7 @@ function App() {
       setNotice(
         `${t.liked ? "Removed" : "Added"} “${t.title}” ${t.liked ? "from" : "to"} liked songs.`,
       );
+      collectionCache.current.clear();
       if (view === "likes") setReload((value) => value + 1);
     } catch (e) {
       if (activeUser.current === userID) setError((e as Error).message);
@@ -611,6 +723,8 @@ function App() {
       ) {
         e.preventDefault();
         setQueueOpen(false);
+        if (mobilePlayback)
+          navigate({ view: "search", libraryId: route.libraryId });
         window.requestAnimationFrame(() => {
           searchInput.current?.focus();
           searchInput.current?.select();
@@ -634,7 +748,7 @@ function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [player.toggle, session]);
+  }, [player.toggle, session, mobilePlayback, navigate, route.libraryId]);
   const playlist = playlists.find((p) => p.id === view.slice(9));
   const heading =
     selectedAlbum?.title ||
@@ -645,11 +759,49 @@ function App() {
       albums: "Albums",
       artists: "Artists",
       songs: "All songs",
+      search: "Search",
+      library: "Your library",
       likes: "Liked songs",
       history: "Recently played",
       admin: "Instance settings",
     }[view] ??
       "Library");
+  const librarySelector = (
+    <label className="library-switcher">
+      Library
+      <select
+        aria-label="Choose library"
+        value={route.libraryId || ""}
+        onChange={(event) => {
+          navigate({ ...route, libraryId: event.target.value || undefined });
+          setOffset(0);
+        }}
+      >
+        <option value="">All accessible music</option>
+        {libraries.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const destinations = Object.fromEntries(
+    (["home", "search", "library"] as MobileTab[]).map((tab) => [
+      tab,
+      tabRoute(
+        tab,
+        remembered.current[tab],
+        route.libraryId,
+        playlists.map((p) => p.id),
+        libraries.map((l) => l.id),
+        soulseek.allowed,
+      ),
+    ]),
+  ) as Record<MobileTab, import("./navigation").Route>;
+  const selectTab = (tab: MobileTab) => {
+    if (tab !== mobileTab) navigate(destinations[tab], false, tab);
+  };
   if (!ready)
     return (
       <div className="auth">
@@ -725,7 +877,7 @@ function App() {
   return (
     <div
       ref={panelResize.app}
-      className={`app ${queueOpen && !mobilePlayback ? "queue-open" : ""} ${panelResize.dragging ? "panel-resizing" : ""}`}
+      className={`app ${mobilePlayback ? "phone-app" : ""} ${view === "admin" ? "focused-view" : ""} ${player.current ? "has-current-track" : ""} ${queueOpen && !mobilePlayback ? "queue-open" : ""} ${panelResize.dragging ? "panel-resizing" : ""}`}
       data-panel-mode={panelResize.mode}
       style={
         {
@@ -847,13 +999,24 @@ function App() {
             <button
               aria-label="Go back"
               title="Go back"
-              disabled={!canGoBack}
-              onClick={back}
+              disabled={
+                !canGoBack &&
+                (!mobilePlayback ||
+                  (!["admin", "album", "artist"].includes(view) &&
+                    !view.startsWith("playlist:")))
+              }
+              onClick={() => {
+                if (canGoBack) back();
+                else browse("library");
+              }}
             >
               <ChevronLeft />
             </button>
           </div>
-          <div className="search">
+          <span className="phone-page-title">{heading}</span>
+          <div
+            className={`search ${view === "search" || view === "find" || ((view === "songs" || view === "search") && query) ? "phone-search-visible" : ""}`}
+          >
             <Search size={18} />
             <input
               ref={searchInput}
@@ -867,11 +1030,16 @@ function App() {
               onChange={(e) => {
                 navigate(
                   {
-                    view: view === "find" ? "find" : "songs",
+                    view:
+                      view === "find"
+                        ? "find"
+                        : mobilePlayback || view === "search"
+                          ? "search"
+                          : "songs",
                     query: e.target.value,
                     libraryId: route.libraryId,
                   },
-                  view === "songs" || view === "find",
+                  view === "songs" || view === "find" || view === "search",
                 );
                 setOffset(0);
               }}
@@ -888,29 +1056,10 @@ function App() {
               </button>
             )}
           </div>
-          {view !== "admin" && view !== "find" && (
-            <label className="library-switcher">
-              Library
-              <select
-                aria-label="Choose library"
-                value={route.libraryId || ""}
-                onChange={(event) => {
-                  navigate({
-                    ...route,
-                    libraryId: event.target.value || undefined,
-                  });
-                  setOffset(0);
-                }}
-              >
-                <option value="">All accessible music</option>
-                {libraries.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          {!mobilePlayback &&
+            view !== "admin" &&
+            view !== "find" &&
+            librarySelector}
           <AccountMenu
             miniPlayer={miniPlayer}
             hasTrack={!!player.current}
@@ -922,6 +1071,7 @@ function App() {
             onVolume={player.setVolume}
             onAdmin={() => browse("admin")}
             onQueue={() => {
+              setFromNowPlaying(false);
               setQueueTab("queue");
               setQueueOpen(true);
             }}
@@ -982,16 +1132,56 @@ function App() {
             }}
             onExpired={expire}
           />
-        ) : view === "find" ? (
-          <FindMusic
-            query={query}
-            capabilities={soulseek}
-            admin={session.user.admin}
-            onQuery={(q) => navigate({ view: "find", query: q }, true)}
-            onLibrary={() => browse("songs")}
+        ) : view === "find" ? null : view === "library" ? (
+          <LibraryOverview
+            playlists={playlists}
+            librarySelector={librarySelector}
+            onNavigate={browse}
+            onCreate={() => setAddingPlaylist(true)}
           />
+        ) : view === "search" && !query ? (
+          <section className="content">
+            <h1 tabIndex={-1}>Search</h1>
+            <p className="muted">
+              Search your collection by title, artist, or album.
+            </p>
+            {soulseek.allowed && (
+              <button onClick={() => navigate({ view: "find" })}>
+                Find music beyond your library
+              </button>
+            )}
+          </section>
         ) : (
           <section className="content">
+            {mobilePlayback &&
+              view !== mobileTab &&
+              view !== "find" &&
+              !(view === "songs" && query) && (
+                <button
+                  className="tab-breadcrumb"
+                  onClick={() =>
+                    navigate(
+                      tabRoute(
+                        mobileTab,
+                        roots.current[mobileTab],
+                        route.libraryId,
+                        playlists.map((p) => p.id),
+                        libraries.map((l) => l.id),
+                        soulseek.allowed,
+                      ),
+                      false,
+                      mobileTab,
+                    )
+                  }
+                >
+                  <ChevronLeft size={16} /> Back to{" "}
+                  {mobileTab === "home"
+                    ? "Home"
+                    : mobileTab === "search"
+                      ? "Search"
+                      : "Library"}
+                </button>
+              )}
             <div className="mobile-nav">
               <select
                 aria-label="Go to collection"
@@ -1028,7 +1218,7 @@ function App() {
                 <option value="__new">Create playlist…</option>
               </select>
             </div>
-            {view === "songs" &&
+            {(view === "songs" || view === "search") &&
               query &&
               soulseek.allowed &&
               soulseek.presentation === "separate" && (
@@ -1166,6 +1356,7 @@ function App() {
                         )
                           return;
                         await api(`/playlists/${playlist.id}`, "DELETE");
+                        collectionCache.current.clear();
                         await refreshPlaylists();
                         setNotice(
                           "Playlist deleted. Your songs are still in the library.",
@@ -1340,23 +1531,63 @@ function App() {
                 Load more <ChevronRight size={16} />
               </button>
             )}
-            {view === "songs" &&
-              query &&
-              soulseek.allowed &&
-              soulseek.presentation === "combined" && (
-                <FindMusic
-                  embedded
-                  query={query}
-                  capabilities={soulseek}
-                  admin={session.user.admin}
-                />
-              )}
             <footer className="content-footer">
               CADENCE <span>Music on your terms.</span>
             </footer>
           </section>
         )}
+        {soulseek.allowed && soulseek.presentation === "combined" && (
+          <div
+            className="find-pane combined-find-pane"
+            hidden={!((view === "songs" || view === "search") && query)}
+          >
+            <FindMusic
+              embedded
+              query={
+                view === "songs" || view === "search"
+                  ? query
+                  : remembered.current.search?.query || ""
+              }
+              capabilities={soulseek}
+              admin={session.user.admin}
+            />
+          </div>
+        )}
+        {soulseek.allowed && (
+          <div className="find-pane" hidden={view !== "find"}>
+            <FindMusic
+              query={
+                view === "find"
+                  ? query
+                  : remembered.current.search?.view === "find"
+                    ? remembered.current.search.query
+                    : ""
+              }
+              capabilities={soulseek}
+              admin={session.user.admin}
+              onQuery={(q) => navigate({ view: "find", query: q }, true)}
+              onLibrary={() => browse("songs")}
+            />
+          </div>
+        )}
       </main>
+      {mobilePlayback && view !== "admin" && (
+        <div className="mobile-chrome">
+          <CompactPlayer
+            player={player}
+            onOpen={() => {
+              setFromNowPlaying(true);
+              setQueueTab("now");
+              setQueueOpen(true);
+            }}
+          />
+          <MobileTabs
+            active={mobileTab}
+            destinations={destinations}
+            onSelect={selectTab}
+          />
+        </div>
+      )}
       <MiniPlayer
         onArtist={(name) => {
           browseArtist(name);
@@ -1392,6 +1623,7 @@ function App() {
             await api(`/playlists/${destination.id}/tracks`, "POST", {
               trackId: addingTrack.id,
             });
+            collectionCache.current.clear();
             if (view === `playlist:${destination.id}`)
               setReload((value) => value + 1);
             setNotice(`Added “${addingTrack.title}” to ${destination.name}.`);
@@ -1413,11 +1645,13 @@ function App() {
             icon,
           });
           await refreshPlaylists();
+          collectionCache.current.clear();
           if (!playlistReturnTrack.current) browse(`playlist:${created.id}`);
           setNotice(`Created “${created.name}”.`);
         }}
       />
       <PlaybackPanel
+        fromNowPlaying={fromNowPlaying}
         open={queueOpen}
         onClose={() => setQueueOpen(false)}
         mobile={mobilePlayback}
@@ -1629,7 +1863,7 @@ function TrackList({
     obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (ref.current) ref.current.scrollTop = 0;
     setScroll(0);
   }, [tracks[0]?.id]);

@@ -22,6 +22,8 @@ export const adminTabs = [
 ];
 const pages = [
   "home",
+  "search",
+  "library",
   "songs",
   "albums",
   "artists",
