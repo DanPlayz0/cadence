@@ -473,21 +473,34 @@ export function Admin({
               </div>
               <div className="panel">
                 <h2>Listeners</h2>
-                {users.map((u) => (
-                  <button
-                    className="user-row user-select"
-                    key={u.id}
-                    onClick={() => setSelectedUser(u)}
-                  >
-                    <UserAvatar user={u} />
-                    <span>
-                      <strong>{u.displayName}</strong>
-                      <small>@{u.username}</small>
-                    </span>
-                    {u.admin && <span className="badge">admin</span>}
-                    <span className="user-edit-label">Manage</span>
-                  </button>
-                ))}
+                <div className="listener-grid">
+                  {users.map((u) => (
+                    <button
+                      type="button"
+                      className="listener-card"
+                      key={u.id}
+                      aria-label={`Manage ${u.displayName} (@${u.username})`}
+                      onClick={() => setSelectedUser(u)}
+                    >
+                      <span className="listener-card-portrait">
+                        <UserAvatar user={u} />
+                      </span>
+                      <span className="listener-card-details">
+                        <strong>{u.displayName}</strong>
+                        <small>@{u.username}</small>
+                        <span className="listener-card-role">
+                          {u.admin ? (
+                            <>
+                              <Shield size={14} /> Administrator
+                            </>
+                          ) : (
+                            "Listener"
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
