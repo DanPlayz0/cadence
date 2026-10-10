@@ -1349,6 +1349,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/artists/avatar:
+    put:
+      summary: Set or remove an artist avatar (admin only)
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [artist, image]
+              properties:
+                artist: { type: string }
+                image:
+                  {
+                    type: string,
+                    description: HTTPS image URL or empty to remove,
+                  }
+      responses:
+        "200":
+          description: Updated artist profile
+        "400":
+          description: Invalid image URL
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator and CSRF required
+        "404":
+          description: Artist is not accessible
   /admin/artists/profile:
     post:
       summary: Fetch and save an accessible artist profile from MusicBrainz and Wikimedia
@@ -3254,7 +3288,19 @@ paths:
           required: true
           schema:
             type: string
-            enum: [title, artist, album, albumArtist, year, genre, number, disc]
+            enum:
+              [
+                title,
+                artist,
+                featuredArtists,
+                videoGuests,
+                album,
+                albumArtist,
+                year,
+                genre,
+                number,
+                disc,
+              ]
         - name: value
           in: query
           schema:
@@ -3325,6 +3371,8 @@ paths:
                       title,
                       artist,
                       album,
+                      featuredArtists,
+                      videoGuests,
                       albumArtist,
                       year,
                       genre,
@@ -3643,6 +3691,8 @@ paths:
                     - title
                     - artist
                     - album
+                    - featuredArtists
+                    - videoGuests
                     - albumArtist
                     - year
                     - genre
@@ -3677,6 +3727,8 @@ paths:
                         title,
                         artist,
                         album,
+                        featuredArtists,
+                        videoGuests,
                         albumArtist,
                         year,
                         genre,
@@ -4043,6 +4095,12 @@ components:
           type: string
         artist:
           type: string
+        featuredArtists:
+          type: string
+          description: Comma-separated featured performers.
+        videoGuests:
+          type: string
+          description: Comma-separated music video appearance credits.
         albumArtist:
           type: string
           description: Omitted for singles.
@@ -4102,6 +4160,8 @@ components:
     Artist:
       type: object
       properties:
+        image:
+          type: string
         name:
           type: string
         tracks:

@@ -23,6 +23,8 @@ export const metadataFields: Record<string, string> = {
   title: "Title",
   artist: "Artist / performer",
   album: "Album",
+  featuredArtists: "Featured artists",
+  videoGuests: "Music video guests",
   albumArtist: "Album artist",
   year: "Year",
   genre: "Genre",

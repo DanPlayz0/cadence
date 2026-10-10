@@ -66,27 +66,29 @@ type Playback struct {
 	Sequence int64   `json:"sequence"`
 }
 type Track struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title"`
-	Artist      string  `json:"artist"`
-	AlbumArtist string  `json:"albumArtist,omitempty"`
-	Album       string  `json:"album,omitempty"`
-	AlbumID     string  `json:"albumId,omitempty"`
-	Single      bool    `json:"single"`
-	Number      int     `json:"number"`
-	Disc        int     `json:"disc"`
-	Year        string  `json:"year"`
-	Genre       string  `json:"genre"`
-	Duration    float64 `json:"duration"`
-	Codec       string  `json:"codec"`
-	MIME        string  `json:"mime"`
-	Artwork     bool    `json:"artwork"`
-	Liked       bool    `json:"liked"`
-	Path        string  `json:"-"`
-	ArtPath     string  `json:"-"`
-	Size        int64   `json:"-"`
-	Modified    int64   `json:"-"`
-	Root        string  `json:"-"`
+	FeaturedArtists string  `json:"featuredArtists,omitempty"`
+	VideoGuests     string  `json:"videoGuests,omitempty"`
+	ID              string  `json:"id"`
+	Title           string  `json:"title"`
+	Artist          string  `json:"artist"`
+	AlbumArtist     string  `json:"albumArtist,omitempty"`
+	Album           string  `json:"album,omitempty"`
+	AlbumID         string  `json:"albumId,omitempty"`
+	Single          bool    `json:"single"`
+	Number          int     `json:"number"`
+	Disc            int     `json:"disc"`
+	Year            string  `json:"year"`
+	Genre           string  `json:"genre"`
+	Duration        float64 `json:"duration"`
+	Codec           string  `json:"codec"`
+	MIME            string  `json:"mime"`
+	Artwork         bool    `json:"artwork"`
+	Liked           bool    `json:"liked"`
+	Path            string  `json:"-"`
+	ArtPath         string  `json:"-"`
+	Size            int64   `json:"-"`
+	Modified        int64   `json:"-"`
+	Root            string  `json:"-"`
 }
 
 // NormalizeAlbum keeps singles distinct from albums without inventing album metadata.
@@ -156,6 +158,7 @@ type ArtistProfile struct {
 }
 
 type Artist struct {
+	Image  string `json:"image,omitempty"`
 	Name   string `json:"name"`
 	Tracks int    `json:"tracks"`
 }

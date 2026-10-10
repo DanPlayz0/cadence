@@ -1132,7 +1132,7 @@ function App() {
                       setOffset(0);
                     }}
                   >
-                    <Artwork id="" label={a.name} />
+                    <ArtistAvatar name={a.name} image={a.image} />
                     <strong>{a.name}</strong>
                     <span>{a.tracks.toLocaleString()} songs</span>
                   </button>
@@ -1406,6 +1406,8 @@ function App() {
                     </button>
                     <ArtistLinks
                       credit={t.artist}
+                      featuredArtists={t.featuredArtists}
+                      videoGuests={t.videoGuests}
                       onNavigate={browseArtist}
                       single={!t.album}
                     />
@@ -1461,6 +1463,8 @@ function App() {
                 <strong>{player.current.title}</strong>
                 <ArtistLinks
                   credit={player.current.artist}
+                  featuredArtists={player.current.featuredArtists}
+                  videoGuests={player.current.videoGuests}
                   single={!player.current.album}
                   onNavigate={browseArtist}
                 />
@@ -1712,6 +1716,8 @@ function TrackList({
                     <span>
                       <ArtistLinks
                         credit={t.artist}
+                        featuredArtists={t.featuredArtists}
+                        videoGuests={t.videoGuests}
                         onNavigate={onArtist}
                         single={!t.album}
                       />
@@ -1749,4 +1755,20 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
         console.warn("Cadence offline support could not start", error),
       );
   });
+}
+
+function ArtistAvatar({ name, image }: { name: string; image?: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [image]);
+  return image && !failed ? (
+    <img
+      className="artist-grid-avatar"
+      src={image}
+      alt={`${name} artist avatar`}
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    <Artwork id="" label={name} />
+  );
 }

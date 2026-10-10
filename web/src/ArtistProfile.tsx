@@ -40,6 +40,7 @@ export function ArtistProfile({
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [avatarURL, setAvatarURL] = useState("");
   const [mbid, setMBID] = useState("");
   const [refreshOpen, setRefreshOpen] = useState(false),
     [missingOnly, setMissingOnly] = useState(true),
@@ -53,6 +54,7 @@ export function ArtistProfile({
       .then((data) => {
         if (live) {
           setProfile(data.profile);
+          setAvatarURL(data.profile?.image || "");
           setMBID(data.profile?.mbid || "");
         }
       })
@@ -182,11 +184,56 @@ export function ArtistProfile({
               setNotice("");
               try {
                 const data = await api<{ profile: Profile }>(
+                  "/admin/artists/avatar",
+                  "PUT",
+                  { artist, image: avatarURL },
+                );
+                setProfile(data.profile);
+                setAvatarURL(data.profile.image);
+                setImageFailed(false);
+                setNotice(
+                  "Artist avatar saved. Reopen the artist grid to see it there.",
+                );
+              } catch (error) {
+                if (error instanceof APIError && error.status === 401)
+                  onExpired();
+                else setError((error as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <label>
+              Artist avatar URL
+              <Input
+                type="url"
+                value={avatarURL}
+                maxLength={2000}
+                placeholder="https://…"
+                disabled={loading || busy}
+                onChange={(event) => setAvatarURL(event.target.value)}
+              />
+            </label>
+            <Button disabled={loading || busy}>Save avatar</Button>
+            <p className="muted">
+              Use an HTTPS image URL, or leave blank to remove the avatar.
+            </p>
+          </form>
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (busy) return;
+              setBusy(true);
+              setError("");
+              setNotice("");
+              try {
+                const data = await api<{ profile: Profile }>(
                   "/admin/artists/profile",
                   "POST",
                   { artist, mbid },
                 );
                 setProfile(data.profile);
+                setAvatarURL(data.profile?.image || "");
                 setMBID(data.profile.mbid);
                 setImageFailed(false);
                 setNotice("Artist profile updated.");

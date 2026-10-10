@@ -7,8 +7,12 @@ export function ArtistLinks({
   credit,
   onNavigate,
   single = false,
+  featuredArtists = "",
+  videoGuests = "",
 }: {
   credit: string;
+  featuredArtists?: string;
+  videoGuests?: string;
   onNavigate: (name: string) => void;
   single?: boolean;
 }) {
@@ -38,6 +42,20 @@ export function ArtistLinks({
           </a>
         </Fragment>
       ))}
+      {featuredArtists.trim() && (
+        <>
+          {" "}
+          · feat.{" "}
+          <ArtistLinks credit={featuredArtists} onNavigate={onNavigate} />
+        </>
+      )}
+      {videoGuests.trim() && (
+        <>
+          {" "}
+          · Video guests:{" "}
+          <ArtistLinks credit={videoGuests} onNavigate={onNavigate} />
+        </>
+      )}
       {single && <span className="single-label"> · Single</span>}
     </span>
   );

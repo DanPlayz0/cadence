@@ -16,6 +16,8 @@ const fields = {
   title: "Title",
   artist: "Artist / performer",
   album: "Album",
+  featuredArtists: "Featured artists",
+  videoGuests: "Music video guests",
   albumArtist: "Album artist",
   year: "Year",
   genre: "Genre",
@@ -373,7 +375,8 @@ export function TrackMetadataEditor({
             </div>
           ))}
           <p className="wide muted">
-            Use Artist for the performer’s name. Duration, codec, and file
+            Use Artist for primary performers. Separate names with commas. Music
+            video guests are appearance credits. Duration, codec, and file
             details come from the audio; artwork suggestions are reviewed
             separately.
           </p>

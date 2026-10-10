@@ -74,7 +74,7 @@ func (s *Server) applyMetadataChoices(w http.ResponseWriter, r *http.Request) {
 
 func metadataFilter(field, value string) bool {
 	switch field {
-	case "title", "artist", "album", "albumArtist", "year", "genre", "number", "disc":
+	case "title", "artist", "featuredArtists", "videoGuests", "album", "albumArtist", "year", "genre", "number", "disc":
 	default:
 		return false
 	}

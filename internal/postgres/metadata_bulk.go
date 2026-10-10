@@ -12,6 +12,8 @@ func metadataExpression(field string) (string, error) {
 	album := `coalesce(t.overrides->>'album',t.album)`
 	single := `(btrim(` + album + `)='' OR lower(btrim(` + album + `))='unknown album')`
 	switch field {
+	case "featuredArtists", "videoGuests":
+		return `coalesce(t.overrides->>'` + field + `','')`, nil
 	case "title", "artist", "year", "genre":
 		return `coalesce(t.overrides->>'` + field + `',t.` + field + `)`, nil
 	case "album":

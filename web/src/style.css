@@ -3858,3 +3858,10 @@ input[type="range"] {
   color: var(--muted);
   font-size: 12px;
 }
+
+.artist-grid-avatar {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 50%;
+}

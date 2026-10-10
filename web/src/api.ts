@@ -12,6 +12,8 @@ export type Track = {
   id: string;
   title: string;
   artist: string;
+  featuredArtists?: string;
+  videoGuests?: string;
   albumArtist?: string;
   album?: string;
   albumId?: string;
@@ -33,7 +35,7 @@ export type Album = {
   tracks: number;
   coverId: string;
 };
-export type Artist = { name: string; tracks: number };
+export type Artist = { name: string; tracks: number; image?: string };
 export type Playlist = { id: string; name: string; icon: string };
 export type Page = {
   items: Track[];

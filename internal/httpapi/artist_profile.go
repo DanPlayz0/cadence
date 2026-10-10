@@ -5,9 +5,47 @@ import (
 	"cadence/internal/domain"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
+
+func (s *Server) saveArtistAvatar(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Artist string `json:"artist"`
+		Image  string `json:"image"`
+	}
+	if !decode(w, r, &input) {
+		return
+	}
+	input.Artist = strings.TrimSpace(input.Artist)
+	input.Image = strings.TrimSpace(input.Image)
+	if !s.artistAccessible(w, r, input.Artist) {
+		return
+	}
+	u, err := url.Parse(input.Image)
+	if input.Image != "" && (err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || len(input.Image) > 2000) {
+		write(w, 400, map[string]string{"error": "Use an HTTPS image URL (up to 2000 characters)"})
+		return
+	}
+	profile, err := s.Repo.ArtistProfile(r.Context(), input.Artist)
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		failure(w, err)
+		return
+	}
+	if profile.Name == "" {
+		profile.Name = input.Artist
+		profile.Genres = []string{}
+		profile.Links = []domain.ArtistLink{}
+	}
+	profile.Image, profile.ImageSource, profile.Updated = input.Image, "", time.Now().UTC()
+	if err = s.Repo.SaveArtistProfile(r.Context(), input.Artist, profile); err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, map[string]any{"profile": profile})
+}
 
 func (s *Server) artistAccessible(w http.ResponseWriter, r *http.Request, artist string) bool {
 	if artist == "" || utf8.RuneCountInString(artist) > 300 {

@@ -86,6 +86,16 @@ func TestArtistProfilePersistenceAndHTTP(t *testing.T) {
 	if err = json.Unmarshal(w.Body.Bytes(), &response); err != nil || response.Profile.Name != artist {
 		t.Fatal("read profile", err)
 	}
+	avatar := `{"artist":"Example","image":"https://example.com/avatar.jpg"}`
+	assert(request("PUT", "/api/v1/admin/artists/avatar", "listener", "csrf", avatar), 403)
+	assert(request("PUT", "/api/v1/admin/artists/avatar", "admin", "", avatar), 403)
+	assert(request("PUT", "/api/v1/admin/artists/avatar", "admin", "csrf", `{"artist":"Example","image":"javascript:alert(1)"}`), 400)
+	assert(request("PUT", "/api/v1/admin/artists/avatar", "admin", "csrf", avatar), 200)
+	saved, err = repo.ArtistProfile(ctx, artist)
+	if err != nil || saved.Image != "https://example.com/avatar.jpg" || saved.Country != "GB" {
+		t.Fatal("avatar must preserve profile", saved, err)
+	}
+	assert(request("PUT", "/api/v1/admin/artists/avatar", "admin", "csrf", `{"artist":"Example","image":""}`), 200)
 	if _, err = conn.Exec(ctx, "UPDATE tracks SET available=false WHERE id=$1", id); err != nil {
 		t.Fatal(err)
 	}

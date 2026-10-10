@@ -155,6 +155,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	m.HandleFunc("GET /api/v1/artists/profile", s.artistProfile)
 	m.HandleFunc("POST /api/v1/admin/artists/profile", s.fetchArtistProfile)
+	m.HandleFunc("PUT /api/v1/admin/artists/avatar", s.saveArtistAvatar)
 	m.HandleFunc("GET /api/v1/artists", func(w http.ResponseWriter, r *http.Request) {
 		l, o := pagination(r)
 		v, e := s.Repo.Artists(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), l, o)
@@ -725,7 +726,7 @@ func (s *Server) createExclusion(w http.ResponseWriter, r *http.Request) {
 }
 func validField(f string) bool {
 	switch f {
-	case "title", "artist", "album", "albumArtist", "year", "genre", "number", "disc", "artwork":
+	case "title", "artist", "featuredArtists", "videoGuests", "album", "albumArtist", "year", "genre", "number", "disc", "artwork":
 		return true
 	}
 	return false
