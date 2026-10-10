@@ -3,5 +3,6 @@ web/dist/
 .cache/
 .local/
 .env
+compose.override.yaml
 *.exe
 coverage.out

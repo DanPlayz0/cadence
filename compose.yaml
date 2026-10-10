@@ -13,12 +13,10 @@ services:
       TRANSCODE_CACHE_MB: ${TRANSCODE_CACHE_MB:-2048}
       SCAN_INTERVAL_MINUTES: ${SCAN_INTERVAL_MINUTES:-60}
       METADATA_USER_AGENT: ${METADATA_USER_AGENT:-}
-    # Mount storage once; select library folders and sharing in the web UI.
+    # Optional host mount; unset MUSIC_PATH starts with empty Docker-managed storage.
+    # Choose library folders and sharing in the web UI after mounting storage.
     volumes:
-      - type: bind
-        source: ${MUSIC_PATH:?Set MUSIC_PATH in .env}
-        target: /music
-        read_only: true
+      - "${MUSIC_PATH:-music_storage}:/music:ro"
       - app_data:/data
     depends_on:
       db:
@@ -44,5 +42,6 @@ services:
       timeout: 5s
       retries: 15
 volumes:
+  music_storage:
   postgres_data:
   app_data:

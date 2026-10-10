@@ -1,0 +1,21 @@
+# Copy to compose.override.yaml and adjust source paths for your Docker host.
+# Compose automatically merges compose.override.yaml with compose.yaml.
+# This example exposes Windows C: and D: read-only; mount only drives you need.
+# Linux example: source: /mnt/media, target: /drives/media, MUSIC_ROOTS: /drives/media
+services:
+  app:
+    environment:
+      MUSIC_ROOTS: /drives/c;/drives/d
+    volumes:
+      - type: bind
+        source: C:/
+        target: /drives/c
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: D:/
+        target: /drives/d
+        read_only: true
+        bind:
+          create_host_path: false

@@ -7,12 +7,16 @@ See [the validation record](docs/VALIDATION.md) for tested behavior, benchmarks,
 ## Run with Docker
 
 1. Run `node scripts/setup-env.mjs` to create `.env` with a cryptographically random database password. The script fills a missing or placeholder password and preserves existing configured values. Alternatively, copy `.env.example` to `.env` and supply your own database password.
-2. Set `MUSIC_PATH` in `.env` to an existing absolute storage-folder path. You can mount a broad parent folder and select individual music folders in the UI. Keep `.env` private; it is excluded from Git.
+2. Optionally set `MUSIC_PATH` in `.env` to an existing absolute host folder or drive path. Leave it blank to set up the app before connecting music storage; Docker provides an empty read-only volume at `/music`. Keep `.env` private; it is excluded from Git.
 3. Run `docker compose up -d --build`.
 4. Open http://localhost:8080 and create the administrator account with a display name, lowercase username, and password (at least 3 characters, up to 72 bytes). Setup is available only until the first account is created. Display names preserve capitalization; usernames are normalized to lowercase and sign-in is case-insensitive.
 5. Open **Instance settings → Libraries → Add library**, choose one or more mounted folders, and select users, groups, or Everyone to share with. Saving requests an incremental scan. Fresh installations scan nothing until a library is configured; subsequent automatic scans run at startup and hourly by default.
 
-Linux containers run as UID/GID 10001; the mounted music directory must be readable/traversable by that user. Cadence never writes into that mount. For more roots, add read-only bind mounts and set `MUSIC_ROOTS=/music;/more-music` on the app service. These roots bound filesystem access; named libraries and sharing are configured in the UI without a restart. Selecting a host folder outside those mounts still requires a Docker configuration change.
+`.env` supplies Compose substitutions. `MUSIC_PATH` is only a shortcut for one storage mount and is not passed to the app. You can configure mounts directly in Compose instead. The app uses `MUSIC_ROOTS` (container paths, separated by semicolons) as the starting points in the UI folder picker. Libraries, selected subfolders, and sharing are saved through the UI.
+
+To browse a whole Windows drive, use `MUSIC_PATH=C:/` or `MUSIC_PATH=D:/`; its root appears as `/music` in the UI. To browse multiple drives, copy [compose.storage.example.yaml](compose.storage.example.yaml) to `compose.override.yaml`, adjust/remove the example C: and D: mounts, and run `docker compose up -d app`. Compose automatically merges that override. The picker starts at `/drives/c` and `/drives/d`, and you choose the folders to scan. Linux hosts can mount a folder or filesystem root the same way using a host path such as `/mnt/media` or `/`, with a matching container path in `MUSIC_ROOTS`. A whole-drive mount makes all readable files on that drive available to the container; use a narrower folder when desired. [Docker bind mounts](https://docs.docker.com/engine/storage/bind-mounts/) determine which host files are visible inside the container.
+
+Linux containers run as UID/GID 10001; mounted storage must be readable/traversable by that user and shared with Docker Desktop where required. Cadence never writes into music mounts. Fresh installations scan nothing until you configure a library, even when an entire drive is mounted. New or changed mounts require recreating the app with `docker compose up -d app`; library folder selections within existing mounts do not require a restart. Host folders and drives outside the mounts cannot be discovered by the UI.
 
 ## Listening and administration
 

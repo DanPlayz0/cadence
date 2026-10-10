@@ -284,6 +284,11 @@ export function LibraryManager({
                   </div>
                 ))}
                 <h3>Browse mounted folders</h3>
+                <p className="muted">
+                  Only storage shared with the server is shown. If a drive or
+                  folder is missing, mount it in Docker and recreate the app,
+                  then return here to choose your music folders.
+                </p>
                 <div className="row">
                   <button type="button" onClick={() => browse("")}>
                     Mounted storage
