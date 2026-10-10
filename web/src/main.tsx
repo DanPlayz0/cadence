@@ -878,7 +878,7 @@ function App() {
         )}
         {view === "admin" ? (
           <Admin
-            tab={route.adminTab || "library"}
+            tab={route.adminTab || "dashboard"}
             onTab={(tab) => navigate({ view: "admin", adminTab: tab })}
             report={setError}
             onUpdated={userUpdated}

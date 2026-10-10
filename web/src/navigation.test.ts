@@ -16,13 +16,30 @@ describe("page URLs", () => {
         parseRoute(new URL(routeURL(route), "https://music.example")),
       ).toEqual(route);
   });
+  it("supports administration sections and existing links", () => {
+    for (const adminTab of [
+      "dashboard",
+      "library",
+      "people",
+      "permissions",
+      "metadata",
+      "suggestions",
+      "activity",
+    ]) {
+      const route = { view: "admin", adminTab };
+      expect(
+        parseRoute(new URL(routeURL(route), "https://music.example")),
+      ).toEqual(route);
+    }
+    expect(routeURL({ view: "admin" })).toBe("/admin/dashboard");
+  });
   it("recovers malformed and unknown routes and normalizes trailing slashes", () => {
     const parse = (path: string) =>
       parseRoute(new URL(path, "https://music.example"));
     expect(parse("/artists/%E0%A4%A")).toEqual({ view: "home" });
     expect(parse("/admin/unknown")).toEqual({ view: "home" });
     expect(parse("/albums/id/extra")).toEqual({ view: "home" });
-    expect(parse("/admin")).toEqual({ view: "admin", adminTab: "library" });
+    expect(parse("/admin")).toEqual({ view: "admin", adminTab: "dashboard" });
     expect(parse("/likes/")).toEqual({ view: "likes" });
   });
 });

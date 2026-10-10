@@ -6,7 +6,15 @@ export type Route = {
   adminTab?: string;
   query?: string;
 };
-export const adminTabs = ["library", "people", "permissions", "suggestions"];
+export const adminTabs = [
+  "dashboard",
+  "library",
+  "people",
+  "permissions",
+  "metadata",
+  "suggestions",
+  "activity",
+];
 const pages = ["home", "songs", "albums", "artists", "likes", "history"];
 
 export function routeURL(route: Route): string {
@@ -18,7 +26,7 @@ export function routeURL(route: Route): string {
   else if (route.view.startsWith("playlist:") && route.view.slice(9))
     path = `/playlists/${encodeURIComponent(route.view.slice(9))}`;
   else if (route.view === "admin")
-    path = `/admin/${adminTabs.includes(route.adminTab || "") ? route.adminTab : "library"}`;
+    path = `/admin/${adminTabs.includes(route.adminTab || "") ? route.adminTab : "dashboard"}`;
   else if (pages.includes(route.view) && route.view !== "home")
     path = `/${route.view}`;
   const params = new URLSearchParams();
@@ -47,7 +55,7 @@ export function parseRoute(url: URL): Route {
     else if (page === "admin" && adminTabs.includes(detail))
       route = { view: "admin", adminTab: detail };
   } else if (page === "admin" && parts.length === 1)
-    route = { view: "admin", adminTab: "library" };
+    route = { view: "admin", adminTab: "dashboard" };
   if (url.searchParams.get("q")) route.query = url.searchParams.get("q")!;
   return route;
 }
