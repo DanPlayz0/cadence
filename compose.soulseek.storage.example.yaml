@@ -1,0 +1,22 @@
+# Copy to an ignored compose.override.yaml and replace the source path.
+# Include it explicitly when using multiple -f files (see docs/SOULSEEK.md).
+services:
+  app:
+    environment:
+      MUSIC_ROOTS: /music
+      SOULSEEK_WRITABLE_ROOTS: /music/Downloads
+    volumes:
+      - type: bind
+        source: C:/Users/YourName/Music
+        target: /music
+        read_only: false
+        bind:
+          create_host_path: false
+  slskd:
+    volumes:
+      - type: bind
+        source: C:/Users/YourName/Music
+        target: /music
+        read_only: true
+        bind:
+          create_host_path: false

@@ -1,0 +1,46 @@
+# Opt in: docker compose -f compose.yaml -f compose.soulseek.yaml up -d --build
+services:
+  app:
+    environment:
+      SLSKD_URL: http://slskd:5030
+      SLSKD_API_KEY: ${SLSKD_API_KEY:?Run node scripts/setup-env.mjs to generate SLSKD_API_KEY}
+      SLSKD_USERNAME: ${SLSKD_USERNAME:-cadence}
+      SLSKD_PASSWORD: ${SLSKD_PASSWORD:?Run node scripts/setup-env.mjs to generate SLSKD_PASSWORD}
+      SOULSEEK_STAGING_DIR: /soulseek-staging
+      SOULSEEK_WRITABLE_ROOTS: ${SOULSEEK_WRITABLE_ROOTS:-}
+    volumes:
+      - soulseek_staging:/soulseek-staging
+  slskd:
+    image: slskd/slskd:0.26.0
+    # Nested fresh volumes are root-owned. Initialize only their mountpoints
+    # before the official entrypoint drops to the configured PUID/PGID.
+    entrypoint: ["/usr/bin/tini", "--", "/bin/sh", "-c"]
+    command:
+      - "mkdir -p /app/downloads /app/incomplete && chown 10001:10001 /app /app/downloads /app/incomplete && exec /entrypoint.sh ./slskd"
+    restart: unless-stopped
+    ports:
+      - "${SOULSEEK_PEER_PORT:-50300}:${SOULSEEK_PEER_PORT:-50300}"
+    environment:
+      PUID: 10001
+      PGID: 10001
+      SLSKD_UMASK: "027"
+      SLSKD_API_KEY: ${SLSKD_API_KEY:?Run node scripts/setup-env.mjs to generate SLSKD_API_KEY}
+      SLSKD_USERNAME: ${SLSKD_USERNAME:-cadence}
+      SLSKD_PASSWORD: ${SLSKD_PASSWORD:?Run node scripts/setup-env.mjs to generate SLSKD_PASSWORD}
+      SLSKD_SLSK_USERNAME: ${SOULSEEK_USERNAME:?Set SOULSEEK_USERNAME in .env}
+      SLSKD_SLSK_PASSWORD: ${SOULSEEK_PASSWORD:?Set SOULSEEK_PASSWORD in .env}
+      SLSKD_SLSK_LISTEN_PORT: ${SOULSEEK_PEER_PORT:-50300}
+      SLSKD_REMOTE_CONFIGURATION: "true"
+      SLSKD_REMOTE_FILE_MANAGEMENT: "false"
+      SLSKD_DOWNLOADS_DIR: /app/downloads
+      SLSKD_INCOMPLETE_DIR: /app/incomplete
+    volumes:
+      - soulseek_config:/app
+      - soulseek_staging:/app/downloads
+      - soulseek_incomplete:/app/incomplete
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  soulseek_config:
+  soulseek_staging:
+  soulseek_incomplete:

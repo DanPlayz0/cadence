@@ -6,6 +6,7 @@ Project source: GPL-2.0-or-later. Dependency versions are locked in go.sum and w
 | --- | --- | --- |
 | pgx, pgpassfile, pgservicefile, puddle | MIT | https://github.com/jackc |
 | golang.org/x/crypto, x/sync, x/text | BSD-3-Clause | https://go.googlesource.com |
+| gopkg.in/yaml.v3 | MIT and Apache-2.0 | https://github.com/go-yaml/yaml |
 | React and React DOM | MIT | https://github.com/facebook/react |
 | Lucide icons | ISC | https://github.com/lucide-icons/lucide |
 | PostgreSQL | PostgreSQL License | https://www.postgresql.org/about/licence/ |
@@ -40,6 +41,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Optional Soulseek container
+
+The optional Compose deployment runs the upstream slskd image as a separate service. Its source and license, including additional terms, are available at [slskd 0.26.0](https://github.com/slskd/slskd/tree/0.26.0) and [its license](https://github.com/slskd/slskd/blob/0.26.0/LICENSE). Cadence communicates through its HTTP API; slskd source is not bundled into the Cadence executable.
 
 ## Optional artist profile content
 
