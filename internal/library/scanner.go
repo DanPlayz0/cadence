@@ -25,6 +25,7 @@ import (
 type Scanner struct {
 	Repo             domain.Repository
 	Roots            []string
+	ExcludedRoots    []string
 	ArtDir           string
 	Enricher         *Enricher
 	busy             atomic.Bool
@@ -205,6 +206,14 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 				complete = false
 				addErr(path + ": " + walkErr.Error())
 				return nil
+			}
+			for _, excluded := range s.ExcludedRoots {
+				if Within(excluded, filepath.ToSlash(path)) {
+					if d.IsDir() {
+						return filepath.SkipDir
+					}
+					return nil
+				}
 			}
 			if d.IsDir() {
 				return nil

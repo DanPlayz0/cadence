@@ -27,6 +27,7 @@ import (
 	"cadence/internal/library"
 	"cadence/internal/lyrics"
 	"cadence/internal/media"
+	"cadence/internal/soulseek"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,6 +45,8 @@ type Server struct {
 	limiter         loginLimiter
 	passwordLimiter loginLimiter
 	Lyrics          *lyrics.Client
+	Soulseek        *soulseek.Service
+	soulseekLimiter loginLimiter
 }
 type sessionKey struct{}
 
@@ -145,6 +148,15 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/users/{id}/avatar", s.userAvatar)
 	m.HandleFunc("POST /api/v1/logout", s.logout)
 	m.HandleFunc("GET /api/v1/libraries", s.accessibleLibraries)
+	m.HandleFunc("GET /api/v1/soulseek/capabilities", s.soulseekCapabilities)
+	m.HandleFunc("POST /api/v1/soulseek/searches", s.soulseekSearch)
+	m.HandleFunc("GET /api/v1/soulseek/searches/{id}", s.soulseekSearch)
+	m.HandleFunc("POST /api/v1/soulseek/folder", s.soulseekFolder)
+	m.HandleFunc("GET /api/v1/soulseek/requests", s.soulseekRequests)
+	m.HandleFunc("POST /api/v1/soulseek/requests", s.soulseekRequests)
+	m.HandleFunc("POST /api/v1/soulseek/requests/{id}/actions", s.soulseekAction)
+	m.HandleFunc("GET /api/v1/admin/soulseek", s.soulseekSettings)
+	m.HandleFunc("PUT /api/v1/admin/soulseek", s.soulseekSettings)
 	m.HandleFunc("GET /api/v1/admin/libraries", s.musicLibraries)
 	m.HandleFunc("POST /api/v1/admin/libraries", s.saveMusicLibrary)
 	m.HandleFunc("PUT /api/v1/admin/libraries/{id}", s.saveMusicLibrary)

@@ -18,6 +18,7 @@ import (
 	"cadence/internal/library"
 	"cadence/internal/media"
 	"cadence/internal/postgres"
+	"cadence/internal/soulseek"
 )
 
 func env(key, fallback string) string {
@@ -94,7 +95,25 @@ func run() error {
 	}
 	enricher := &library.Enricher{Repo: repo, ArtDir: art, UserAgent: os.Getenv("METADATA_USER_AGENT")}
 	scanner := &library.Scanner{Repo: repo, Roots: roots, ManagedLibraries: true, ArtDir: art, Enricher: enricher, Context: ctx}
+	stage := os.Getenv("SOULSEEK_STAGING_DIR")
+	writable := []string{}
+	for _, p := range strings.Split(os.Getenv("SOULSEEK_WRITABLE_ROOTS"), ";") {
+		if strings.TrimSpace(p) != "" {
+			writable = append(writable, strings.TrimSpace(p))
+		}
+	}
+	remote := soulseek.NewClient(os.Getenv("SLSKD_URL"), os.Getenv("SLSKD_API_KEY"), env("SLSKD_USERNAME", "cadence"), os.Getenv("SLSKD_PASSWORD"))
+	soul := &soulseek.Service{Repo: repo, Libraries: repo, Activity: repo.RecordActivity, Remote: remote, Configured: remote.Configured() && stage != "", Roots: roots, WritableRoots: writable, Stage: stage, Scan: scanner.RequestScan}
+	if stage != "" {
+		p, e := filepath.Abs(stage)
+		if e != nil {
+			return e
+		}
+		scanner.ExcludedRoots = []string{filepath.ToSlash(p)}
+	}
 	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://"), AllowAnyOrigin: allowAnyOrigin}}
+	app.Soulseek = soul
+	go soul.Run(ctx)
 	server := &http.Server{Addr: env("LISTEN_ADDR", ":8080"), Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	go func() {
 		ticker := time.NewTicker(time.Duration(number("SCAN_INTERVAL_MINUTES", 60)) * time.Minute)

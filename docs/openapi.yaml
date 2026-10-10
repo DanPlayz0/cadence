@@ -10,10 +10,345 @@ info:
     /me or login. Mutation origins are restricted to PUBLIC_URL (or the request origin
     when unset) unless ALLOW_ANY_ORIGIN=true; this does not enable cross-origin CORS.
     Excluded tracks return 404. Mounted storage boundaries are configured by
-    environment; library folders and sharing are configured in the UI. Music files are never modified.
+    environment; library folders and sharing are configured in the UI. Existing music files are never modified. Optional Soulseek imports create new files in explicitly writable destinations.
 servers:
   - url: /api/v1
 paths:
+  /soulseek/capabilities:
+    get:
+      summary: Read current user Soulseek capabilities
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekCapabilities"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+  /soulseek/searches:
+    post:
+      summary: Start an explicit external search
+      security:
+        - session: []
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekSearch"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  minLength: 3
+                  maxLength: 200
+  /soulseek/searches/{id}:
+    get:
+      summary: Poll an owned asynchronous search
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekSearch"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+  /soulseek/folder:
+    post:
+      summary: Fetch complete audio listing for a peer folder in an owned search
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SoulseekFile"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - searchId
+                - username
+                - folder
+              properties:
+                searchId: &a1
+                  type: string
+                username: *a1
+                folder: *a1
+  /soulseek/requests:
+    get:
+      summary: List own requests; administrators list all requests
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SoulseekRequest"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 500
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+    post:
+      summary: Request selected songs or a complete album folder
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Existing request for this idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekRequest"
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekRequest"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoulseekSelection"
+  /soulseek/requests/{id}/actions:
+    post:
+      summary: Manage a request; approval, rejection, and staging deletion require
+        administrator access
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekRequest"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoulseekAction"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+  /admin/soulseek:
+    get:
+      summary: Read administrator Soulseek settings without credentials
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekAdminSettings"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+    put:
+      summary: Save permissions, routing, review, presentation, and sharing settings
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoulseekAdminSettings"
+        "400":
+          description: Invalid request or destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing permission or CSRF token
+        "404":
+          description: Owned resource not found
+        "409":
+          description: Stale action or duplicate request ID
+        "429":
+          description: Search rate limit
+        "502":
+          description: Soulseek API failure
+        "503":
+          description: Optional integration unavailable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoulseekSettings"
   /libraries:
     get:
       summary: List accessible named libraries
@@ -4511,3 +4846,214 @@ components:
           type: array
           items:
             type: string
+
+    SoulseekCapabilities:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        enabled:
+          type: boolean
+        allowed:
+          type: boolean
+        presentation:
+          type: string
+          enum:
+            - separate
+            - combined
+    SoulseekRule:
+      type: object
+      required:
+        - mode
+      properties:
+        subject: &a1
+          type: string
+        mode:
+          type: string
+          enum:
+            - review
+            - auto
+        libraryId: *a1
+        folder: *a1
+    SoulseekSettings:
+      type: object
+      required:
+        - enabled
+        - presentation
+        - reviewTiming
+        - default
+        - sharing
+      properties:
+        enabled:
+          type: boolean
+        users: &a2
+          type: array
+          items: *a1
+        groups: *a2
+        presentation:
+          type: string
+          enum:
+            - separate
+            - combined
+        reviewTiming:
+          type: string
+          enum:
+            - before
+            - after
+        default:
+          $ref: "#/components/schemas/SoulseekRule"
+        userRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/SoulseekRule"
+        groupRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/SoulseekRule"
+        sharing:
+          type: string
+          enum:
+            - disabled
+            - selected
+            - imported
+        shareFolders: *a2
+        sharingError:
+          type: string
+          readOnly: true
+    SoulseekAdminSettings:
+      type: object
+      properties:
+        settings:
+          $ref: "#/components/schemas/SoulseekSettings"
+        configured:
+          type: boolean
+        writableRoots: *a2
+        staging: *a1
+    SoulseekFile:
+      type: object
+      properties:
+        filename: *a1
+        size:
+          type: integer
+          format: int64
+        bitRate:
+          type: integer
+        sampleRate:
+          type: integer
+        bitDepth:
+          type: integer
+        length:
+          type: integer
+    SoulseekResult:
+      allOf:
+        - $ref: "#/components/schemas/SoulseekFile"
+        - type: object
+          properties:
+            username: *a1
+            folder: *a1
+            queueLength:
+              type: integer
+            hasFreeUploadSlot:
+              type: boolean
+            uploadSpeed:
+              type: integer
+              format: int64
+    SoulseekSearch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        state: *a1
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SoulseekResult"
+    SoulseekRequestFile:
+      allOf:
+        - $ref: "#/components/schemas/SoulseekFile"
+        - type: object
+          properties:
+            transferId: *a1
+            state: *a1
+            bytesTransferred:
+              type: integer
+              format: int64
+            placeInQueue:
+              type: integer
+    SoulseekRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId: *a1
+        username: *a1
+        folder: *a1
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/SoulseekRequestFile"
+        rule:
+          $ref: "#/components/schemas/SoulseekRule"
+        reviewTiming: *a1
+        approved:
+          type: boolean
+        state:
+          type: string
+          enum:
+            - review_before
+            - queued
+            - downloading
+            - review_after
+            - importing
+            - imported
+            - failed
+            - blocked
+            - cancelling
+            - cancelled
+            - rejected
+            - deleted
+        error: *a1
+        batchId: *a1
+        created:
+          type: string
+          format: date-time
+        revision:
+          type: integer
+          format: int64
+    SoulseekSelection:
+      type: object
+      required:
+        - id
+        - searchId
+        - username
+        - folder
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Caller-generated idempotency key; repeating an owned ID returns the
+            existing request.
+        searchId: *a1
+        username: *a1
+        folder: *a1
+        filenames: *a2
+        album:
+          type: boolean
+          description: Fetch all supported audio files in this peer folder.
+    SoulseekAction:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - approve
+            - reject
+            - cancel
+            - retry
+            - delete-staging
+        libraryId: *a1
+        folder: *a1
