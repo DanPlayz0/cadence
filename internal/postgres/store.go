@@ -42,6 +42,9 @@ var artistCreditsMigration string
 //go:embed 008_artist_profiles.sql
 var artistProfilesMigration string
 
+//go:embed 009_branding.sql
+var brandingMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -168,6 +171,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(8)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=9)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, brandingMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(9)"); err != nil {
 			return err
 		}
 	}
@@ -749,5 +763,15 @@ func (s *Store) SaveArtistProfile(ctx context.Context, artist string, profile do
 		return err
 	}
 	_, err = s.pool.Exec(ctx, "INSERT INTO artist_profiles(artist,profile) VALUES($1,$2) ON CONFLICT(artist) DO UPDATE SET profile=excluded.profile", artist, data)
+	return err
+}
+
+func (s *Store) InstanceName(ctx context.Context) (string, error) {
+	var name string
+	err := s.pool.QueryRow(ctx, "SELECT value FROM instance_settings WHERE key='name'").Scan(&name)
+	return name, err
+}
+func (s *Store) SetInstanceName(ctx context.Context, name string) error {
+	_, err := s.pool.Exec(ctx, "UPDATE instance_settings SET value=$1 WHERE key='name'", name)
 	return err
 }

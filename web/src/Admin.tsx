@@ -13,6 +13,7 @@ import {
   Plus,
   X,
   Pencil,
+  Palette,
 } from "lucide-react";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
@@ -51,6 +52,12 @@ const sections = [
     label: "Dashboard",
     icon: LayoutDashboard,
     description: "An overview of your music server.",
+  },
+  {
+    id: "branding",
+    label: "Branding",
+    icon: Palette,
+    description: "Make this instance your own.",
   },
   {
     id: "library",
@@ -102,6 +109,8 @@ const reviewFields = {
 };
 export function Admin({
   report,
+  instanceName,
+  onBranding,
   onUpdated,
   onRevoked,
   onExpired,
@@ -109,12 +118,19 @@ export function Admin({
   onTab,
 }: {
   report: (s: string) => void;
+  instanceName: string;
+  onBranding: (name: string) => void;
   onUpdated: (user: User) => void;
   onRevoked: (id: string) => void;
   onExpired: () => void;
   tab: string;
   onTab: (tab: string) => void;
 }) {
+  const [brandingNotice, setBrandingNotice] = useState("");
+  const [brandingName, setBrandingName] = useState(instanceName);
+  useEffect(() => {
+    setBrandingName(instanceName);
+  }, [instanceName]);
   const [creatingUser, setCreatingUser] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   useEffect(() => {
@@ -255,6 +271,52 @@ export function Admin({
               </button>
             )}
           </div>
+          {tab === "branding" && (
+            <div className="panel">
+              <h2>Instance name</h2>
+              <p className="muted">
+                Choose the name listeners see on the login page, in the app, and
+                in their browser tab.
+              </p>
+              <form
+                className="admin-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void perform(async () => {
+                    setBrandingNotice("");
+                    const saved = await api<{ name: string }>(
+                      "/admin/branding",
+                      "PUT",
+                      { name: brandingName },
+                    );
+                    onBranding(saved.name);
+                    setBrandingNotice("Branding saved.");
+                  });
+                }}
+              >
+                <label className="wide">
+                  Instance name
+                  <input
+                    value={brandingName}
+                    required
+                    maxLength={120}
+                    disabled={loading}
+                    onChange={(event) => {
+                      setBrandingName(event.target.value);
+                      setBrandingNotice("");
+                    }}
+                  />
+                </label>
+                <button
+                  className="primary"
+                  disabled={loading || !brandingName.trim()}
+                >
+                  {loading ? "Saving…" : "Save"}
+                </button>
+              </form>
+              {brandingNotice && <p role="status">{brandingNotice}</p>}
+            </div>
+          )}
           {tab === "dashboard" && (
             <>
               <div className="admin-overview">

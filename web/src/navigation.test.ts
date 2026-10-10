@@ -19,6 +19,7 @@ describe("page URLs", () => {
   it("supports administration sections and existing links", () => {
     for (const adminTab of [
       "dashboard",
+      "branding",
       "library",
       "people",
       "permissions",

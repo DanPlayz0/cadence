@@ -3722,3 +3722,12 @@ input[type="range"] {
   padding: 0;
   background: var(--line);
 }
+
+.brand .instance-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+.brand > svg {
+  flex-shrink: 0;
+}

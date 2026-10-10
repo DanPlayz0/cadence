@@ -5,7 +5,8 @@ info:
   license:
     name: GPL-2.0-or-later
     url: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-  description: Same-origin API. Authenticated mutations require X-CSRF-Token from
+  description:
+    Same-origin API. Authenticated mutations require X-CSRF-Token from
     /me or login. Excluded tracks return 404. Instance folders are configured by
     environment; music files are never modified.
 servers:
@@ -454,7 +455,8 @@ paths:
   /me/password:
     post:
       summary: Change own password
-      description: Requires current password. Keeps this session and revokes all other
+      description:
+        Requires current password. Keeps this session and revokes all other
         sessions atomically.
       tags:
         - Accounts
@@ -538,7 +540,8 @@ paths:
   /me/avatar:
     put:
       summary: Set avatar
-      description: Accepts JPEG or PNG up to 2 MiB, 4096 pixels per side and 8 million
+      description:
+        Accepts JPEG or PNG up to 2 MiB, 4096 pixels per side and 8 million
         pixels. Center-cropped, resized to at most 256 pixels, and re-encoded as
         JPEG.
       tags:
@@ -728,7 +731,8 @@ paths:
   /admin/users/{id}:
     put:
       summary: Edit a user as administrator
-      description: At least one field is required. Username, display name, and groups
+      description:
+        At least one field is required. Username, display name, and groups
         update atomically. Administrator status cannot be changed here.
       tags:
         - Accounts
@@ -810,7 +814,8 @@ paths:
   /admin/users/{id}/password:
     post:
       summary: Reset a user password as administrator
-      description: No current password required. Revokes every session, including this
+      description:
+        No current password required. Revokes every session, including this
         session if resetting your own account.
       tags:
         - Accounts
@@ -884,7 +889,8 @@ paths:
   /admin/users/{id}/avatar:
     put:
       summary: Set avatar
-      description: Accepts JPEG or PNG up to 2 MiB, 4096 pixels per side and 8 million
+      description:
+        Accepts JPEG or PNG up to 2 MiB, 4096 pixels per side and 8 million
         pixels. Center-cropped, resized to at most 256 pixels, and re-encoded as
         JPEG.
       tags:
@@ -1184,7 +1190,8 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [found, instrumental, plainLyrics, syncedLyrics, source]
+                required:
+                  [found, instrumental, plainLyrics, syncedLyrics, source]
                 properties:
                   found:
                     type: boolean
@@ -2233,6 +2240,72 @@ paths:
                   maxItems: 500
                   items:
                     type: string
+  /admin/branding:
+    get:
+      summary: Read instance branding (administrator only)
+      tags: [Administration]
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Current instance name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    type: string
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator required
+        "500":
+          description: Server failure
+    put:
+      summary: Rename the instance (administrator only)
+      tags: [Administration]
+      security:
+        - session: []
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                  description: Trimmed instance display name
+      responses:
+        "200":
+          description: Saved instance name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name]
+                properties:
+                  name:
+                    type: string
+        "400":
+          description: Invalid or empty instance name
+        "401":
+          description: Authentication required
+        "403":
+          description: CSRF, origin, or role rejected
+        "500":
+          description: Server failure
   /admin/config:
     get:
       summary: Configured roots and enrichment settings
@@ -3367,7 +3440,18 @@ paths:
                   maxItems: 9
                   items:
                     type: string
-                    enum: [title, artist, album, albumArtist, year, genre, number, disc, artwork]
+                    enum:
+                      [
+                        title,
+                        artist,
+                        album,
+                        albumArtist,
+                        year,
+                        genre,
+                        number,
+                        disc,
+                        artwork,
+                      ]
       responses:
         "200":
           description: All selected pending suggestions accepted atomically

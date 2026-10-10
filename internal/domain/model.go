@@ -231,6 +231,8 @@ type AdminRepository interface {
 	ClearOverride(context.Context, string, string) error
 	Settings(context.Context) (map[string]bool, error)
 	SetEnrichment(context.Context, bool) error
+	InstanceName(context.Context) (string, error)
+	SetInstanceName(context.Context, string) error
 }
 type Repository interface {
 	AuthRepository

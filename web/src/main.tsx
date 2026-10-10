@@ -198,6 +198,10 @@ function App() {
   const activeUser = useRef<string | undefined>(undefined);
   activeUser.current = session?.user.id;
   const [ready, setReady] = useState(false);
+  const [instanceName, setInstanceName] = useState("Cadence");
+  useEffect(() => {
+    document.title = instanceName;
+  }, [instanceName]);
   const [setup, setSetup] = useState(false);
   const [error, setError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
@@ -267,7 +271,7 @@ function App() {
   useEffect(() => {
     let live = true;
     Promise.all([
-      api<{ setupRequired: boolean }>("/status"),
+      api<{ setupRequired: boolean; name: string }>("/status"),
       api<Session>("/me").catch((e) => {
         if (e instanceof APIError && e.status === 401) return null;
         throw e;
@@ -276,6 +280,7 @@ function App() {
       .then(([status, s]) => {
         if (!live) return;
         setSetup(status.setupRequired);
+        setInstanceName(status.name);
         setSession(s);
         updateSession(s);
         setReady(true);
@@ -616,7 +621,7 @@ function App() {
       <div className="auth">
         <div className="auth-card">
           <div className="brand">
-            <Headphones /> cadence<span className="dot">.</span>
+            <Headphones /> <span className="instance-name">{instanceName}</span>
           </div>
           <p className="eyebrow">YOUR COLLECTION. YOUR SERVER.</p>
           <h1>{setup ? "Make yourself at home." : "Welcome back."}</h1>
@@ -700,7 +705,7 @@ function App() {
       </a>
       <aside className="sidebar">
         <div className="brand">
-          <Headphones /> cadence<span className="dot">.</span>
+          <Headphones /> <span className="instance-name">{instanceName}</span>
         </div>
         <nav aria-label="Browse music">
           <button
@@ -878,6 +883,8 @@ function App() {
         )}
         {view === "admin" ? (
           <Admin
+            instanceName={instanceName}
+            onBranding={setInstanceName}
             tab={route.adminTab || "dashboard"}
             onTab={(tab) => navigate({ view: "admin", adminTab: tab })}
             report={setError}

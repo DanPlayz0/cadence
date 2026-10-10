@@ -241,6 +241,15 @@ func (s *Server) Handler() http.Handler {
 		s.ok(w, s.Repo.RecordPlay(r.Context(), current(r).User.ID, r.PathValue("id"), v.EventID))
 	})
 	m.HandleFunc("POST /api/v1/permissions/check", s.checkPermissions)
+	m.HandleFunc("GET /api/v1/admin/branding", func(w http.ResponseWriter, r *http.Request) {
+		name, err := s.Repo.InstanceName(r.Context())
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		write(w, 200, map[string]string{"name": name})
+	})
+	m.HandleFunc("PUT /api/v1/admin/branding", s.updateBranding)
 	m.HandleFunc("GET /api/v1/admin/config", func(w http.ResponseWriter, r *http.Request) {
 		settings, e := s.Repo.Settings(r.Context())
 		if e != nil {
@@ -496,7 +505,12 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	write(w, 200, map[string]any{"setupRequired": !b, "name": "Cadence"})
+	name, err := s.Repo.InstanceName(r.Context())
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, map[string]any{"setupRequired": !b, "name": name})
 }
 
 type credentials struct {
@@ -909,4 +923,23 @@ func ValidatePublicURL(v string) error {
 		return fmt.Errorf("PUBLIC_URL must be an http(s) origin without a path")
 	}
 	return nil
+}
+
+func (s *Server) updateBranding(w http.ResponseWriter, r *http.Request) {
+	var v struct {
+		Name string `json:"name"`
+	}
+	if !decode(w, r, &v) {
+		return
+	}
+	v.Name = strings.TrimSpace(v.Name)
+	if v.Name == "" || utf8.RuneCountInString(v.Name) > 120 {
+		write(w, 400, map[string]string{"error": "Instance name must contain 1–120 characters"})
+		return
+	}
+	if err := s.Repo.SetInstanceName(r.Context(), v.Name); err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, map[string]string{"name": v.Name})
 }
