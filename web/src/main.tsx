@@ -43,6 +43,7 @@ import {
   Track,
   User,
 } from "./api";
+import { catalogLibrary, type LibrarySummary } from "./libraries";
 import { usePlayer } from "./player";
 import { Admin } from "./Admin";
 import { AccountMenu } from "./AccountMenu";
@@ -101,7 +102,9 @@ function ArtistAlbums({
   artist,
   onAlbum,
   onExpired,
+  libraryId,
 }: {
+  libraryId: string;
   artist: string;
   onAlbum: (id: string) => void;
   onExpired: () => void;
@@ -117,7 +120,7 @@ function ArtistAlbums({
     setLoading(true);
     setError("");
     void api<Album[]>(
-      `/albums?artist=${encodeURIComponent(artist)}&limit=24&offset=${offset}`,
+      `/albums?artist=${encodeURIComponent(artist)}&limit=24&offset=${offset}&libraryId=${encodeURIComponent(libraryId)}`,
     )
       .then((items) => {
         if (!live) return;
@@ -137,7 +140,7 @@ function ArtistAlbums({
     return () => {
       live = false;
     };
-  }, [artist, offset, retry, onExpired]);
+  }, [artist, libraryId, offset, retry, onExpired]);
   return (
     <section
       className="artist-albums"
@@ -296,7 +299,12 @@ function App() {
   }, []);
   const { route, navigate, canGoBack, back } = useNavigation();
   const searchInput = useRef<HTMLInputElement>(null);
+  const currentRoute = useRef(route);
+  currentRoute.current = route;
   const view = route.view;
+  const libraryId = catalogLibrary(view, route.libraryId);
+  const [libraries, setLibraries] = useState<LibrarySummary[]>([]);
+  const [libraryRevision, setLibraryRevision] = useState(0);
   const query = route.query || "";
   const [debounced, setDebounced] = useState(query);
   const selectedArtist = route.artist || "";
@@ -312,6 +320,7 @@ function App() {
     selectedAlbumId,
     selectedArtist,
     debounced,
+    libraryId,
   ]);
   const [loadedCollection, setLoadedCollection] = useState("");
   const [collectionError, setCollectionError] = useState<{
@@ -349,6 +358,44 @@ function App() {
   }, [queueOpen]);
   const [reload, setReload] = useState(0);
   const request = useRef(0);
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId) {
+      setLibraries([]);
+      return;
+    }
+    let live = true;
+    const refresh = async () => {
+      if (!navigator.onLine) return;
+      try {
+        const next = await api<LibrarySummary[]>("/libraries");
+        if (!live) return;
+        setLibraries(next);
+        const selected = currentRoute.current.libraryId;
+        if (selected && !next.some((item) => item.id === selected)) {
+          navigate({ ...currentRoute.current, libraryId: undefined }, true);
+        }
+        setLoadedCollection("");
+        setAlbums([]);
+        setArtists([]);
+        setTracks([]);
+        setReload((value) => value + 1);
+      } catch (e) {
+        if (live && e instanceof APIError && e.status === 401) expire();
+        else if (live) setError((e as Error).message);
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 60000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+    };
+  }, [session?.user.id, libraryRevision, navigate, expire]);
   const mainElement = useRef<HTMLElement>(null);
   const focusRoute = `${view}:${selectedAlbumId || ""}:${selectedArtist}`;
   const previousView = useRef(focusRoute);
@@ -382,13 +429,13 @@ function App() {
   }, [session, refreshPlaylists]);
   const browse = useCallback(
     (v: string) => {
-      navigate({ view: v });
+      navigate({ view: v, libraryId: route.libraryId });
       setOffset(0);
     },
-    [navigate],
+    [navigate, route.libraryId],
   );
   const browseArtist = (artist: string) => {
-    navigate({ view: "artist", artist });
+    navigate({ view: "artist", artist, libraryId: route.libraryId });
     setOffset(0);
     setQueueOpen(false);
   };
@@ -409,6 +456,7 @@ function App() {
       offset: "0",
       q: debounced,
     });
+    if (libraryId) params.set("libraryId", libraryId);
     if (selectedAlbumId) params.set("album", selectedAlbumId);
     if (selectedArtist) params.set("artist", selectedArtist);
     if (view === "likes" || view === "history") params.set("collection", view);
@@ -465,6 +513,7 @@ function App() {
       offset: String(next),
       q: debounced,
     });
+    if (libraryId) params.set("libraryId", libraryId);
     if (selectedAlbumId) params.set("album", selectedAlbumId);
     if (selectedArtist) params.set("artist", selectedArtist);
     if (view === "likes" || view === "history") params.set("collection", view);
@@ -812,7 +861,11 @@ function App() {
               value={query}
               onChange={(e) => {
                 navigate(
-                  { view: "songs", query: e.target.value },
+                  {
+                    view: "songs",
+                    query: e.target.value,
+                    libraryId: route.libraryId,
+                  },
                   view === "songs",
                 );
                 setOffset(0);
@@ -830,6 +883,29 @@ function App() {
               </button>
             )}
           </div>
+          {view !== "admin" && (
+            <label className="library-switcher">
+              Library
+              <select
+                aria-label="Choose library"
+                value={route.libraryId || ""}
+                onChange={(event) => {
+                  navigate({
+                    ...route,
+                    libraryId: event.target.value || undefined,
+                  });
+                  setOffset(0);
+                }}
+              >
+                <option value="">All accessible music</option>
+                {libraries.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <AccountMenu
             miniPlayer={miniPlayer}
             hasTrack={!!player.current}
@@ -885,8 +961,15 @@ function App() {
           <Admin
             instanceName={instanceName}
             onBranding={setInstanceName}
+            onLibrariesChanged={() => setLibraryRevision((value) => value + 1)}
             tab={route.adminTab || "dashboard"}
-            onTab={(tab) => navigate({ view: "admin", adminTab: tab })}
+            onTab={(tab) =>
+              navigate({
+                view: "admin",
+                adminTab: tab,
+                libraryId: route.libraryId,
+              })
+            }
             report={setError}
             onUpdated={userUpdated}
             onRevoked={(id) => {
@@ -987,11 +1070,16 @@ function App() {
             )}
             {selectedArtist && (
               <ArtistAlbums
-                key={`albums:${selectedArtist}`}
+                key={`albums:${selectedArtist}:${libraryId}`}
+                libraryId={libraryId}
                 artist={selectedArtist}
                 onExpired={expire}
                 onAlbum={(albumId) => {
-                  navigate({ view: "album", albumId });
+                  navigate({
+                    view: "album",
+                    albumId,
+                    libraryId: route.libraryId,
+                  });
                   setOffset(0);
                 }}
               />
@@ -1105,7 +1193,11 @@ function App() {
                     className="album-card"
                     key={a.id}
                     onClick={() => {
-                      navigate({ view: "album", albumId: a.id });
+                      navigate({
+                        view: "album",
+                        albumId: a.id,
+                        libraryId: route.libraryId,
+                      });
                       setOffset(0);
                     }}
                   >
@@ -1131,7 +1223,11 @@ function App() {
                     className="album-card artist-card"
                     key={a.name}
                     onClick={() => {
-                      navigate({ view: "artist", artist: a.name });
+                      navigate({
+                        view: "artist",
+                        artist: a.name,
+                        libraryId: route.libraryId,
+                      });
                       setOffset(0);
                     }}
                   >
@@ -1144,6 +1240,7 @@ function App() {
             ) : (
               <>
                 <TrackList
+                  libraryId={libraryId}
                   onArtist={browseArtist}
                   tracks={tracks}
                   currentId={player.current?.id}
@@ -1204,7 +1301,7 @@ function App() {
                     {debounced
                       ? "Try another title, artist, or album."
                       : session.user.admin
-                        ? "Mount your music folder, then run a scan in Instance settings."
+                        ? "Add a library in Instance settings, choose music folders, and share it with listeners."
                         : "Your administrator can add music to this instance."}
                   </p>
                 </div>
@@ -1424,6 +1521,7 @@ function App() {
               <div>
                 <strong>{player.current.title}</strong>
                 <ArtistLinks
+                  libraryId={route.libraryId}
                   credit={player.current.artist}
                   featuredArtists={player.current.featuredArtists}
                   videoGuests={player.current.videoGuests}
@@ -1565,6 +1663,7 @@ function App() {
 }
 function TrackList({
   tracks,
+  libraryId,
   currentId,
   playing,
   cached,
@@ -1578,6 +1677,7 @@ function TrackList({
   onEdit,
 }: {
   tracks: Track[];
+  libraryId?: string;
   currentId?: string;
   playing: boolean;
   cached: (id: string) => boolean;
@@ -1677,6 +1777,7 @@ function TrackList({
                     <button onClick={() => onPlay(i)}>{t.title}</button>
                     <span>
                       <ArtistLinks
+                        libraryId={libraryId}
                         credit={t.artist}
                         featuredArtists={t.featuredArtists}
                         videoGuests={t.videoGuests}

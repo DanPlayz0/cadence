@@ -54,6 +54,9 @@ var activityMigration string
 //go:embed 012_artist_roles.sql
 var artistRolesMigration string
 
+//go:embed 013_libraries.sql
+var librariesMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -232,6 +235,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=13)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, librariesMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(13)"); err != nil {
+			return err
+		}
+	}
 	return tx.Commit(ctx)
 }
 func (s *Store) Close()                         { s.pool.Close() }
@@ -332,7 +346,7 @@ func (s *Store) RevokeSessions(ctx context.Context, user string) error {
 }
 
 // Every consumer filters tracks before aggregation. Folder matches require a path boundary.
-const allowed = `t.available AND NOT EXISTS (SELECT 1 FROM user_groups ug JOIN exclusions e ON e.group_id=ug.group_id WHERE ug.user_id=$1 AND ((e.kind='track' AND e.target=t.id) OR (e.kind='album' AND (e.target=t.album_id OR e.target=` + albumIdentity + `)) OR (e.kind='folder' AND (t.path=e.target OR left(t.path,length(e.target)+1)=e.target||'/'))))`
+const allowed = `t.available AND ` + libraryAccess + ` AND NOT EXISTS (SELECT 1 FROM user_groups ug JOIN exclusions e ON e.group_id=ug.group_id WHERE ug.user_id=$1 AND ((e.kind='track' AND e.target=t.id) OR (e.kind='album' AND (e.target=t.album_id OR e.target=` + albumIdentity + `)) OR (e.kind='folder' AND (t.path=e.target OR left(t.path,length(e.target)+1)=e.target||'/'))))`
 const columns = `t.id,coalesce(t.overrides->>'title',t.title),coalesce(t.overrides->>'artist',t.artist),coalesce(t.overrides->>'albumArtist',t.album_artist),coalesce(t.overrides->>'album',t.album),` + albumIdentity + `,coalesce((t.overrides->>'number')::integer,t.number),coalesce((t.overrides->>'disc')::integer,t.disc),coalesce(t.overrides->>'year',t.year),coalesce(t.overrides->>'genre',t.genre),t.duration,t.codec,t.mime,t.path,coalesce(t.overrides->>'artwork',t.art_path),t.size,t.modified,t.root,coalesce(t.overrides->>'featuredArtists',''),coalesce(t.overrides->>'videoGuests','')`
 
 func readTrack(row pgx.Row) (domain.Track, error) {
@@ -367,6 +381,9 @@ func filter(q domain.Query) (string, []any, string) {
 	n := 1
 	order := `lower(coalesce(t.overrides->>'albumArtist',t.album_artist)),lower(coalesce(t.overrides->>'album',t.album)),coalesce((t.overrides->>'disc')::integer,t.disc),coalesce((t.overrides->>'number')::integer,t.number),t.id`
 	add := func(expr string, value any) { n++; w += " AND " + fmt.Sprintf(expr, n); args = append(args, value) }
+	if q.LibraryID != "" {
+		add(libraryFilter("$%d"), q.LibraryID)
+	}
 	if q.Search != "" {
 		add("t.search @@ websearch_to_tsquery('simple',$%d)", q.Search)
 	}
@@ -437,7 +454,10 @@ func (s *Store) Tracks(ctx context.Context, user string, q domain.Query) (domain
 	return p, lr.Err()
 }
 func (s *Store) Albums(ctx context.Context, user, search, artist string, limit, offset int) ([]domain.Album, error) {
-	rows, err := s.pool.Query(ctx, `SELECT `+albumIdentity+`,min(`+albumTitle+`),min(`+albumArtist+`),count(*),coalesce(min(t.id) FILTER (WHERE coalesce(t.overrides->>'artwork',t.art_path)<>''),'') FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) AND btrim(coalesce(t.overrides->>'album',t.album))<>'' AND lower(btrim(coalesce(t.overrides->>'album',t.album)))<>'unknown album' AND ($3='' OR artist_names(concat_ws(',',coalesce(t.overrides->>'artist',t.artist),t.overrides->>'featuredArtists',t.overrides->>'videoGuests')) @> ARRAY[$3]::text[]) GROUP BY `+albumIdentity+` ORDER BY lower(min(`+albumTitle+`)),`+albumIdentity+` LIMIT $4 OFFSET $5`, user, search, artist, limit, offset)
+	return s.AlbumsInLibrary(ctx, user, search, artist, "", limit, offset)
+}
+func (s *Store) AlbumsInLibrary(ctx context.Context, user, search, artist, libraryID string, limit, offset int) ([]domain.Album, error) {
+	rows, err := s.pool.Query(ctx, `SELECT `+albumIdentity+`,min(`+albumTitle+`),min(`+albumArtist+`),count(*),coalesce(min(t.id) FILTER (WHERE coalesce(t.overrides->>'artwork',t.art_path)<>''),'') FROM tracks t WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) AND btrim(coalesce(t.overrides->>'album',t.album))<>'' AND lower(btrim(coalesce(t.overrides->>'album',t.album)))<>'unknown album' AND ($6='' OR `+libraryFilter("$6")+`) AND ($3='' OR artist_names(concat_ws(',',coalesce(t.overrides->>'artist',t.artist),t.overrides->>'featuredArtists',t.overrides->>'videoGuests')) @> ARRAY[$3]::text[]) GROUP BY `+albumIdentity+` ORDER BY lower(min(`+albumTitle+`)),`+albumIdentity+` LIMIT $4 OFFSET $5`, user, search, artist, limit, offset, libraryID)
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +473,10 @@ func (s *Store) Albums(ctx context.Context, user, search, artist string, limit, 
 	return out, rows.Err()
 }
 func (s *Store) Artists(ctx context.Context, user, search string, limit, offset int) ([]domain.Artist, error) {
-	rows, err := s.pool.Query(ctx, `SELECT a.name,count(*),coalesce((SELECT profile->>'image' FROM artist_profiles WHERE artist=a.name),'') FROM tracks t CROSS JOIN LATERAL unnest(artist_names(concat_ws(',',coalesce(t.overrides->>'artist',t.artist),t.overrides->>'featuredArtists',t.overrides->>'videoGuests'))) AS a(name) WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) GROUP BY a.name ORDER BY lower(a.name),a.name LIMIT $3 OFFSET $4`, user, search, limit, offset)
+	return s.ArtistsInLibrary(ctx, user, search, "", limit, offset)
+}
+func (s *Store) ArtistsInLibrary(ctx context.Context, user, search, libraryID string, limit, offset int) ([]domain.Artist, error) {
+	rows, err := s.pool.Query(ctx, `SELECT a.name,count(*),coalesce((SELECT profile->>'image' FROM artist_profiles WHERE artist=a.name),'') FROM tracks t CROSS JOIN LATERAL unnest(artist_names(concat_ws(',',coalesce(t.overrides->>'artist',t.artist),t.overrides->>'featuredArtists',t.overrides->>'videoGuests'))) AS a(name) WHERE `+allowed+` AND ($2='' OR t.search @@ websearch_to_tsquery('simple',$2)) AND ($5='' OR `+libraryFilter("$5")+`) GROUP BY a.name ORDER BY lower(a.name),a.name LIMIT $3 OFFSET $4`, user, search, limit, offset, libraryID)
 	if err != nil {
 		return nil, err
 	}

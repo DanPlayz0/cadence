@@ -12,6 +12,7 @@ services:
       TRANSCODE_CACHE_MB: ${TRANSCODE_CACHE_MB:-2048}
       SCAN_INTERVAL_MINUTES: ${SCAN_INTERVAL_MINUTES:-60}
       METADATA_USER_AGENT: ${METADATA_USER_AGENT:-}
+    # Mount storage once; select library folders and sharing in the web UI.
     volumes:
       - type: bind
         source: ${MUSIC_PATH:?Set MUSIC_PATH in .env}

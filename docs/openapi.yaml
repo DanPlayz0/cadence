@@ -7,11 +7,175 @@ info:
     url: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
   description:
     Same-origin API. Authenticated mutations require X-CSRF-Token from
-    /me or login. Excluded tracks return 404. Instance folders are configured by
-    environment; music files are never modified.
+    /me or login. Excluded tracks return 404. Mounted storage boundaries are configured by
+    environment; library folders and sharing are configured in the UI. Music files are never modified.
 servers:
   - url: /api/v1
 paths:
+  /libraries:
+    get:
+      summary: List accessible named libraries
+      description: Returns IDs and names only. Administrators see all configured
+        libraries; listeners see everyone, user, and group grants.
+      security: &a1
+        - session: []
+      responses:
+        "200":
+          description: Accessible libraries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibrarySummary"
+        "401":
+          description: Sign in required
+        "500":
+          description: Server failure
+  /admin/libraries:
+    get:
+      summary: List library configuration
+      security: *a1
+      responses:
+        "200":
+          description: Libraries with folders and sharing
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MusicLibrary"
+        "401": &a2
+          description: Sign in required
+        "403": &a3
+          description: Administrator required
+        "500": &a4
+          description: Server failure
+    post:
+      summary: Create a music library
+      description: Requires administrator and CSRF. Choose one to 100 existing
+        directories beneath MUSIC_ROOTS. Grants are saved atomically. New
+        libraries default to administrator-only. Overlapping library grants add
+        together; group exclusions still override them. Requests an incremental
+        scan or coalesced follow-up.
+      security: *a1
+      parameters:
+        - &a5
+          name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody: &a6
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MusicLibraryInput"
+      responses:
+        "201":
+          description: Created library
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicLibrary"
+        "400": &a7
+          description: Invalid input or unavailable folder
+        "401": *a2
+        "403": *a3
+        "404": &a8
+          description: Library not found
+        "409": &a9
+          description: Invalid user/group reference
+        "500": *a4
+  /admin/libraries/{id}:
+    put:
+      summary: Replace library folders and sharing
+      description: Requires administrator and CSRF. Access changes immediately. Folder
+        and grant changes are atomic and request an incremental scan. Does not
+        modify source files.
+      security: *a1
+      parameters:
+        - &a10
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - *a5
+      requestBody: *a6
+      responses:
+        "200":
+          description: Updated library
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicLibrary"
+        "400": *a7
+        "401": *a2
+        "403": *a3
+        "404": *a8
+        "409": *a9
+        "500": *a4
+    delete:
+      summary: Remove a library and its sharing
+      description: Source music, catalog records, overrides, playlists and history are
+        retained. Tracks remain accessible if another library grants access.
+      security: *a1
+      parameters:
+        - *a10
+        - *a5
+      responses:
+        "200":
+          description: Library removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+        "401": *a2
+        "403": *a3
+        "404": *a8
+        "500": *a4
+  /admin/folders:
+    get:
+      summary: Browse immediate mounted directories before indexing
+      description: Administrator only. Empty path lists configured MUSIC_ROOTS. Paths
+        must be absolute directories within those roots. Parent traversal and
+        escaping symlinks are rejected. Music files are omitted; no recursive walk
+        is performed.
+      security: *a1
+      parameters:
+        - name: path
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Directory page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicFolderPage"
+        "400": *a7
+        "401": *a2
+        "403": *a3
+        "500": *a4
   /me/playback:
     get:
       summary: Restore this account's last song and playback position
@@ -1039,6 +1203,11 @@ paths:
       security:
         - session: []
       parameters:
+        - name: libraryId
+          in: query
+          description: Optional named library filter. Only accessible library tracks contribute to results and counts; inaccessible or unknown IDs return empty results.
+          schema:
+            type: string
         - name: limit
           in: query
           schema:
@@ -1221,6 +1390,11 @@ paths:
       security:
         - session: []
       parameters:
+        - name: libraryId
+          in: query
+          description: Optional named library filter. Only accessible library tracks contribute to results and counts; inaccessible or unknown IDs return empty results.
+          schema:
+            type: string
         - name: artist
           in: query
           description: Exact individual artist credit, including comma-separated collaborations. Counts and artwork include only accessible matching songs.
@@ -1473,6 +1647,11 @@ paths:
       security:
         - session: []
       parameters:
+        - name: libraryId
+          in: query
+          description: Optional named library filter. Only accessible library tracks contribute to results and counts; inaccessible or unknown IDs return empty results.
+          schema:
+            type: string
         - name: limit
           in: query
           schema:
@@ -4018,6 +4197,65 @@ components:
       in: cookie
       name: cadence_session
   schemas:
+    LibrarySummary:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    MusicLibraryInput:
+      type: object
+      required:
+        - name
+        - folders
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        folders:
+          type: array
+          items: &a1
+            type: string
+          minItems: 1
+          maxItems: 100
+        everyone:
+          type: boolean
+          default: false
+        users: &a2
+          type: array
+          items: *a1
+        groups: *a2
+    MusicLibrary:
+      allOf:
+        - $ref: "#/components/schemas/MusicLibraryInput"
+        - $ref: "#/components/schemas/LibrarySummary"
+    MusicFolderPage:
+      type: object
+      properties:
+        path:
+          type: string
+        parent:
+          type: string
+        total:
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              path:
+                type: string
     ArtistProfile:
       type: object
       properties:

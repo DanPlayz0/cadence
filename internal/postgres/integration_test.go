@@ -63,6 +63,15 @@ func fixture(t testing.TB) (*postgres.Store, *pgx.Conn) {
 	if _, e = c.Exec(ctx, "SET search_path TO "+safe); e != nil {
 		t.Fatal(e)
 	}
+	// Existing catalog tests explicitly opt into an everyone-shared library.
+	// New library tests remove this fixture configuration to exercise fresh setup.
+	tempRoot, e := library.Canonical(os.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = r.SaveMusicLibrary(ctx, domain.MusicLibrary{Name: "Test catalog", Folders: []string{"/", "C:/Music", tempRoot}, Everyone: true}); e != nil {
+		t.Fatal(e)
+	}
 	return r, c
 }
 func TestRepositoryContract(t *testing.T) {
@@ -541,7 +550,7 @@ func TestReopenPreservesCatalogAndOverrides(t *testing.T) {
 		t.Fatal("catalog/override persistence failed", e)
 	}
 	var versions int
-	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 12 {
+	if e = c.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&versions); e != nil || versions != 13 {
 		t.Fatal("migration reapplied", e)
 	}
 	checkpoint, e := reopened.Playback(ctx, u.ID)

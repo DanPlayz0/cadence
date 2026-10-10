@@ -69,12 +69,27 @@ func run() error {
 			return fmt.Errorf("empty MUSIC_ROOTS entry")
 		}
 	}
+	// Store normalized paths even when a mount is temporarily unavailable.
+	for i, r := range roots {
+		p, e := library.Canonical(r)
+		if e != nil {
+			p, e = filepath.Abs(r)
+			if e != nil {
+				return e
+			}
+			p = filepath.ToSlash(filepath.Clean(p))
+		}
+		roots[i] = p
+	}
+	if err = repo.InitializeLibraries(ctx, roots); err != nil {
+		return err
+	}
 	cache, err := media.New(filepath.Join(data, "transcodes"), int64(number("TRANSCODE_CACHE_MB", 2048))<<20, number("TRANSCODE_WORKERS", 2), ctx)
 	if err != nil {
 		return err
 	}
 	enricher := &library.Enricher{Repo: repo, ArtDir: art, UserAgent: os.Getenv("METADATA_USER_AGENT")}
-	scanner := &library.Scanner{Repo: repo, Roots: roots, ArtDir: art, Enricher: enricher, Context: ctx}
+	scanner := &library.Scanner{Repo: repo, Roots: roots, ManagedLibraries: true, ArtDir: art, Enricher: enricher, Context: ctx}
 	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://")}}
 	server := &http.Server{Addr: env("LISTEN_ADDR", ":8080"), Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	go func() {

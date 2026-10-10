@@ -143,10 +143,26 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("DELETE /api/v1/me/avatar", s.updateAvatar)
 	m.HandleFunc("GET /api/v1/users/{id}/avatar", s.userAvatar)
 	m.HandleFunc("POST /api/v1/logout", s.logout)
+	m.HandleFunc("GET /api/v1/libraries", s.accessibleLibraries)
+	m.HandleFunc("GET /api/v1/admin/libraries", s.musicLibraries)
+	m.HandleFunc("POST /api/v1/admin/libraries", s.saveMusicLibrary)
+	m.HandleFunc("PUT /api/v1/admin/libraries/{id}", s.saveMusicLibrary)
+	m.HandleFunc("DELETE /api/v1/admin/libraries/{id}", s.deleteMusicLibrary)
+	m.HandleFunc("GET /api/v1/admin/folders", s.musicFolders)
 	m.HandleFunc("GET /api/v1/tracks", s.tracks)
 	m.HandleFunc("GET /api/v1/albums", func(w http.ResponseWriter, r *http.Request) {
 		l, o := pagination(r)
-		v, e := s.Repo.Albums(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), r.URL.Query().Get("artist"), l, o)
+		var v []domain.Album
+		var e error
+		if id := r.URL.Query().Get("libraryId"); id != "" {
+			repo, ok := s.namedLibraries(w)
+			if !ok {
+				return
+			}
+			v, e = repo.AlbumsInLibrary(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), r.URL.Query().Get("artist"), id, l, o)
+		} else {
+			v, e = s.Repo.Albums(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), r.URL.Query().Get("artist"), l, o)
+		}
 		if e != nil {
 			failure(w, e)
 			return
@@ -158,7 +174,17 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("PUT /api/v1/admin/artists/avatar", s.saveArtistAvatar)
 	m.HandleFunc("GET /api/v1/artists", func(w http.ResponseWriter, r *http.Request) {
 		l, o := pagination(r)
-		v, e := s.Repo.Artists(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), l, o)
+		var v []domain.Artist
+		var e error
+		if id := r.URL.Query().Get("libraryId"); id != "" {
+			repo, ok := s.namedLibraries(w)
+			if !ok {
+				return
+			}
+			v, e = repo.ArtistsInLibrary(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), id, l, o)
+		} else {
+			v, e = s.Repo.Artists(r.Context(), current(r).User.ID, r.URL.Query().Get("q"), l, o)
+		}
 		if e != nil {
 			failure(w, e)
 			return
@@ -625,7 +651,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 func (s *Server) tracks(w http.ResponseWriter, r *http.Request) {
 	l, o := pagination(r)
 	v := r.URL.Query()
-	q := domain.Query{Search: v.Get("q"), Album: v.Get("album"), Artist: v.Get("artist"), Collection: v.Get("collection"), Playlist: v.Get("playlist"), Limit: l, Offset: o}
+	q := domain.Query{LibraryID: v.Get("libraryId"), Search: v.Get("q"), Album: v.Get("album"), Artist: v.Get("artist"), Collection: v.Get("collection"), Playlist: v.Get("playlist"), Limit: l, Offset: o}
 	p, e := s.Repo.Tracks(r.Context(), current(r).User.ID, q)
 	if e != nil {
 		failure(w, e)
@@ -789,6 +815,9 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path, e := library.ResolveFile(s.Config.Roots, t.Path)
+	if e == nil && path != t.Path {
+		e = fmt.Errorf("music file path changed")
+	}
 	if e != nil {
 		write(w, 404, map[string]string{"error": "Music file unavailable"})
 		return

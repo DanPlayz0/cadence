@@ -127,6 +127,7 @@ type MetadataChoice struct {
 	Value   *string `json:"value,omitempty"`
 }
 type Query struct {
+	LibraryID                                   string
 	Search, Album, Artist, Collection, Playlist string
 	Offset, Limit                               int
 }

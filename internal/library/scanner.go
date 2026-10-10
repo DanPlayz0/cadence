@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,12 +23,15 @@ import (
 )
 
 type Scanner struct {
-	Repo     domain.Repository
-	Roots    []string
-	ArtDir   string
-	Enricher *Enricher
-	busy     atomic.Bool
-	Context  context.Context
+	Repo             domain.Repository
+	Roots            []string
+	ArtDir           string
+	Enricher         *Enricher
+	busy             atomic.Bool
+	ManagedLibraries bool
+	scanMu           sync.Mutex
+	pending          bool
+	Context          context.Context
 }
 
 var extensions = map[string]string{".mp3": "audio/mpeg", ".flac": "audio/flac", ".m4a": "audio/mp4", ".aac": "audio/aac", ".ogg": "audio/ogg", ".opus": "audio/ogg", ".wav": "audio/wav"}
@@ -38,7 +42,7 @@ func Canonical(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p, err = filepath.EvalSymlinks(p)
+	p, err = resolveCanonicalPath(p)
 	if err != nil {
 		return "", err
 	}
@@ -95,6 +99,12 @@ func (s *Scanner) Start(full bool) (string, bool) {
 }
 
 func (s *Scanner) StartWithOptions(options ScanOptions) (string, bool) {
+	s.scanMu.Lock()
+	defer s.scanMu.Unlock()
+	return s.startLocked(options)
+}
+
+func (s *Scanner) startLocked(options ScanOptions) (string, bool) {
 	if !s.busy.CompareAndSwap(false, true) {
 		return "", false
 	}
@@ -112,8 +122,27 @@ func (s *Scanner) StartWithOptions(options ScanOptions) (string, bool) {
 	go s.run(ctx, v, options)
 	return id, true
 }
+
+// RequestScan coalesces configuration changes into one incremental follow-up scan.
+func (s *Scanner) RequestScan() {
+	s.scanMu.Lock()
+	defer s.scanMu.Unlock()
+	if s.busy.Load() {
+		s.pending = true
+		return
+	}
+	s.startLocked(ScanOptions{})
+}
 func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
-	defer s.busy.Store(false)
+	defer func() {
+		s.scanMu.Lock()
+		defer s.scanMu.Unlock()
+		s.busy.Store(false)
+		if s.pending && ctx.Err() == nil {
+			s.pending = false
+			s.startLocked(ScanOptions{})
+		}
+	}()
 	settings, err := s.Repo.Settings(ctx)
 	if err != nil {
 		v.Errors = append(v.Errors, "Unable to read enrichment settings")
@@ -123,8 +152,41 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 			v.Errors = append(v.Errors, msg)
 		}
 	}
-	for _, configured := range s.Roots {
+	folders := s.Roots
+	if s.ManagedLibraries {
+		repo, ok := s.Repo.(domain.NamedLibraryRepository)
+		if !ok {
+			addErr("Library configuration unavailable")
+			folders = nil
+		} else {
+			libraries, e := repo.MusicLibraries(ctx)
+			if e != nil {
+				addErr("Unable to load libraries")
+				folders = nil
+			} else {
+				folders = []string{}
+				for _, l := range libraries {
+					for _, folder := range l.Folders {
+						p, e := ResolveDirectory(s.Roots, folder)
+						if e != nil || p != folder {
+							addErr(folder + ": mount unavailable or outside music roots")
+							continue
+						}
+						folders = append(folders, p)
+					}
+				}
+				folders = MinimalFolders(folders)
+			}
+		}
+	}
+	for _, configured := range folders {
 		root, err := Canonical(configured)
+		if s.ManagedLibraries {
+			root, err = ResolveDirectory(s.Roots, configured)
+			if err == nil && root != configured {
+				err = fmt.Errorf("music directory path changed")
+			}
+		}
 		if err != nil {
 			addErr(configured + ": mount unavailable")
 			continue
@@ -155,6 +217,14 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 				return nil
 			}
 			path = filepath.ToSlash(path)
+			if s.ManagedLibraries {
+				resolved, e := ResolveFile(s.Roots, path)
+				if e != nil || resolved != path {
+					complete = false
+					addErr(path + ": file unavailable or path changed")
+					return nil
+				}
+			}
 			info, err := d.Info()
 			if err != nil {
 				complete = false
@@ -207,6 +277,15 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 				return nil
 			}
 			t.Root = root
+			if s.ManagedLibraries {
+				for _, boundary := range s.Roots {
+					p, e := Canonical(boundary)
+					if e == nil && Within(p, path) {
+						t.Root = p
+						break
+					}
+				}
+			}
 			t.Size = info.Size()
 			t.Modified = info.ModTime().UnixNano()
 			t.ArtPath = s.art(ctx, path, tags, info.ModTime().UnixNano())
@@ -246,7 +325,12 @@ func (s *Scanner) run(ctx context.Context, v domain.Scan, options ScanOptions) {
 			addErr(err.Error())
 		}
 		if complete {
-			if err = s.Repo.FinishRoot(ctx, root, v.ID); err != nil {
+			if s.ManagedLibraries {
+				err = s.Repo.(domain.NamedLibraryRepository).FinishFolder(ctx, root, v.ID)
+			} else {
+				err = s.Repo.FinishRoot(ctx, root, v.ID)
+			}
+			if err != nil {
 				addErr("Database: " + err.Error())
 			}
 		}

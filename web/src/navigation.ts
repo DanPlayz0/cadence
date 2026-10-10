@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 export type Route = {
   view: string;
+  libraryId?: string;
   albumId?: string;
   artist?: string;
   adminTab?: string;
@@ -34,6 +35,7 @@ export function routeURL(route: Route): string {
     path = `/${route.view}`;
   const params = new URLSearchParams();
   if (route.query) params.set("q", route.query);
+  if (route.libraryId) params.set("libraryId", route.libraryId);
   return path + (params.size ? `?${params}` : "");
 }
 
@@ -60,5 +62,7 @@ export function parseRoute(url: URL): Route {
   } else if (page === "admin" && parts.length === 1)
     route = { view: "admin", adminTab: "dashboard" };
   if (url.searchParams.get("q")) route.query = url.searchParams.get("q")!;
+  if (url.searchParams.get("libraryId"))
+    route.libraryId = url.searchParams.get("libraryId")!;
   return route;
 }

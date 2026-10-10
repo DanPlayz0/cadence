@@ -3991,3 +3991,34 @@ input[type="range"] {
   object-fit: cover;
   border-radius: 50%;
 }
+
+.library-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+.library-switcher select {
+  max-width: 200px;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 104px;
+    padding-block: 12px;
+  }
+  .search {
+    width: auto;
+    flex: 1;
+  }
+  .library-switcher {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .library-switcher select {
+    max-width: 100%;
+  }
+}

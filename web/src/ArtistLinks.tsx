@@ -5,12 +5,14 @@ import { routeURL } from "./navigation";
 
 export function ArtistLinks({
   credit,
+  libraryId,
   onNavigate,
   single = false,
   featuredArtists = "",
   videoGuests = "",
 }: {
   credit: string;
+  libraryId?: string;
   featuredArtists?: string;
   videoGuests?: string;
   onNavigate: (name: string) => void;
@@ -22,7 +24,7 @@ export function ArtistLinks({
         <Fragment key={name}>
           {i > 0 && ", "}
           <a
-            href={routeURL({ view: "artist", artist: name })}
+            href={routeURL({ view: "artist", artist: name, libraryId })}
             onDoubleClick={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
@@ -46,14 +48,22 @@ export function ArtistLinks({
         <>
           {" "}
           · feat.{" "}
-          <ArtistLinks credit={featuredArtists} onNavigate={onNavigate} />
+          <ArtistLinks
+            credit={featuredArtists}
+            libraryId={libraryId}
+            onNavigate={onNavigate}
+          />
         </>
       )}
       {videoGuests.trim() && (
         <>
           {" "}
           · Video guests:{" "}
-          <ArtistLinks credit={videoGuests} onNavigate={onNavigate} />
+          <ArtistLinks
+            credit={videoGuests}
+            libraryId={libraryId}
+            onNavigate={onNavigate}
+          />
         </>
       )}
       {single && <span className="single-label"> · Single</span>}

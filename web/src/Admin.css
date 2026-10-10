@@ -12,3 +12,86 @@
 .scan-mode p {
   margin: 0;
 }
+
+.library-manager h2,
+.library-card h3 {
+  margin-right: auto;
+}
+.library-card {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+.library-card code,
+.library-editor code {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.library-editor.ui-dialog-content {
+  width: min(720px, calc(100vw - 2rem));
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+.library-editor fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.library-editor input[type="text"],
+.library-editor #music-library-name {
+  width: 100%;
+}
+.library-editor h3 {
+  margin-top: 1.25rem;
+}
+.library-editor .row {
+  margin: 0.5rem 0;
+}
+.library-editor .row code {
+  flex: 1;
+  min-width: 0;
+}
+.folder-picker {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+.folder-picker .row > button:first-child {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+.folder-picker span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.library-recipients {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.library-recipients > div {
+  max-height: 220px;
+  overflow-y: auto;
+}
+.library-warning {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+}
+
+.account-dialog.library-editor form {
+  display: grid;
+  justify-content: stretch;
+  gap: 16px;
+  margin-top: 20px;
+}
+.account-dialog.library-editor fieldset {
+  width: 100%;
+}
+.account-dialog.library-editor h2 {
+  margin: 0 0 12px;
+}
+.account-dialog.library-editor > p {
+  color: var(--muted);
+  line-height: 1.6;
+}

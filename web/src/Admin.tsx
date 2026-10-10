@@ -17,6 +17,7 @@ import {
   Monitor,
   Search,
 } from "lucide-react";
+import { LibraryManager } from "./LibraryManager";
 import { ActivityLog } from "./ActivityLog";
 import { describeClient } from "./devices";
 import { api, User } from "./api";
@@ -135,6 +136,7 @@ export function Admin({
   report,
   instanceName,
   onBranding,
+  onLibrariesChanged,
   onUpdated,
   onRevoked,
   onExpired,
@@ -144,6 +146,7 @@ export function Admin({
   report: (s: string) => void;
   instanceName: string;
   onBranding: (name: string) => void;
+  onLibrariesChanged: () => void;
   onUpdated: (user: User) => void;
   onRevoked: (id: string) => void;
   onExpired: () => void;
@@ -539,11 +542,20 @@ export function Admin({
           )}
           {tab === "library" && (
             <>
+              <LibraryManager
+                users={users}
+                groups={groups}
+                onChanged={() => {
+                  void load();
+                  onLibrariesChanged();
+                }}
+              />
               <div className="panel">
-                <h2>Music folders</h2>
+                <h2>Mounted storage and scans</h2>
                 <p className="muted">
-                  Configured with MUSIC_ROOTS. Files are read-only; accepted
-                  corrections live in the catalog.
+                  Mounted storage is available for library setup. Scans include
+                  only folders selected in libraries. Accepted corrections live
+                  in the catalog.
                 </p>
                 {roots.map((r) => (
                   <code key={r}>{r}</code>
@@ -563,7 +575,9 @@ export function Admin({
                       <option value="incremental">
                         Scan for new and updated files
                       </option>
-                      <option value="missing">Search for missing metadata</option>
+                      <option value="missing">
+                        Search for missing metadata
+                      </option>
                       <option value="full">Replace all metadata</option>
                     </select>
                     <p id="library-scan-description" className="muted">
@@ -605,8 +619,8 @@ export function Admin({
                 <p className="muted">
                   MusicBrainz and Cover Art Archive can suggest catalog changes.
                   Set METADATA_USER_AGENT with contact information on the
-                  server. Enable this, then choose Search for missing metadata or
-                  Replace all metadata in Library to include existing files.
+                  server. Enable this, then choose Search for missing metadata
+                  or Replace all metadata in Library to include existing files.
                 </p>
                 <Checkbox
                   label="Enable external lookups"
