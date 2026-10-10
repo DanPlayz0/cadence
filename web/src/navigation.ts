@@ -18,8 +18,17 @@ export const adminTabs = [
   "suggestions",
   "activity",
   "scans",
+  "soulseek",
 ];
-const pages = ["home", "songs", "albums", "artists", "likes", "history"];
+const pages = [
+  "home",
+  "songs",
+  "albums",
+  "artists",
+  "likes",
+  "history",
+  "find",
+];
 
 export function routeURL(route: Route): string {
   let path = "/";

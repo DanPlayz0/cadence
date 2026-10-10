@@ -9,6 +9,7 @@ describe("page URLs", () => {
       { view: "artist", artist: "AC/DC & 音楽" },
       { view: "playlist:mix/one" },
       { view: "songs", query: "rock & roll + 音楽" },
+      { view: "find", query: "artist & album" },
       { view: "admin", adminTab: "people" },
     ];
     for (const route of routes)
@@ -28,6 +29,7 @@ describe("page URLs", () => {
       "suggestions",
       "activity",
       "scans",
+      "soulseek",
     ]) {
       const route = { view: "admin", adminTab };
       expect(

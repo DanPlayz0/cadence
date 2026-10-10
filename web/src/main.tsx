@@ -46,6 +46,8 @@ import {
 import { catalogLibrary, type LibrarySummary } from "./libraries";
 import { usePlayer } from "./player";
 import { Admin } from "./Admin";
+import { FindMusic } from "./SoulseekViews";
+import { useSoulseekCapabilities } from "./soulseek";
 import { AccountMenu } from "./AccountMenu";
 import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
@@ -302,6 +304,7 @@ function App() {
   const currentRoute = useRef(route);
   currentRoute.current = route;
   const view = route.view;
+  const soulseek = useSoulseekCapabilities(session?.user.id);
   const libraryId = catalogLibrary(view, route.libraryId);
   const [libraries, setLibraries] = useState<LibrarySummary[]>([]);
   const [libraryRevision, setLibraryRevision] = useState(0);
@@ -447,7 +450,7 @@ function App() {
   const artistView = view === "artists";
   useEffect(() => {
     const id = ++request.current;
-    if (!session || view === "admin") return;
+    if (!session || view === "admin" || view === "find") return;
     setLoading(true);
     setCollectionError(null);
     setOffset(0);
@@ -757,6 +760,15 @@ function App() {
           <Headphones /> <span className="instance-name">{instanceName}</span>
         </div>
         <nav aria-label="Browse music">
+          {soulseek.allowed && (
+            <button
+              className={view === "find" ? "active" : ""}
+              aria-current={view === "find" ? "page" : undefined}
+              onClick={() => navigate({ view: "find", query })}
+            >
+              <Search /> Find music
+            </button>
+          )}
           <button
             className={view === "home" ? "active" : ""}
             aria-current={view === "home" ? "page" : undefined}
@@ -857,16 +869,20 @@ function App() {
             <input
               ref={searchInput}
               aria-label="Search music"
-              placeholder="Search your collection"
+              placeholder={
+                view === "find"
+                  ? "Search beyond your library"
+                  : "Search your collection"
+              }
               value={query}
               onChange={(e) => {
                 navigate(
                   {
-                    view: "songs",
+                    view: view === "find" ? "find" : "songs",
                     query: e.target.value,
                     libraryId: route.libraryId,
                   },
-                  view === "songs",
+                  view === "songs" || view === "find",
                 );
                 setOffset(0);
               }}
@@ -883,7 +899,7 @@ function App() {
               </button>
             )}
           </div>
-          {view !== "admin" && (
+          {view !== "admin" && view !== "find" && (
             <label className="library-switcher">
               Library
               <select
@@ -977,6 +993,14 @@ function App() {
             }}
             onExpired={expire}
           />
+        ) : view === "find" ? (
+          <FindMusic
+            query={query}
+            capabilities={soulseek}
+            admin={session.user.admin}
+            onQuery={(q) => navigate({ view: "find", query: q }, true)}
+            onLibrary={() => browse("songs")}
+          />
         ) : (
           <section className="content">
             <div className="mobile-nav">
@@ -1011,9 +1035,21 @@ function App() {
                     {p.name}
                   </option>
                 ))}
+                {soulseek.allowed && <option value="find">Find music</option>}
                 <option value="__new">Create playlist…</option>
               </select>
             </div>
+            {view === "songs" &&
+              query &&
+              soulseek.allowed &&
+              soulseek.presentation === "separate" && (
+                <button
+                  className="soulseek-search-link"
+                  onClick={() => navigate({ view: "find", query })}
+                >
+                  Find “{query}” on Soulseek
+                </button>
+              )}
             <div className="page-heading">
               {playlist && (
                 <div className="playlist-cover">
@@ -1315,6 +1351,17 @@ function App() {
                 Load more <ChevronRight size={16} />
               </button>
             )}
+            {view === "songs" &&
+              query &&
+              soulseek.allowed &&
+              soulseek.presentation === "combined" && (
+                <FindMusic
+                  embedded
+                  query={query}
+                  capabilities={soulseek}
+                  admin={session.user.admin}
+                />
+              )}
             <footer className="content-footer">
               CADENCE <span>Music on your terms.</span>
             </footer>

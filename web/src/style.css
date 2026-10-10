@@ -19,6 +19,13 @@
   --scrollbar-thumb: #50564a;
   --scrollbar-thumb-hover: #747d68;
 }
+.soulseek-search-link {
+  padding: 10px 14px;
+  margin: 12px 0;
+  background: var(--line);
+  border-radius: 6px;
+  color: var(--accent);
+}
 @media (forced-colors: none) {
   * {
     scrollbar-width: thin;

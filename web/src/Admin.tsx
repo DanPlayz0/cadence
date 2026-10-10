@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { LibraryManager } from "./LibraryManager";
 import { ActivityLog } from "./ActivityLog";
+import { SoulseekSettings } from "./SoulseekViews";
 import { describeClient } from "./devices";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
@@ -60,6 +61,13 @@ type Scan = {
   errors: string[];
 };
 const sections = [
+  {
+    id: "soulseek",
+    label: "Soulseek",
+    icon: Search,
+    description:
+      "Find music, manage downloads, and configure review and sharing.",
+  },
   {
     id: "dashboard",
     label: "Dashboard",
@@ -638,6 +646,7 @@ export function Admin({
             </>
           )}
           {tab === "activity" && <ActivityLog />}
+          {tab === "soulseek" && <SoulseekSettings />}
           {tab === "scans" && (
             <>
               <div className="panel">

@@ -1,0 +1,155 @@
+.soulseek {
+  max-width: 1100px;
+}
+.soulseek h1,
+.soulseek h2,
+.soulseek h3 {
+  margin-top: 0;
+}
+.soulseek p,
+.soulseek-requests p {
+  color: var(--muted);
+}
+.soulseek [role="alert"],
+.soulseek-requests [role="alert"] {
+  color: #f4ae9d;
+}
+.soulseek [role="status"],
+.soulseek-requests [role="status"] {
+  color: var(--accent);
+}
+.soulseek-row,
+.soulseek-actions,
+.soulseek-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.soulseek-row {
+  justify-content: space-between;
+}
+.soulseek-search input {
+  flex: 1;
+  min-width: 180px;
+}
+.soulseek button,
+.soulseek-requests button {
+  min-height: 40px;
+  padding: 9px 14px;
+  background: var(--line);
+  border-radius: 6px;
+}
+.soulseek button:disabled,
+.soulseek-requests button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.soulseek button:hover:not(:disabled),
+.soulseek-requests button:hover:not(:disabled) {
+  background: #41463a;
+}
+.soulseek-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+.soulseek-card details {
+  margin-bottom: 12px;
+}
+.soulseek-card progress {
+  width: min(85%, 450px);
+  accent-color: var(--accent);
+}
+.soulseek-destination,
+.soulseek-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.soulseek-destination label,
+.soulseek-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.soulseek input:not([type="checkbox"]),
+.soulseek select,
+.soulseek-destination input,
+.soulseek-destination select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #141514;
+  color: inherit;
+}
+.soulseek-checks,
+.soulseek-folder {
+  display: grid;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 14px 0;
+}
+.soulseek-checks label,
+.soulseek-folder label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.soulseek input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.soulseek-help,
+.soulseek-path {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.soulseek-embedded {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.soulseek-rule {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.soulseek-requests {
+  margin-top: 28px;
+}
+.soulseek-search-link {
+  padding: 10px 14px;
+  margin: 12px 0;
+  background: var(--line);
+  border-radius: 6px;
+  color: var(--accent);
+}
+.soulseek fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+@media (max-width: 650px) {
+  .soulseek-destination,
+  .soulseek-fields {
+    grid-template-columns: 1fr;
+  }
+  .soulseek-card {
+    padding: 14px;
+  }
+  .soulseek-search button {
+    width: 100%;
+  }
+}

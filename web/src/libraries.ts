@@ -33,6 +33,7 @@ export function broaderOverlaps(draft: MusicLibrary, others: MusicLibrary[]) {
 
 export function catalogLibrary(view: string, libraryId?: string) {
   return view === "admin" ||
+    view === "find" ||
     view === "likes" ||
     view === "history" ||
     view.startsWith("playlist:")
