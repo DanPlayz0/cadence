@@ -57,6 +57,7 @@ import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import { usePlaybackResume } from "./usePlaybackResume";
 import { ArtistProfile } from "./ArtistProfile";
 import { ArtistLinks } from "./ArtistLinks";
+import { TrackMetadataEditor } from "./TrackMetadataEditor";
 import { TrackActions } from "./TrackActions";
 import { PlaylistPicker } from "./PlaylistPicker";
 import { usePanelResize } from "./usePanelResize";
@@ -306,6 +307,7 @@ function App() {
   const [addingPlaylist, setAddingPlaylist] = useState(false);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [editingTrack, setEditingTrack] = useState<Track | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const collectionKey = JSON.stringify([
     view,
@@ -1151,6 +1153,7 @@ function App() {
                     player.enqueue(track);
                     setNotice(`Added “${track.title}” to the queue.`);
                   }}
+                  onEdit={session.user.admin ? setEditingTrack : undefined}
                   onAdd={setAddingTrack}
                   onRemove={
                     playlist
@@ -1222,6 +1225,17 @@ function App() {
         target={miniPlayer.target}
         onClose={miniPlayer.close}
       />
+      {editingTrack && session.user.admin && (
+        <TrackMetadataEditor
+          key={editingTrack.id}
+          trackId={editingTrack.id}
+          revision={0}
+          onClose={() => setEditingTrack(null)}
+          onSuggestions={async () => {
+            setReload((v) => v + 1);
+          }}
+        />
+      )}
       {addingTrack && (
         <PlaylistPicker
           key={addingTrack.id}
@@ -1595,6 +1609,7 @@ function TrackList({
   onQueue,
   onAdd,
   onRemove,
+  onEdit,
 }: {
   tracks: Track[];
   currentId?: string;
@@ -1607,7 +1622,13 @@ function TrackList({
   onQueue: (t: Track) => void;
   onAdd: (t: Track) => void;
   onRemove?: (t: Track) => void;
+  onEdit?: (t: Track) => void;
 }) {
+  const [context, setContext] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [scroll, setScroll] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(600);
@@ -1641,7 +1662,10 @@ function TrackList({
         role="region"
         aria-label="Songs. Scroll for more songs."
         ref={ref}
-        onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
+        onScroll={(e) => {
+          setScroll(e.currentTarget.scrollTop);
+          setContext(null);
+        }}
       >
         <div style={{ height: tracks.length * row, position: "relative" }}>
           {tracks.slice(start, end).map((t, j) => {
@@ -1657,6 +1681,10 @@ function TrackList({
                   right: 0,
                 }}
                 className={`track-row ${t.id === currentId ? "current" : ""}`}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setContext({ id: t.id, x: event.clientX, y: event.clientY });
+                }}
                 onDoubleClick={() => onPlay(i)}
               >
                 <button
@@ -1694,6 +1722,9 @@ function TrackList({
                 <span className="track-album">{t.album || "Single"}</span>
                 <span className="track-duration">{duration(t.duration)}</span>
                 <TrackActions
+                  contextPosition={context?.id === t.id ? context : undefined}
+                  onContextClose={() => setContext(null)}
+                  onEdit={onEdit ? () => onEdit(t) : undefined}
                   track={t}
                   liking={liking.has(t.id)}
                   onLike={() => onLike(t)}

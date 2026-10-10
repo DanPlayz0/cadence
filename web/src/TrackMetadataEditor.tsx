@@ -4,6 +4,12 @@ import { api, type Track, type Page } from "./api";
 import { BulkMetadataEditor } from "./BulkMetadataEditor";
 import { LibraryMetadataBrowser } from "./LibraryMetadataBrowser";
 import { MetadataChooser } from "./MetadataChooser";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./components/ui/dialog";
 import { Button } from "./components/ui/button";
 
 const fields = {
@@ -28,9 +34,13 @@ function values(track: Track): Values {
 export function TrackMetadataEditor({
   onSuggestions,
   revision,
+  trackId,
+  onClose,
 }: {
   onSuggestions: () => Promise<void>;
   revision: number;
+  trackId?: string;
+  onClose?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
@@ -76,7 +86,10 @@ export function TrackMetadataEditor({
     }
   }
   useEffect(() => {
-    if (mode !== "search") return;
+    if (trackId) void selectTrack(trackId);
+  }, [trackId]);
+  useEffect(() => {
+    if (trackId || mode !== "search") return;
     let live = true;
     setSearching(true);
     setSearchError("");
@@ -132,131 +145,144 @@ export function TrackMetadataEditor({
       setBusy(false);
     }
   }
-  return (
+  const content = (
     <div className="panel metadata-editor">
-      <h2>Edit song metadata</h2>
+      {!trackId && <h2>Edit song metadata</h2>}
       <p className="muted">
-        Find a song in this instance’s library, then edit its metadata. Save
-        changes as suggestions to review below; your music files stay intact.
+        {trackId
+          ? "Save edits as suggestions, then choose metadata / artwork to review and apply them."
+          : "Find a song in this instance’s library, then edit its metadata. Save changes as suggestions to review below; your music files stay intact."}
       </p>
-      <div className="row metadata-browse-modes">
-        <Button
-          variant="outline"
-          aria-pressed={mode === "folders"}
-          onClick={() => setMode("folders")}
-        >
-          Browse folders
-        </Button>
-        <Button
-          variant="outline"
-          aria-pressed={mode === "search"}
-          onClick={() => setMode("search")}
-        >
-          Search songs
-        </Button>
-        <Button
-          variant="outline"
-          aria-pressed={mode === "attributes"}
-          disabled={busy || dirty}
-          onClick={() => setMode("attributes")}
-        >
-          Attribute filter / bulk edit
-        </Button>
-      </div>
-      {dirty && (
-        <p role="status">
-          Save or discard your edits before selecting another song.{" "}
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => setDraft(baseline)}
-          >
-            Discard unsaved edits
-          </Button>
-        </p>
-      )}
-      {mode === "attributes" ? (
-        <BulkMetadataEditor
-          onSuggestions={onSuggestions}
-          revision={revision}
-          disabled={busy || dirty}
-        />
-      ) : mode === "folders" ? (
-        <LibraryMetadataBrowser
-          onSelect={(id, path) => void selectTrack(id, path)}
-          busy={busy || dirty}
-          revision={revision}
-        />
-      ) : (
+      {!trackId && (
         <>
-          <label className="metadata-search">
-            Search library
-            <input
-              type="search"
-              value={query}
-              placeholder="Song title, artist, or album"
-              disabled={busy}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setLimit(20);
-              }}
+          <div className="row metadata-browse-modes">
+            <Button
+              variant="outline"
+              aria-pressed={mode === "folders"}
+              onClick={() => setMode("folders")}
+            >
+              Browse folders
+            </Button>
+            <Button
+              variant="outline"
+              aria-pressed={mode === "search"}
+              onClick={() => setMode("search")}
+            >
+              Search songs
+            </Button>
+            <Button
+              variant="outline"
+              aria-pressed={mode === "attributes"}
+              disabled={busy || dirty}
+              onClick={() => setMode("attributes")}
+            >
+              Attribute filter / bulk edit
+            </Button>
+          </div>
+          {dirty && (
+            <p role="status">
+              Save or discard your edits before selecting another song.{" "}
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => setDraft(baseline)}
+              >
+                Discard unsaved edits
+              </Button>
+            </p>
+          )}
+          {mode === "attributes" ? (
+            <BulkMetadataEditor
+              onSuggestions={onSuggestions}
+              revision={revision}
+              disabled={busy || dirty}
             />
-          </label>
-          {searchError && (
+          ) : mode === "folders" ? (
+            <LibraryMetadataBrowser
+              onSelect={(id, path) => void selectTrack(id, path)}
+              busy={busy || dirty}
+              revision={revision}
+            />
+          ) : (
+            <>
+              <label className="metadata-search">
+                Search library
+                <input
+                  type="search"
+                  value={query}
+                  placeholder="Song title, artist, or album"
+                  disabled={busy}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setLimit(20);
+                  }}
+                />
+              </label>
+              {searchError && (
+                <p role="alert" className="auth-error">
+                  {searchError}
+                </p>
+              )}
+              <div
+                className="metadata-results"
+                aria-label="Library search results"
+                aria-busy={searching}
+              >
+                {searching ? (
+                  <p role="status">Searching library…</p>
+                ) : (
+                  results.map((track) => (
+                    <button
+                      type="button"
+                      key={track.id}
+                      disabled={busy || dirty}
+                      aria-pressed={selected?.id === track.id}
+                      onClick={() => void selectTrack(track.id)}
+                    >
+                      <strong>{track.title}</strong>
+                      <span>
+                        {track.artist} · {track.album || "Single"}
+                      </span>
+                    </button>
+                  ))
+                )}
+                {!searching && !searchError && !results.length && (
+                  <p>No songs found. Try another title or artist.</p>
+                )}
+              </div>
+              {!searching && results.length < total && limit < 500 && (
+                <button
+                  type="button"
+                  className="subtle"
+                  disabled={busy}
+                  onClick={() =>
+                    setLimit((current) => Math.min(current + 20, 500))
+                  }
+                >
+                  Show more songs ({results.length} of {total})
+                </button>
+              )}
+              {!searching && limit >= 500 && results.length < total && (
+                <p className="muted">
+                  Refine your search to find a song beyond these 500 results.
+                </p>
+              )}
+            </>
+          )}
+          {mode === "folders" && searchError && (
             <p role="alert" className="auth-error">
               {searchError}
             </p>
           )}
-          <div
-            className="metadata-results"
-            aria-label="Library search results"
-            aria-busy={searching}
-          >
-            {searching ? (
-              <p role="status">Searching library…</p>
-            ) : (
-              results.map((track) => (
-                <button
-                  type="button"
-                  key={track.id}
-                  disabled={busy || dirty}
-                  aria-pressed={selected?.id === track.id}
-                  onClick={() => void selectTrack(track.id)}
-                >
-                  <strong>{track.title}</strong>
-                  <span>
-                    {track.artist} · {track.album || "Single"}
-                  </span>
-                </button>
-              ))
-            )}
-            {!searching && !searchError && !results.length && (
-              <p>No songs found. Try another title or artist.</p>
-            )}
-          </div>
-          {!searching && results.length < total && limit < 500 && (
-            <button
-              type="button"
-              className="subtle"
-              disabled={busy}
-              onClick={() => setLimit((current) => Math.min(current + 20, 500))}
-            >
-              Show more songs ({results.length} of {total})
-            </button>
-          )}
-          {!searching && limit >= 500 && results.length < total && (
-            <p className="muted">
-              Refine your search to find a song beyond these 500 results.
-            </p>
-          )}
         </>
       )}
-      {mode === "folders" && searchError && (
+      {trackId && searchError && (
         <p role="alert" className="auth-error">
           {searchError}
         </p>
       )}
-      {mode !== "attributes" && selected && draft && baseline && (
+      {trackId && busy && !selected && <p role="status">Loading metadata…</p>}
+      {(trackId || mode !== "attributes") && selected && draft && baseline && (
         <form
           className="admin-form metadata-form"
           aria-busy={busy}
@@ -305,7 +331,7 @@ export function TrackMetadataEditor({
               disabled={busy || dirty}
               onClick={() => setChooser(true)}
             >
-              Choose suggested metadata
+              Choose metadata / artwork
             </Button>
           </div>
           {fieldNames.map((field) => (
@@ -383,5 +409,27 @@ export function TrackMetadataEditor({
         />
       )}
     </div>
+  );
+  if (!trackId) return content;
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy && !dirty) onClose?.();
+      }}
+    >
+      <DialogContent className="metadata-chooser" busy={busy || dirty}>
+        <DialogTitle>
+          Edit song{selected ? ` — ${selected.title}` : ""}
+        </DialogTitle>
+        <DialogDescription>
+          Edit album, artist, and other metadata, or choose suggested artwork.
+        </DialogDescription>
+        {content}
+        <Button variant="outline" disabled={busy} onClick={onClose}>
+          {dirty ? "Discard edits and close" : "Close"}
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import { Heart, ListMusic, MoreHorizontal, Plus, X } from "lucide-react";
+import {
+  Heart,
+  ListMusic,
+  MoreHorizontal,
+  Plus,
+  X,
+  Pencil,
+} from "lucide-react";
+import { useState } from "react";
 import type { Track } from "./api";
 import { Button } from "./components/ui/button";
 import {
@@ -15,6 +23,9 @@ export function TrackActions({
   onQueue,
   onAdd,
   onRemove,
+  onEdit,
+  contextPosition,
+  onContextClose,
 }: {
   track: Track;
   liking: boolean;
@@ -22,7 +33,11 @@ export function TrackActions({
   onQueue: () => void;
   onAdd: () => void;
   onRemove?: () => void;
+  onEdit?: () => void;
+  contextPosition?: { x: number; y: number };
+  onContextClose?: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div
       className="song-actions"
@@ -40,19 +55,44 @@ export function TrackActions({
       >
         <Heart size={18} fill={track.liked ? "currentColor" : "none"} />
       </Button>
-      <DropdownMenu modal={false}>
+      <DropdownMenu
+        modal={false}
+        open={!!contextPosition || menuOpen}
+        onOpenChange={(open) => {
+          setMenuOpen(open);
+          if (!open) onContextClose?.();
+        }}
+      >
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Actions for ${track.title}`}
-            title="Song actions"
-          >
-            <MoreHorizontal size={20} />
-          </Button>
+          {contextPosition ? (
+            <button
+              aria-label={`Actions for ${track.title}`}
+              style={{
+                position: "fixed",
+                left: contextPosition.x,
+                top: contextPosition.y,
+                width: 0,
+                height: 0,
+                padding: 0,
+                border: 0,
+              }}
+            />
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Actions for ${track.title}`}
+              title="Song actions"
+            >
+              <MoreHorizontal size={20} />
+            </Button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          align="end"
+          align={contextPosition ? "start" : "end"}
+          onCloseAutoFocus={(event) => {
+            if (contextPosition) event.preventDefault();
+          }}
           className="song-action-menu"
           aria-label={`Actions for ${track.title}`}
           onDoubleClick={(event) => event.stopPropagation()}
@@ -69,6 +109,12 @@ export function TrackActions({
             <Plus size={18} />
             Add to playlist…
           </DropdownMenuItem>
+          {onEdit && (
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil size={18} />
+              Edit metadata / artwork…
+            </DropdownMenuItem>
+          )}
           {onRemove && (
             <DropdownMenuItem onSelect={onRemove}>
               <X size={18} />
