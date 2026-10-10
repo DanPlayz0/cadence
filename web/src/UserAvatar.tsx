@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useEffect, useState } from "react";
+import { UserRound } from "lucide-react";
 import type { User } from "./api";
 
-export function UserAvatar({ user }: { user: User }) {
+export function UserAvatar({
+  user,
+  fallback = "initial",
+}: {
+  user: User;
+  fallback?: "initial" | "icon";
+}) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [user.id, user.avatarVersion]);
   return (
@@ -13,6 +20,8 @@ export function UserAvatar({ user }: { user: User }) {
           alt=""
           onError={() => setFailed(true)}
         />
+      ) : fallback === "icon" ? (
+        <UserRound size={64} strokeWidth={1.5} />
       ) : (
         user.displayName.slice(0, 1).toUpperCase()
       )}

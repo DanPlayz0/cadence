@@ -10,6 +10,9 @@ import {
   LockKeyhole,
   Tags,
   Activity,
+  Plus,
+  X,
+  Pencil,
 } from "lucide-react";
 import { api, User } from "./api";
 import { Checkbox } from "./Checkbox";
@@ -17,6 +20,12 @@ import { UserEditorDialog } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
 import { TrackMetadataEditor } from "./TrackMetadataEditor";
 import { SuggestionReview } from "./SuggestionReview";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./components/ui/dialog";
 type Group = { id: string; name: string };
 type Exclusion = { id: string; groupId: string; kind: string; target: string };
 type Suggestion = {
@@ -106,8 +115,12 @@ export function Admin({
   tab: string;
   onTab: (tab: string) => void;
 }) {
+  const [creatingUser, setCreatingUser] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  useEffect(() => setSelectedUser(null), [tab]);
+  useEffect(() => {
+    setSelectedUser(null);
+    setCreatingUser(false);
+  }, [tab]);
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [exclusions, setExclusions] = useState<Exclusion[]>([]);
@@ -232,6 +245,15 @@ export function Admin({
                 {sections.find((section) => section.id === tab)?.description}
               </p>
             </div>
+            {tab === "people" && (
+              <button
+                className="add-user-button"
+                aria-label="Add user"
+                onClick={() => setCreatingUser(true)}
+              >
+                <Plus size={22} />
+              </button>
+            )}
           </div>
           {tab === "dashboard" && (
             <>
@@ -404,87 +426,106 @@ export function Admin({
           )}
           {tab === "people" && (
             <>
-              <div className="panel">
-                <h2>Invite a listener</h2>
-                <form
-                  className="admin-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const form = e.currentTarget;
-                    const f = new FormData(form);
-                    void perform(async () => {
-                      await api("/admin/users", "POST", {
-                        username: String(f.get("username"))
-                          .trim()
-                          .toLowerCase(),
-                        displayName: f.get("displayName"),
-                        password: f.get("password"),
-                        admin: f.get("admin") === "on",
-                      });
-                      form.reset();
-                    });
-                  }}
-                >
-                  <label>
-                    Display name
-                    <input
-                      name="displayName"
-                      required
-                      maxLength={120}
-                      autoComplete="nickname"
-                    />
-                  </label>
-                  <label>
-                    Username
-                    <input
-                      name="username"
-                      required
-                      maxLength={120}
-                      autoComplete="username"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      onChange={(e) => {
-                        e.currentTarget.value =
-                          e.currentTarget.value.toLowerCase();
-                      }}
-                    />
-                  </label>
-                  <label>
-                    Initial password
-                    <input
-                      name="password"
-                      type="password"
-                      required
-                      minLength={3}
-                      maxLength={72}
-                      autoComplete="new-password"
-                    />
-                  </label>
-                  <Checkbox
-                    name="admin"
-                    label="Administrator"
-                    description="Can manage listeners, library scans, and instance settings."
-                    disabled={loading}
-                  />
-                  <button className="primary" disabled={loading}>
-                    Create account
-                  </button>
-                </form>
-              </div>
-              <div className="panel">
-                <h2>Listeners</h2>
-                <div className="listener-grid">
-                  {users.map((u) => (
+              <Dialog
+                open={creatingUser}
+                onOpenChange={(open) => {
+                  if (!loading) setCreatingUser(open);
+                }}
+              >
+                <DialogContent busy={loading}>
+                  <div className="row dialog-heading">
+                    <DialogTitle>Add user</DialogTitle>
                     <button
-                      type="button"
-                      className="listener-card"
-                      key={u.id}
-                      aria-label={`Manage ${u.displayName} (@${u.username})`}
-                      onClick={() => setSelectedUser(u)}
+                      aria-label="Close add user"
+                      disabled={loading}
+                      onClick={() => setCreatingUser(false)}
                     >
-                      <span className="listener-card-portrait">
-                        <UserAvatar user={u} />
-                      </span>
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <DialogDescription>
+                    Create an account for a new listener.
+                  </DialogDescription>
+                  <form
+                    className="admin-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget;
+                      const f = new FormData(form);
+                      void perform(async () => {
+                        await api("/admin/users", "POST", {
+                          username: String(f.get("username"))
+                            .trim()
+                            .toLowerCase(),
+                          displayName: f.get("displayName"),
+                          password: f.get("password"),
+                          admin: f.get("admin") === "on",
+                        });
+                        form.reset();
+                        setCreatingUser(false);
+                      });
+                    }}
+                  >
+                    <label>
+                      Display name
+                      <input
+                        name="displayName"
+                        required
+                        maxLength={120}
+                        autoComplete="nickname"
+                      />
+                    </label>
+                    <label>
+                      Username
+                      <input
+                        name="username"
+                        required
+                        maxLength={120}
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        onChange={(e) => {
+                          e.currentTarget.value =
+                            e.currentTarget.value.toLowerCase();
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Initial password
+                      <input
+                        name="password"
+                        type="password"
+                        required
+                        minLength={3}
+                        maxLength={72}
+                        autoComplete="new-password"
+                      />
+                    </label>
+                    <Checkbox
+                      name="admin"
+                      label="Administrator"
+                      description="Can manage listeners, library scans, and instance settings."
+                      disabled={loading}
+                    />
+                    <button className="primary" disabled={loading}>
+                      Create account
+                    </button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <div className="listener-grid">
+                {users.map((u) => (
+                  <button
+                    type="button"
+                    className="listener-card"
+                    key={u.id}
+                    aria-label={`Manage ${u.displayName} (@${u.username})`}
+                    onClick={() => setSelectedUser(u)}
+                  >
+                    <span className="listener-card-portrait">
+                      <UserAvatar user={u} fallback="icon" />
+                    </span>
+                    <span className="listener-card-footer">
                       <span className="listener-card-details">
                         <strong>{u.displayName}</strong>
                         <small>@{u.username}</small>
@@ -498,9 +539,10 @@ export function Admin({
                           )}
                         </span>
                       </span>
-                    </button>
-                  ))}
-                </div>
+                      <Pencil size={18} aria-hidden="true" />
+                    </span>
+                  </button>
+                ))}
               </div>
             </>
           )}
