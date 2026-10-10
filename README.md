@@ -42,6 +42,10 @@ Linux containers run as UID/GID 10001; the mounted music directory must be reada
 
 ## Remote access
 
+Cadence is an installable PWA in production builds. Use your browser's **Install app** action, or Safari's **Share → Add to Home Screen** on iPhone/iPad. Installation and service workers require HTTPS (localhost also works); plain HTTP on a LAN address does not enable offline support. Development mode does not register a service worker.
+
+The service worker caches only public static assets and shows an offline page when navigation cannot reach the server. Account responses, artwork, and audio are not stored in its persistent cache. Installation does not download music: the existing per-tab audio cache still clears on reload. Updates wait until all Cadence tabs/app windows close before activating, so playback is not interrupted. Reopen the app online to use the latest build.
+
 Run behind an owner-managed HTTPS reverse proxy. Set `PUBLIC_URL=https://music.example.com`; this enables Secure cookies and fixes the accepted mutation origin. Leave PostgreSQL unexposed. Example Caddy configuration when Caddy runs on the host:
 
 ```caddy
