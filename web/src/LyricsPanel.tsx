@@ -62,15 +62,20 @@ export function LyricsPanel({
     if (!follow || !active.current || !viewport.current) return;
     const node = active.current,
       container = viewport.current;
-    container.scrollTo({
-      top: Math.max(
-        0,
-        node.offsetTop - container.clientHeight / 2 + node.offsetHeight / 2,
-      ),
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "instant"
-        : "smooth",
-    });
+    const center = () =>
+      container.scrollTo({
+        top: Math.max(
+          0,
+          node.offsetTop - container.clientHeight / 2 + node.offsetHeight / 2,
+        ),
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+    center();
+    const observer = new ResizeObserver(center);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [index, follow, lines]);
   if (!track) return <p className="muted">Play a song to see its lyrics.</p>;
   return (

@@ -42,14 +42,14 @@ The warm Cadence palette, existing component stack, and compact profile layout r
 
 ## Recommended next changes
 
-| Priority | Area | Proposed change | Reason / dependency |
-| --- | --- | --- | --- |
-| High | Mobile navigation | Replace the icon rail plus collection dropdown with named Home, Search, and Library destinations. Keep collections and playlists within Library. | The current navigation divides related tasks between two controls and consumes space on small screens. Needs a coordinated navigation and player layout change. |
-| Medium | Play next | Add a distinct Play next operation to song menus. | Define queue insertion around the current track and shuffle state before introducing this action. Queue additions and playlist selection are implemented. |
-| Medium | Home | Replace some of the static welcome banner with recently played music and shortcuts to liked songs and playlists. | Useful entry points reduce the distance to playback. Reuse actual history and playlists, without implying algorithmic recommendations. |
-| Medium | Collection pages | Add a consistent play/shuffle action near album and playlist titles, with total duration and song count. | Playback should be the primary action. Define whether it plays the fetched page or the entire collection before changing the existing loaded-song behavior. |
-| Low | Playlist removal | Add per-song pending feedback to removals and a themed deletion confirmation. | Creation/addition and likes already have pending states; deletion currently uses the browser's confirmation. |
-| Medium | Permissions | Replace manual track/album IDs with searchable catalog choices. | Keep folder/path exclusions explicit, and account for catalog permissions when supplying choices. |
+| Priority | Area              | Proposed change                                                                                                                                  | Reason / dependency                                                                                                                                             |
+| -------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| High     | Mobile navigation | Replace the icon rail plus collection dropdown with named Home, Search, and Library destinations. Keep collections and playlists within Library. | The current navigation divides related tasks between two controls and consumes space on small screens. Needs a coordinated navigation and player layout change. |
+| Medium   | Play next         | Add a distinct Play next operation to song menus.                                                                                                | Define queue insertion around the current track and shuffle state before introducing this action. Queue additions and playlist selection are implemented.       |
+| Medium   | Home              | Replace some of the static welcome banner with recently played music and shortcuts to liked songs and playlists.                                 | Useful entry points reduce the distance to playback. Reuse actual history and playlists, without implying algorithmic recommendations.                          |
+| Medium   | Collection pages  | Add a consistent play/shuffle action near album and playlist titles, with total duration and song count.                                         | Playback should be the primary action. Define whether it plays the fetched page or the entire collection before changing the existing loaded-song behavior.     |
+| Low      | Playlist removal  | Add per-song pending feedback to removals and a themed deletion confirmation.                                                                    | Creation/addition and likes already have pending states; deletion currently uses the browser's confirmation.                                                    |
+| Medium   | Permissions       | Replace manual track/album IDs with searchable catalog choices.                                                                                  | Keep folder/path exclusions explicit, and account for catalog permissions when supplying choices.                                                               |
 
 Playback resumption is now account-backed; durable offline downloads still need persistence design before adding controls for them.
 
@@ -70,3 +70,11 @@ Remaining candidates are the quality selector (Select), admin user editor (Dialo
 Queue and lyrics now share a resizable playback panel. Drag its left edge on desktop or top edge on screens at or below 1100px. The header's expand button uses the largest size that preserves library space; restore returns to the preceding custom size. Close/reopen and switching tabs keep the size, and separate desktop/stacked preferences are saved in this browser.
 
 The focused separator supports arrow keys in 20px steps (Shift for 80px), Home/End for minimum/maximum, and Enter or double-click for the default size. Desktop limits reserve at least 300px for the panel and 360px for the library. Stacked layouts reserve at least 200px for the panel and 160px for the library, keeping both visible instead of replacing the library. Player controls retain their existing minimum sizes. Very short screens scroll the page to preserve minimum heights. Queue content and lyrics scroll independently within the available panel space.
+
+## Phone playback sheets (2026-10-10)
+
+At 700px and below, Queue and Lyrics open in a modal bottom sheet above the library. Expand fills the visible viewport; Restore returns to the sheet, and reopening starts at the sheet size. The sheet includes Previous, Play/Pause, Next, and seeking, so playback remains accessible while the background is modal. Close, Escape, and the backdrop dismiss it and restore focus to the opener. Artist and source links close the sheet when navigating.
+
+The layout uses dynamic viewport height and safe-area padding. Header actions, tabs, and transport stay visible while queue entries or lyrics scroll. Short landscape screens use a compact lyric heading. Live lyrics recenter when the viewport changes, unless following has been paused by manual scrolling. Desktop and tablet panels retain resizing, expansion, and their saved size preferences. Phone collection headings can wrap without forcing horizontal overflow.
+
+The sheet uses the existing Radix dialog primitives for focus containment and background scroll locking. Queue operations, lyrics providers, playback APIs, and database schemas are unchanged. Swipe-to-dismiss is not implemented. See VALIDATION.md for checks and device/browser limitations.

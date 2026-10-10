@@ -109,10 +109,10 @@ Validated locally on Windows with an AMD Ryzen 5 2600 (6 cores), PostgreSQL 17.1
 
 PostgreSQL seeded with 250,000 synthetic catalog rows; three iterations per case, warm cache. These are catalog measurements, not timing of 250,000 FFprobe filesystem scans.
 
-| Operation | Mean |
-| --- | ---: |
-| First 100 tracks with full-library count | 70.3 ms |
-| Exact-word full-text search | 4.9 ms |
+| Operation                                 |    Mean |
+| ----------------------------------------- | ------: |
+| First 100 tracks with full-library count  | 70.3 ms |
+| Exact-word full-text search               |  4.9 ms |
 | Batch of 20 concurrent full-text searches | 16.6 ms |
 
 An additional integration scenario passed 20 concurrent audio range requests sharing a 320 kbps conversion. Sustained bandwidth, 20 distinct concurrent transcodes, browser-specific codec behavior, and end-to-end 250,000-file scan duration remain deployment-dependent.
@@ -226,3 +226,9 @@ Run the complete Compose stack on a Docker-enabled machine and verify ownership 
 - Windows directory-junction escape checks exposed a limitation in filepath.EvalSymlinks. Windows canonical paths now come from the opened file's final filesystem path; junction escape checks pass for folder resolution and the administrator picker. Creating symbolic links requires unavailable Windows privileges, so these checks use directory junctions. Linux builds retain filepath.EvalSymlinks; Linux runtime/browser and physical-device checks were not run.
 - Live Chromium checks against the temporary app and generated audio verified library creation, direct listener sharing, administrator-only music, named selection, and resetting revoked selections with hidden songs removed. Desktop and 390 × 844 layouts were visually inspected; mobile had no horizontal page overflow. An optional restoration of the temporary listener grant was blocked by automatic approval review and was left unapplied. Temporary screenshots, fixture audio, and app data remain ignored under .local/; the temporary server/database are stopped after verification.
 - Existing 250,000-track benchmark: catalog read approximately 615 ms, search approximately 7.6 ms, and a batch of 20 concurrent search readers approximately 44 ms (three iterations). These are observations on this machine, not capacity guarantees.
+
+## Phone playback sheets (2026-10-10)
+
+- Queue and Lyrics now use a modal bottom sheet at 700px and below, with full-viewport Expand/Restore, internal transport/seeking, independent content scrolling, focus containment/restoration, backdrop/Escape dismissal, and navigation that closes the sheet. Dynamic viewport height and safe-area padding cover phone display insets; short landscape screens use compact lyric metadata. Desktop/tablet resize preferences remain independent. Live lyrics recenter after resizing when following is enabled.
+- All 39 frontend tests passed. TypeScript/production build, Prettier checks, and diff checks passed. Chromium API/media fixtures passed at 320 x 740, 390 x 844, 700 x 400, 701 x 900, 900 x 900, and 1280 x 900 for sheet/full-screen dimensions, expansion/restoration, playback and seeking, active lyric centering, queue move/removal menus, tab access, dismissal/focus restoration, source navigation, and horizontal overflow checks on Home, albums, artists, songs, and playlists. Transitioning between 390px and 701px while open passed. Empty playback, missing/instrumental/plain lyrics, and lyric error/retry checks passed.
+- Phone sheet, queue, full-screen lyrics, and short-landscape screenshots were visually inspected. Fixture scripts/screenshots and build output remain ignored. Browser checks use mocked API/media responses; live backend audio, Firefox/Safari, physical touch interactions, and actual device safe-area/browser-chrome behavior were not verified. Local build/browser subprocesses required sandbox escalation.

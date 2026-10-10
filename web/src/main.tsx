@@ -12,8 +12,6 @@ import {
   Heart,
   Home,
   ListMusic,
-  Maximize2,
-  Minimize2,
   Mic2,
   Music2,
   Pause,
@@ -52,8 +50,7 @@ import { AccountMenu } from "./AccountMenu";
 import { QualitySelect, VolumeControl } from "./PlaybackControls";
 import { PlaylistDialog, PlaylistIcon } from "./PlaylistDialog";
 import { useNavigation } from "./useNavigation";
-import { QueuePanel } from "./QueuePanel";
-import { LyricsPanel } from "./LyricsPanel";
+import { PlaybackPanel, useMobilePlayback } from "./PlaybackPanel";
 import { MiniPlayer, useMiniPlayer } from "./MiniPlayer";
 import { usePlaybackResume } from "./usePlaybackResume";
 import { ArtistProfile } from "./ArtistProfile";
@@ -350,15 +347,7 @@ function App() {
   const [queueOpen, setQueueOpen] = useState(false);
   const panelResize = usePanelResize(queueOpen);
   const [queueTab, setQueueTab] = useState<"queue" | "lyrics">("queue");
-  const queuePanel = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (!queueOpen) return;
-    const previous = document.activeElement;
-    queuePanel.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    return () => {
-      if (previous instanceof HTMLElement) previous.focus();
-    };
-  }, [queueOpen]);
+  const mobilePlayback = useMobilePlayback();
   const [reload, setReload] = useState(0);
   const request = useRef(0);
   useEffect(() => {
@@ -736,7 +725,7 @@ function App() {
   return (
     <div
       ref={panelResize.app}
-      className={`app ${queueOpen ? "queue-open" : ""} ${panelResize.dragging ? "panel-resizing" : ""}`}
+      className={`app ${queueOpen && !mobilePlayback ? "queue-open" : ""} ${panelResize.dragging ? "panel-resizing" : ""}`}
       data-panel-mode={panelResize.mode}
       style={
         {
@@ -1428,134 +1417,23 @@ function App() {
           setNotice(`Created “${created.name}”.`);
         }}
       />
-      {queueOpen && (
-        <aside
-          className="queue-panel"
-          ref={queuePanel}
-          id="play-queue"
-          aria-label={queueTab === "queue" ? "Play queue" : "Lyrics"}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setQueueOpen(false);
-          }}
-        >
-          <div
-            className="panel-resize-handle"
-            role="separator"
-            tabIndex={0}
-            aria-label={
-              panelResize.mode === "side"
-                ? "Resize playback panel width"
-                : "Resize playback panel height"
-            }
-            aria-orientation={
-              panelResize.mode === "side" ? "vertical" : "horizontal"
-            }
-            aria-controls="play-queue"
-            aria-valuemin={panelResize.bounds.min}
-            aria-valuemax={panelResize.bounds.max}
-            aria-valuenow={panelResize.size}
-            aria-valuetext={`${Math.round(panelResize.size)} pixels`}
-            title="Drag to resize. Arrow keys resize; Home/End choose minimum/maximum; Enter resets."
-            {...panelResize.handle}
-          />
-          <div className="row playback-panel-heading">
-            <h2>{queueTab === "queue" ? "Play queue" : "Lyrics"}</h2>
-            <div className="playback-panel-actions">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={
-                  panelResize.expanded
-                    ? "Restore playback panel size"
-                    : "Expand playback panel"
-                }
-                aria-pressed={panelResize.expanded}
-                onClick={panelResize.toggleExpanded}
-                title={panelResize.expanded ? "Restore size" : "Expand panel"}
-              >
-                {panelResize.expanded ? (
-                  <Minimize2 size={18} />
-                ) : (
-                  <Maximize2 size={18} />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={
-                  queueTab === "queue" ? "Close queue" : "Close lyrics"
-                }
-                onClick={() => setQueueOpen(false)}
-              >
-                <X size={20} />
-              </Button>
-            </div>
-          </div>
-          <div
-            className="playback-tabs"
-            role="tablist"
-            aria-label="Playback panel"
-            onKeyDown={(event) => {
-              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                event.preventDefault();
-                const next = queueTab === "queue" ? "lyrics" : "queue";
-                setQueueTab(next);
-                event.currentTarget
-                  .querySelector<HTMLButtonElement>(`[id="${next}-tab"]`)
-                  ?.focus();
-              }
-            }}
-          >
-            <button
-              id="queue-tab"
-              role="tab"
-              aria-selected={queueTab === "queue"}
-              aria-controls="queue-content"
-              tabIndex={queueTab === "queue" ? 0 : -1}
-              onClick={() => setQueueTab("queue")}
-            >
-              Queue
-            </button>
-            <button
-              id="lyrics-tab"
-              role="tab"
-              aria-selected={queueTab === "lyrics"}
-              aria-controls="lyrics-content"
-              tabIndex={queueTab === "lyrics" ? 0 : -1}
-              onClick={() => setQueueTab("lyrics")}
-            >
-              Lyrics
-            </button>
-          </div>
-          {queueTab === "lyrics" ? (
-            <div
-              id="lyrics-content"
-              role="tabpanel"
-              aria-labelledby="lyrics-tab"
-            >
-              <LyricsPanel
-                onArtist={browseArtist}
-                track={player.current}
-                position={player.position}
-                onSeek={player.seek}
-                onExpired={expire}
-              />
-            </div>
-          ) : (
-            <div id="queue-content" role="tabpanel" aria-labelledby="queue-tab">
-              <QueuePanel
-                player={player}
-                onArtist={browseArtist}
-                onNavigate={(next) => {
-                  navigate(next);
-                  setOffset(0);
-                }}
-                onAdded={(title) => setNotice(`Added “${title}” to the queue.`)}
-              />
-            </div>
-          )}
-        </aside>
-      )}
+      <PlaybackPanel
+        open={queueOpen}
+        onClose={() => setQueueOpen(false)}
+        mobile={mobilePlayback}
+        tab={queueTab}
+        onTab={setQueueTab}
+        resize={panelResize}
+        player={player}
+        onArtist={browseArtist}
+        onNavigate={(next) => {
+          navigate(next);
+          setOffset(0);
+          if (mobilePlayback) setQueueOpen(false);
+        }}
+        onAdded={(title) => setNotice(`Added “${title}” to the queue.`)}
+        onExpired={expire}
+      />
       <footer className="player" aria-label="Music player">
         <div className="now-playing">
           {player.current ? (
