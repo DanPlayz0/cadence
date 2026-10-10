@@ -390,6 +390,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/admin/library", s.libraryDirectory)
 	m.HandleFunc("GET /api/v1/admin/tracks/{id}/suggestions", s.trackSuggestions)
 	m.HandleFunc("POST /api/v1/admin/tracks/{id}/metadata", s.applyMetadataChoices)
+	m.HandleFunc("PUT /api/v1/admin/tracks/{id}/album", s.moveTrackAlbum)
 	m.HandleFunc("POST /api/v1/admin/suggestions", s.suggest)
 	m.HandleFunc("POST /api/v1/admin/suggestions/accept-all", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {

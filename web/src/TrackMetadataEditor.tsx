@@ -4,6 +4,7 @@ import { api, type Track, type Page } from "./api";
 import { BulkMetadataEditor } from "./BulkMetadataEditor";
 import { LibraryMetadataBrowser } from "./LibraryMetadataBrowser";
 import { MetadataChooser } from "./MetadataChooser";
+import { AlbumMover } from "./AlbumMover";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,7 @@ export function TrackMetadataEditor({
   );
   const [selectedPath, setSelectedPath] = useState("");
   const [chooser, setChooser] = useState(false);
+  const [movingAlbum, setMovingAlbum] = useState(false);
   const dirty =
     !!draft &&
     !!baseline &&
@@ -324,6 +326,14 @@ export function TrackMetadataEditor({
           <div className="wide metadata-selection">
             <strong>{selected.title}</strong>
             <span>{selected.artist}</span>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy || dirty}
+              onClick={() => setMovingAlbum(true)}
+            >
+              Move to album…
+            </Button>
             {selectedPath && (
               <span className="metadata-file-path">{selectedPath}</span>
             )}
@@ -406,6 +416,16 @@ export function TrackMetadataEditor({
           trackId={selected.id}
           onClose={() => setChooser(false)}
           onApplied={async () => {
+            await selectTrack(selected.id, selectedPath);
+            await onSuggestions();
+          }}
+        />
+      )}
+      {movingAlbum && selected && (
+        <AlbumMover
+          track={selected}
+          onClose={() => setMovingAlbum(false)}
+          onMoved={async () => {
             await selectTrack(selected.id, selectedPath);
             await onSuggestions();
           }}

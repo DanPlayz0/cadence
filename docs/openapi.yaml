@@ -3555,6 +3555,44 @@ paths:
           description: Song or suggestion missing or excluded
         "409":
           description: Comparison changed, candidate resolved, or multiple choices for one field; nothing applied
+  /admin/tracks/{id}/album:
+    put:
+      summary: Move a song to an existing album (administrator)
+      description: Applies album and album artist overrides immediately. Assignments survive rescans and do not modify music files. Albums are grouped by current title and album artist (falling back to performer), ignoring case and surrounding whitespace.
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [albumId]
+              properties:
+                albumId:
+                  type: string
+                  minLength: 32
+                  maxLength: 32
+                  description: Destination ID returned by /albums.
+      responses:
+        "200":
+          description: Song moved
+        "400":
+          description: Invalid destination
+        "401":
+          description: Sign in required
+        "403":
+          description: Administrator, CSRF, or origin check rejected
+        "404":
+          description: Source song or destination album missing or excluded
+        "501":
+          description: Repository does not support album moves
   /admin/suggestions:
     get:
       summary: Pending scan or external suggestions

@@ -43,11 +43,15 @@ func TestArtistAlbums(t *testing.T) {
 	if err != nil || len(albums) != 3 {
 		t.Fatalf("albums %+v: %v", albums, err)
 	}
-	if albums[0].ID != "a" || albums[0].Tracks != 1 || albums[0].CoverID != ids[0] {
+	first, err := repo.Track(ctx, user.ID, ids[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if albums[0].ID != first.AlbumID || albums[0].Tracks != 1 || albums[0].CoverID != ids[0] {
 		t.Fatalf("matching tracks/cover %+v", albums[0])
 	}
 	guest, err := repo.Albums(ctx, user.ID, "", "Guest", 100, 0)
-	if err != nil || len(guest) != 1 || guest[0].ID != "a" {
+	if err != nil || len(guest) != 1 || guest[0].ID != first.AlbumID {
 		t.Fatalf("collaboration %+v %v", guest, err)
 	}
 	page, err := repo.Albums(ctx, user.ID, "", "Example", 1, 1)
@@ -68,7 +72,7 @@ func TestArtistAlbums(t *testing.T) {
 		t.Fatal(err)
 	}
 	albums, err = repo.Albums(ctx, user.ID, "", "Example", 100, 0)
-	if err != nil || len(albums) != 1 || albums[0].ID != "d" {
+	if err != nil || len(albums) != 1 || albums[0].Title != "Fourth" {
 		t.Fatalf("permissions/availability %+v %v", albums, err)
 	}
 	if _, err = conn.Exec(ctx, `UPDATE tracks SET overrides='{"album":""}' WHERE id=$1`, ids[4]); err != nil {

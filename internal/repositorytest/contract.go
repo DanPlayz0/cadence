@@ -134,7 +134,9 @@ func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 		}
 		albums, e := r.Albums(ctx, listener.ID, "", "", 100, 0)
 		must(t, e)
-		if len(albums) != 1 || albums[0].ID != "album-two" {
+		visible, e := r.Track(ctx, listener.ID, id2)
+		must(t, e)
+		if len(albums) != 1 || albums[0].ID != visible.AlbumID {
 			t.Fatal("hidden albums/counts leaked")
 		}
 		artists, e := r.Artists(ctx, listener.ID, "", 100, 0)
