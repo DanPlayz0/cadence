@@ -475,11 +475,28 @@ export function App() {
       ) {
         e.preventDefault();
         setQueueOpen(false);
-        if (mobilePlayback)
+        if (mobilePlayback && view !== "find")
           navigate({ view: "search", libraryId: route.libraryId });
+        if (
+          view === "find" &&
+          (route.find?.tab === "downloads" ||
+            (route.find?.tab === "direct" && !soulseek.allowed))
+        )
+          navigate(
+            { ...route, find: { ...route.find!, tab: "catalog" } },
+            true,
+          );
         window.requestAnimationFrame(() => {
-          searchInput.current?.focus();
-          searchInput.current?.select();
+          const input =
+            view === "find"
+              ? (document.getElementById(
+                  route.find?.tab === "direct" && soulseek.allowed
+                    ? "find-source-query"
+                    : "find-query",
+                ) as HTMLInputElement | null)
+              : searchInput.current;
+          input?.focus();
+          input?.select();
         });
         return;
       }
@@ -500,7 +517,16 @@ export function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [player.toggle, session, mobilePlayback, navigate, route.libraryId]);
+  }, [
+    player.toggle,
+    session,
+    mobilePlayback,
+    navigate,
+    route.libraryId,
+    view,
+    route.find,
+    soulseek.allowed,
+  ]);
   const playlist = playlists.find((p) => p.id === view.slice(9));
   const [playlistPending, setPlaylistPending] = useState(false);
   const playlistRequest = useRef(0);
@@ -583,7 +609,7 @@ export function App() {
         route.libraryId,
         playlists.map((p) => p.id),
         libraries.map((l) => l.id),
-        soulseek.allowed,
+        true,
       ),
     ]),
   ) as Record<MobileTab, import("./lib/navigation").Route>;
@@ -689,16 +715,14 @@ export function App() {
           <Headphones /> <span className="instance-name">{instanceName}</span>
         </div>
         <nav aria-label="Browse music">
-          {soulseek.allowed && (
-            <Button
-              variant="ghost"
-              className={view === "find" ? "active" : ""}
-              aria-current={view === "find" ? "page" : undefined}
-              onClick={() => navigate({ view: "find", query })}
-            >
-              <Search /> Find music
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            className={view === "find" ? "active" : ""}
+            aria-current={view === "find" ? "page" : undefined}
+            onClick={() => navigate({ view: "find", query })}
+          >
+            <Search /> Find music
+          </Button>
           <Button
             variant="ghost"
             className={view === "home" ? "active" : ""}
@@ -815,6 +839,7 @@ export function App() {
           </div>
           <span className="phone-page-title">{heading}</span>
           <div
+            hidden={view === "find"}
             className={`search ${view === "search" || view === "find" || ((view === "songs" || view === "search") && query) ? "phone-search-visible" : ""}`}
           >
             <Search size={18} />
@@ -954,14 +979,9 @@ export function App() {
             <p className="muted">
               Search your collection by title, artist, or album.
             </p>
-            {soulseek.allowed && (
-              <Button
-                variant="ghost"
-                onClick={() => navigate({ view: "find" })}
-              >
-                Find music beyond your library
-              </Button>
-            )}
+            <Button variant="ghost" onClick={() => navigate({ view: "find" })}>
+              Find music beyond your library
+            </Button>
           </section>
         ) : (
           <section className="content">
@@ -980,7 +1000,7 @@ export function App() {
                         route.libraryId,
                         playlists.map((p) => p.id),
                         libraries.map((l) => l.id),
-                        soulseek.allowed,
+                        true,
                       ),
                       false,
                       mobileTab,
@@ -1027,23 +1047,19 @@ export function App() {
                     {p.name}
                   </SelectItem>
                 ))}
-                {soulseek.allowed && (
-                  <SelectItem value="find">Find music</SelectItem>
-                )}
+                <SelectItem value="find">Find music</SelectItem>
                 <SelectItem value="__new">Create playlist…</SelectItem>
               </Select>
             </div>
-            {(view === "songs" || view === "search") &&
-              query &&
-              soulseek.allowed && (
-                <Button
-                  variant="ghost"
-                  className="soulseek-search-link"
-                  onClick={() => navigate({ view: "find", query })}
-                >
-                  Find “{query}” on Soulseek
-                </Button>
-              )}
+            {(view === "songs" || view === "search") && query && (
+              <Button
+                variant="ghost"
+                className="soulseek-search-link"
+                onClick={() => navigate({ view: "find", query })}
+              >
+                Find “{query}” beyond your library
+              </Button>
+            )}
             <div className="page-heading">
               {playlist && (
                 <div className="playlist-cover">
@@ -1434,23 +1450,37 @@ export function App() {
             </footer>
           </section>
         )}
-        {soulseek.allowed && (
-          <div className="find-pane" hidden={view !== "find"}>
-            <FindMusic
-              query={
-                view === "find"
-                  ? query
-                  : remembered.current.search?.view === "find"
-                    ? remembered.current.search.query
-                    : ""
-              }
-              capabilities={soulseek}
-              admin={session.user.admin}
-              onQuery={(q) => navigate({ view: "find", query: q }, true)}
-              onLibrary={() => browse("songs")}
-            />
-          </div>
-        )}
+        <div className="find-pane" hidden={view !== "find"}>
+          <FindMusic
+            query={
+              view === "find"
+                ? query
+                : remembered.current.search?.view === "find"
+                  ? remembered.current.search.query
+                  : ""
+            }
+            capabilities={soulseek}
+            admin={session.user.admin}
+            active={view === "find"}
+            navigation={
+              view === "find" ? route.find : remembered.current.search?.find
+            }
+            onNavigate={(find, replace) =>
+              navigate(
+                {
+                  view: "find",
+                  query:
+                    find.tab === "catalog"
+                      ? find.catalogQuery
+                      : find.sourceQuery,
+                  find,
+                },
+                replace,
+              )
+            }
+            onLibrary={() => browse("songs")}
+          />
+        </div>
       </main>
       {mobilePlayback && view !== "admin" && (
         <div className="mobile-chrome">

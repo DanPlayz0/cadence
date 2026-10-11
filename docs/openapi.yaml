@@ -15,6 +15,166 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /catalog/search:
+    get:
+      summary: Search MusicBrainz artists, release groups, or recordings
+      description: Available to all signed-in listeners, independently of Soulseek grants and the enrichment toggle. Requires METADATA_USER_AGENT. Shares metadata rate limiting and a bounded ten-minute cache.
+      security:
+        - session: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [artist, album, song]
+        - name: q
+          in: query
+          required: true
+          description: Trimmed search query, 3 to 200 UTF-8 bytes
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Normalized catalog matches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogPage"
+        "400":
+          description: Invalid query or type
+        "401":
+          description: Sign in required
+        "502":
+          description: Provider failed, timed out, or returned an invalid response; retry
+        "503":
+          description: Catalog identification is not configured
+  /catalog/artists/{id}/albums:
+    get:
+      summary: Browse an artist's MusicBrainz release groups
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Paginated artist albums
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogPage"
+        "400":
+          description: Invalid artist ID
+        "401":
+          description: Sign in required
+        "502":
+          description: Provider lookup failed; retry
+        "503":
+          description: Catalog identification is not configured
+  /catalog/albums/{id}:
+    get:
+      summary: Read a MusicBrainz release-group overview
+      description: Does not select a release edition, return a track list, or modify library metadata.
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Normalized album overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogItem"
+        "400":
+          description: Invalid album ID
+        "401":
+          description: Sign in required
+        "502":
+          description: Provider lookup failed; retry
+        "503":
+          description: Catalog identification is not configured
+  /soulseek/folder-details:
+    post:
+      summary: Inspect eligible folder files and excluded audio count
+      description: Uses the same owned-search, matching-peer, CSRF, access, and download-policy checks as /soulseek/folder. The original endpoint still returns an array.
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [searchId, username, folder]
+              properties:
+                searchId:
+                  type: string
+                  format: uuid
+                username:
+                  type: string
+                folder:
+                  type: string
+      responses:
+        "200":
+          description: Eligible files and audio files excluded by instance policy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [files, excludedAudioCount]
+                properties:
+                  files:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SoulseekFile"
+                  excludedAudioCount:
+                    type: integer
+                    minimum: 0
+        "400":
+          description: Invalid selection or peer not in search
+        "401":
+          description: Sign in required
+        "403":
+          description: Missing download permission or CSRF token
+        "404":
+          description: Owned search not found
+        "502":
+          description: Peer or Soulseek API failure
+        "503":
+          description: Integration unavailable
   /tracks/{id}/playlists:
     get:
       summary: Read the current user's playlist memberships for an accessible track
@@ -5393,6 +5553,42 @@ components:
           items:
             type: string
 
+    CatalogItem:
+      type: object
+      required: [id, kind, name, artist, date, releaseType, disambiguation]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [artist, album, song]
+        name:
+          type: string
+        artist:
+          type: string
+          description: Joined artist credit; empty for artist results
+        date:
+          type: string
+          description: First release date when available, otherwise empty
+        releaseType:
+          type: string
+        disambiguation:
+          type: string
+    CatalogPage:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogItem"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
     SoulseekCapabilities:
       type: object
       properties:

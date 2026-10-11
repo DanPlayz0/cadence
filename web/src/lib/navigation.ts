@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { parseFind, type FindNavigation } from "./findMusic";
 export type Route = {
+  find?: FindNavigation;
   view: string;
   libraryId?: string;
   albumId?: string;
@@ -48,6 +50,8 @@ export function routeURL(route: Route): string {
   const params = new URLSearchParams();
   if (route.query) params.set("q", route.query);
   if (route.libraryId) params.set("libraryId", route.libraryId);
+  if (route.view === "find" && route.find)
+    params.set("find", JSON.stringify(route.find));
   return path + (params.size ? `?${params}` : "");
 }
 
@@ -76,5 +80,7 @@ export function parseRoute(url: URL): Route {
   if (url.searchParams.get("q")) route.query = url.searchParams.get("q")!;
   if (url.searchParams.get("libraryId"))
     route.libraryId = url.searchParams.get("libraryId")!;
+  if (route.view === "find")
+    route.find = parseFind(url.searchParams.get("find"));
   return route;
 }

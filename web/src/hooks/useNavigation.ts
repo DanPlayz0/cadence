@@ -81,7 +81,12 @@ export function useNavigation(userID?: string) {
         );
         setCanGoBack(cadenceIndex > 0);
         pendingScroll.current = positions.current.get(url) || {
-          top: 0,
+          top:
+            replace &&
+            next.view === "find" &&
+            current.current.route.view === "find"
+              ? document.querySelector("#main-content")?.scrollTop || 0
+              : 0,
           songs: 0,
         };
       }

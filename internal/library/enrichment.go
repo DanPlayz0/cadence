@@ -26,6 +26,8 @@ type Enricher struct {
 	last              time.Time
 	cache             map[string]*release
 	artistSplitCache  map[string]artistSplit
+	catalogCache      map[string]catalogCacheEntry
+	requestGate       chan struct{}
 }
 type release struct {
 	ID     string `json:"id"`
@@ -44,8 +46,20 @@ var mbid = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-
 
 func (e *Enricher) get(ctx context.Context, uri string) (*http.Response, error) {
 	e.mu.Lock()
-	defer e.mu.Unlock()
+	if e.requestGate == nil {
+		e.requestGate = make(chan struct{}, 1)
+	}
+	gate := e.requestGate
+	e.mu.Unlock()
+	select {
+	case gate <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	defer func() { <-gate }()
+	e.mu.Lock()
 	delay := time.Until(e.last.Add(time.Second))
+	e.mu.Unlock()
 	if delay > 0 {
 		timer := time.NewTimer(delay)
 		defer timer.Stop()
@@ -55,7 +69,9 @@ func (e *Enricher) get(ctx context.Context, uri string) (*http.Response, error) 
 			return nil, ctx.Err()
 		}
 	}
+	e.mu.Lock()
 	e.last = time.Now()
+	e.mu.Unlock()
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,8 @@ Cadence should feel like a music library: artwork, collections, and playback com
 
 ## Improvements implemented
 
+- Find music opens in a MusicBrainz catalog for all signed-in listeners, with Albums, Artists, and Songs discovery, album overviews, and explicit handoff to Direct search. Download access remains separately controlled. Compact folder/file source rows support quality and availability comparison, filters, and sorting; eligible folder tracks open beside results or in a full-screen phone dialog with focus restoration. Downloads has its own tab. Find uses one search field and retains Ctrl/Cmd+K, navigation inputs, and current session results.
+
 - The avatar opens an account dropdown with profile details, listening settings, play queue, administrator-only instance settings, and sign-out. Account actions move out of the music sidebar. The dropdown supports keyboard navigation, Escape, outside clicks, and focus restoration. Profile and settings use native modal dialogs.
 - Profile editing supports display names, uploaded avatars, avatar removal, and password changes with current-password verification. Changes update the account menu immediately. Usernames are changed through the administrator user editor.
 - Listening settings connect directly to the existing player volume and quality controls. Queue, lyrics, quality, and volume controls are also visible in the tablet player. Changes apply immediately in the current tab.

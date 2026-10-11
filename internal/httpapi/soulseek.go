@@ -212,7 +212,12 @@ func (s *Server) soulseekFolder(w http.ResponseWriter, r *http.Request) {
 		soulseekError(w, e)
 		return
 	}
-	write(w, 200, soulseek.FilterFiles(out, cfg.DownloadPolicy()))
+	files := soulseek.FilterFiles(out, cfg.DownloadPolicy())
+	if strings.HasSuffix(r.URL.Path, "/folder-details") {
+		write(w, 200, map[string]any{"files": files, "excludedAudioCount": len(out) - len(files)})
+		return
+	}
+	write(w, 200, files)
 }
 func (s *Server) soulseekPeer(w http.ResponseWriter, r *http.Request, id, user, folder string) bool {
 	search, e := s.Soulseek.Remote.Search(r.Context(), id)

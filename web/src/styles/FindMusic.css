@@ -1,0 +1,276 @@
+.find-music {
+  max-width: 1500px;
+}
+.find-tabs,
+.find-type-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.find-tabs {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.find-music button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.find-music button[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--line);
+  box-shadow: inset 0 -2px var(--accent);
+}
+.find-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.find-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0 !important;
+  background: transparent !important;
+}
+.find-search > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.find-empty {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--muted);
+  max-width: 600px;
+  margin: auto;
+}
+.find-empty > svg {
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+.find-empty h2 {
+  color: var(--text);
+}
+.find-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.find-music .find-catalog-card {
+  justify-content: flex-start;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--surface);
+  align-items: flex-start;
+}
+.find-catalog-card > span:last-child {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.find-catalog-card span span,
+.find-catalog-card small {
+  color: var(--muted);
+}
+.find-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--line);
+  color: var(--accent);
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+.find-overview {
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.find-overview-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 24px;
+  overflow-wrap: anywhere;
+}
+.find-overview-body .find-art {
+  width: 140px;
+  height: 140px;
+}
+.find-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 2fr) repeat(3, minmax(110px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.find-filters label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.find-filters .find-free {
+  display: flex;
+  align-items: center;
+  grid-column: 1 / -1;
+}
+.find-source-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.find-source-layout.has-folder {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr);
+}
+.find-sources {
+  border-top: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.find-source-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.find-source-name {
+  flex: 1;
+  min-width: 170px;
+  display: grid;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+.find-source-name small,
+.find-peer small {
+  color: var(--muted);
+}
+.find-source-name .soulseek-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.find-peer {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.find-available {
+  color: var(--accent);
+}
+.find-folder-panel {
+  position: sticky;
+  top: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.find-folder-files {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.find-folder-files label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.find-folder-files label > span {
+  display: grid;
+  gap: 5px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.find-folder-files small {
+  color: var(--muted);
+}
+.find-folder-dialog {
+  overflow-y: auto;
+}
+.find-error {
+  border-left: 3px solid var(--accent);
+  padding: 0 16px;
+  margin: 20px 0;
+}
+.find-music [hidden] {
+  display: none !important;
+}
+.search[hidden] {
+  display: none !important;
+}
+@media (max-width: 1000px) {
+  .find-source-layout.has-folder {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .find-folder-panel {
+    position: static;
+  }
+}
+@media (max-width: 700px) {
+  .find-search {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .find-search input {
+    width: calc(100% - 40px) !important;
+  }
+  .find-search > button {
+    width: 100%;
+  }
+  .find-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .find-catalog-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .find-overview {
+    padding: 16px;
+  }
+  .find-overview-body {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .find-overview-body .find-art {
+    width: 64px;
+    height: 64px;
+  }
+  .find-tabs {
+    gap: 4px;
+  }
+  .find-music .find-tabs button {
+    padding: 10px;
+  }
+  .find-folder-dialog.ui-dialog-content {
+    inset: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 20px;
+  }
+  .find-folder-files {
+    max-height: none;
+  }
+}

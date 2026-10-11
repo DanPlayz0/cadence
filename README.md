@@ -20,6 +20,8 @@ Linux containers run as UID/GID 10001; mounted storage must be readable/traversa
 
 ## Listening and administration
 
+**Find music** opens a MusicBrainz catalog for every signed-in listener. Set `METADATA_USER_AGENT` with application/contact information to enable discovery; the enrichment toggle is independent. Browse albums, artists, and songs, then explicitly search and compare Soulseek sources in **Direct search**. Downloading requires the existing Soulseek integration and access grants. **Downloads** holds progress and approval status. See [the Soulseek workflow](docs/SOULSEEK.md) for setup and details.
+
 **Listening settings → Sync** connects each listener's own Last.fm and/or ListenBrainz account. Choose **Sync plays**, **Sync now playing**, and **Sync likes** separately for each service. Plays and now playing default on; likes default off. Sync sends changes from Cadence to the service; it does not import history, likes, or music. Only official service endpoints are supported.
 
 Instance settings groups pages under **Instance**, **Music library**, **Integrations**, **Access**, and **Monitoring**. **Integrations** contains Metadata, Last.fm, and Soulseek; **Music library** contains Libraries and Metadata review.
