@@ -22,6 +22,7 @@
   flex-shrink: 0;
 }
 .ui-select-content,
+.ui-dropdown-content,
 .ui-popover-content {
   z-index: 60;
   color: #eeefea;
@@ -265,6 +266,7 @@
 }
 @media (forced-colors: active) {
   .ui-select-content,
+  .ui-dropdown-content,
   .ui-popover-content {
     border-color: CanvasText;
     background: Canvas;
