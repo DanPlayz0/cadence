@@ -33,5 +33,35 @@ and keep its tests beside the implementation. Import modules directly rather tha
 adding barrel files. `components/soulseek/SoulseekViews.tsx` retains lazy loading
 for music discovery and Soulseek settings.
 
+## UI component policy
+
+Feature components use shared controls from `components/ui/`. Use Button and
+Input for actions and text/numeric fields; Select, Checkbox, RadioGroup, Slider,
+Collapsible, Tabs, Progress, Dialog, AlertDialog, and Popover provide the other
+interactions. Keep the existing CSS theme rather than introducing Tailwind.
+Semantic HTML remains appropriate for content, layout, links, labels, and
+fieldsets. Form supplies inline validation instead of browser validation bubbles.
+
+Select accepts SelectItem children and preserves string values, including empty
+selections, through its change-event adapter. Named selections submit exactly one
+value and reset to their defaults. Checkbox and Slider preserve existing change
+callbacks; composite controls inherit disabled fieldsets. Give every control an
+associated label or accessible name. Use RadioGroup around related radio choices.
+
+Use DateField for optional `YYYY-MM-DD` dates and FileUpload for hidden file
+selection behind themed upload buttons. The system file picker is allowed.
+FolderInput provides themed mounted-folder suggestions while allowing typed paths.
+Native browser prompts and visible native selectors, calendars, range controls,
+and disclosures are prohibited. The standalone offline page keeps its themed
+semantic retry link.
+
+`npm test` includes an AST policy check and component interaction tests.
+Run `npm run build` before `npm run test:ui`, which runs Chromium API fixtures
+against the production assets across frontend routes at desktop,
+tablet, phone, and short landscape sizes. Install Playwright Chromium with
+`npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an
+existing Chromium executable. Screenshots and failure reports stay in ignored
+`.local/ui-review/results/`. Fixtures do not verify live backend integrations.
+
 Static assets live in `public/`. The Vite configuration, PWA build plugin, service
 worker template, and PWA tests remain at the web project root.

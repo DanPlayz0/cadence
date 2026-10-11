@@ -63,7 +63,7 @@ Review found the highest-value adoption points in the custom account and song me
 
 This is a manual, CSS-adapted integration: Cadence's warm palette, typography, responsive sizing, and existing styles replace upstream Tailwind utility classes. Tailwind and the shadcn CLI are not configured; future upstream components require the same CSS adaptation. Radix handles menu typeahead, keyboard navigation, focus management, portals, and collision positioning. Song menus remain non-modal so other library controls stay accessible. Dialog saves block Escape/outside dismissal while pending; global playback shortcuts recognize Radix dialogs and menus.
 
-Remaining candidates are the quality selector (Select), admin user editor (Dialog), admin navigation (Tabs), and checkbox controls. Native selects, radio inputs, range controls, and disclosure elements remain appropriate where their browser semantics already meet the interaction needs. Playlist deletion still uses a browser confirmation and could use AlertDialog in a separate behavior change. See [VALIDATION.md](VALIDATION.md) for checks and limitations.
+The remaining controls were subsequently migrated in the app-wide component pass below. Administrator navigation remains page navigation rather than tabs. See [VALIDATION.md](VALIDATION.md) for checks and limitations.
 
 ## Expandable queue and lyrics (2026-10-09)
 
@@ -88,3 +88,13 @@ The current track appears in a compact player above the tabs. Its track area ope
 Tab destinations and scroll positions are remembered in memory for the signed-in session. Album, artist, and playlist details inherit their opening tab; direct detail links default to Library, and legacy song-query links default to Search. Browser history preserves tab ownership. Subpages provide a breadcrumb back to their tab overview; Search restores its last query when returning from an artist or album. Loaded catalog pages are cached in a bounded session cache to restore paginated/virtualized lists, with invalidation for account changes, permission refreshes, edits, and playlist/like mutations. Deleted playlist destinations and revoked library selections recover safely. Separate and combined Soulseek views stay mounted to retain active results/folder selection across tab switches; they clear with the signed-in session.
 
 The interface preserves Cadence's existing theme and uses its existing React, CSS, Lucide, and Radix components. It does not add backend APIs or change playback persistence. Verification and remaining browser/device limitations are recorded in VALIDATION.md.
+
+## App-wide UI component migration (2026-10-10)
+
+All frontend screens now use shared UI controls. The CSS-adapted Radix component set includes Select, Slider, Checkbox, RadioGroup, Collapsible, Tabs, Progress, AlertDialog, and Popover, alongside the existing Button, Input, Dialog, and DropdownMenu. Raw interactive control tags are confined to shared primitives. The warm palette and existing desktop, tablet, and phone layouts remain the basis of the design.
+
+Quality selection uses the shared Select with descriptions, all seeking and volume controls use Slider, and Queue/Lyrics use linked Tabs. The administrator user editor uses Dialog with pending-save dismissal protection. Playlist deletion uses AlertDialog with cancellation, a pending state, recoverable errors, and retry. Administrator destinations retain their URLs and page-navigation semantics.
+
+Forms show inline validation and focus the first invalid field. Named selects preserve empty values, form submission, default selection, and reset. Composite controls inherit dynamic disabled fieldsets. Radio choices support group keyboard navigation. FileUpload keeps the native file input hidden behind themed upload actions and retains drag-and-drop; the operating system file picker is allowed. DateField accepts optional local dates as `YYYY-MM-DD`, validates real calendar dates, and blocks invalid export requests. FolderInput replaces browser datalist popups with themed suggestions while retaining free path entry.
+
+An AST test enforces the component policy and rejects browser prompts and specialized generic Inputs. The contributor policy and browser-test instructions are documented in `web/README.md`. Backend endpoints, payloads, and schemas are unchanged. Browser fixtures and remaining limitations are recorded in VALIDATION.md.
