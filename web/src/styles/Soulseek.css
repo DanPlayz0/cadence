@@ -37,16 +37,19 @@
 .soulseek-requests button {
   min-height: 40px;
   padding: 9px 14px;
-  background: var(--line);
   border-radius: 6px;
+}
+.soulseek button:not(.primary),
+.soulseek-requests button:not(.primary) {
+  background: var(--line);
 }
 .soulseek button:disabled,
 .soulseek-requests button:disabled {
   opacity: 0.5;
   cursor: default;
 }
-.soulseek button:hover:not(:disabled),
-.soulseek-requests button:hover:not(:disabled) {
+.soulseek button:not(.primary):hover:not(:disabled),
+.soulseek-requests button:not(.primary):hover:not(:disabled) {
   background: #41463a;
 }
 .soulseek-card {
