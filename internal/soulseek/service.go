@@ -139,7 +139,7 @@ func (s *Service) ValidateSettings(ctx context.Context, v domain.SoulseekSetting
 	if v.Enabled && !s.Configured {
 		return errors.New("Configure the optional Soulseek container first")
 	}
-	if !slices.Contains([]string{"separate", "combined"}, v.Presentation) || !slices.Contains([]string{"before", "after"}, v.ReviewTiming) || !slices.Contains([]string{"disabled", "selected", "imported"}, v.Sharing) {
+	if v.Presentation != "separate" || !slices.Contains([]string{"before", "after"}, v.ReviewTiming) || !slices.Contains([]string{"disabled", "selected", "imported"}, v.Sharing) {
 		return errors.New("Invalid Soulseek settings")
 	}
 	if len(v.Users)+len(v.Groups)+len(v.UserRules)+len(v.GroupRules) > 10000 {
@@ -184,6 +184,8 @@ func (s *Service) ValidateSettings(ctx context.Context, v domain.SoulseekSetting
 func (s *Service) SaveSettings(ctx context.Context, v domain.SoulseekSettings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Retain compatibility with clients that still send the old placement setting.
+	v.Presentation = "separate"
 	if err := s.ValidateSettings(ctx, v); err != nil {
 		return err
 	}

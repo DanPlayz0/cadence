@@ -29,21 +29,22 @@ func TestSoulseekPersistence(t *testing.T) {
 	if e != nil || cfg.Enabled || cfg.ReviewTiming != "before" || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, domain.SoulseekAudioFormats()) {
 		t.Fatal(cfg, e)
 	}
-	if _, e = conn.Exec(ctx, "INSERT INTO soulseek_settings(id,payload) VALUES(true,$1)", []byte(`{"enabled":false,"presentation":"separate","reviewTiming":"before","default":{"mode":"review"},"sharing":"disabled"}`)); e != nil {
+	if _, e = conn.Exec(ctx, "INSERT INTO soulseek_settings(id,payload) VALUES(true,$1)", []byte(`{"enabled":false,"presentation":"combined","reviewTiming":"before","default":{"mode":"review"},"sharing":"disabled"}`)); e != nil {
 		t.Fatal(e)
 	}
 	cfg, e = r.SoulseekSettings(ctx)
-	if e != nil || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, domain.SoulseekAudioFormats()) {
+	if e != nil || cfg.Presentation != "separate" || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, domain.SoulseekAudioFormats()) {
 		t.Fatal("legacy settings defaults", cfg, e)
 	}
 	cfg.Enabled = true
+	cfg.Presentation = "combined"
 	cfg.AllowedFormats = []string{"flac", "m4a"}
 	cfg.ManagedShares = []string{"/music/approved"}
 	if e = r.SaveSoulseekSettings(ctx, cfg); e != nil {
 		t.Fatal(e)
 	}
 	cfg, e = r.SoulseekSettings(ctx)
-	if e != nil || len(cfg.ManagedShares) != 1 || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, []string{"flac", "m4a"}) {
+	if e != nil || cfg.Presentation != "separate" || len(cfg.ManagedShares) != 1 || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, []string{"flac", "m4a"}) {
 		t.Fatal(cfg, e)
 	}
 	b, _ := json.Marshal(cfg)

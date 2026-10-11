@@ -623,7 +623,7 @@ paths:
         "503":
           description: Optional integration unavailable
     put:
-      summary: Save permissions, routing, review, presentation, and sharing settings
+      summary: Save permissions, routing, review, and sharing settings
       security:
         - session: []
       responses:
@@ -5416,9 +5416,9 @@ components:
           type: boolean
         presentation:
           type: string
+          description: Always separate; Soulseek uses the Find music page.
           enum:
             - separate
-            - combined
     SoulseekRule:
       type: object
       required:
@@ -5462,9 +5462,9 @@ components:
         groups: *a2
         presentation:
           type: string
+          description: Always separate. Legacy placement values are normalized on save.
           enum:
             - separate
-            - combined
         reviewTiming:
           type: string
           enum:

@@ -1,6 +1,6 @@
 # Soulseek downloads
 
-Cadence can use an external [slskd](https://github.com/slskd/slskd) instance or the optional bundled container to search Soulseek and download songs or complete audio folders. Existing installations and listening features work without it. Soulseek search is always an explicit action; typing in library search does not send queries to Soulseek.
+Cadence can use an external [slskd](https://github.com/slskd/slskd) instance or the optional bundled container to search Soulseek and download songs or complete audio folders. Existing installations and listening features work without it. Soulseek search always uses the separate **Find music** page; its placement cannot be changed in Instance settings. Existing combined placement settings automatically use the separate page. Soulseek search is always an explicit action; typing in library search does not send queries to Soulseek.
 
 ## Connect an external slskd
 

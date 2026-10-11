@@ -24,10 +24,12 @@ func (s *Store) SoulseekSettings(ctx context.Context) (domain.SoulseekSettings, 
 	if err = json.Unmarshal(b, &v); err != nil {
 		return v, err
 	}
+	v.Presentation = "separate"
 	err = json.Unmarshal(shares, &v.ManagedShares)
 	return v, err
 }
 func (s *Store) SaveSoulseekSettings(ctx context.Context, v domain.SoulseekSettings) error {
+	v.Presentation = "separate"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

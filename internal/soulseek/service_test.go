@@ -18,6 +18,23 @@ type memory struct {
 	libraries []domain.MusicLibrary
 }
 
+func TestSaveSettingsForcesSeparatePage(t *testing.T) {
+	for _, placement := range []string{"combined", "separate", ""} {
+		t.Run(placement, func(t *testing.T) {
+			cfg := domain.DefaultSoulseekSettings()
+			cfg.Presentation = placement
+			repo := &memory{settings: cfg}
+			s := &Service{Repo: repo}
+			if err := s.SaveSettings(context.Background(), cfg); err != nil {
+				t.Fatal(err)
+			}
+			if repo.settings.Presentation != "separate" {
+				t.Fatalf("saved placement = %q", repo.settings.Presentation)
+			}
+		})
+	}
+}
+
 func (m *memory) SoulseekSettings(context.Context) (domain.SoulseekSettings, error) {
 	return m.settings, nil
 }

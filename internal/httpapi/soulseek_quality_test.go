@@ -18,6 +18,24 @@ type qualityRepo struct {
 	saved    domain.SoulseekRequest
 }
 
+func TestSoulseekPlacementAlwaysSeparate(t *testing.T) {
+	cfg := domain.DefaultSoulseekSettings()
+	cfg.Presentation = "combined"
+	s := &Server{Soulseek: &soulseek.Service{Repo: &qualityRepo{settings: cfg}}}
+	for _, path := range []string{"/soulseek/capabilities", "/admin/soulseek"} {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		if path == "/admin/soulseek" {
+			s.soulseekSettings(w, r)
+		} else {
+			s.soulseekCapabilities(w, r)
+		}
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"presentation":"separate"`) || strings.Contains(w.Body.String(), "combined") {
+			t.Fatalf("%s: %d %s", path, w.Code, w.Body.String())
+		}
+	}
+}
+
 func (r *qualityRepo) SoulseekSettings(context.Context) (domain.SoulseekSettings, error) {
 	return r.settings, nil
 }

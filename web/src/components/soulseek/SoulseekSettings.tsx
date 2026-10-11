@@ -303,25 +303,6 @@ export function SoulseekSettings() {
             </label>
             <div className="soulseek-fields">
               <label>
-                Search placement
-                <Select
-                  value={draft.presentation}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      presentation: e.target.value as Settings["presentation"],
-                    })
-                  }
-                >
-                  <SelectItem value="separate">
-                    Separate Find music page
-                  </SelectItem>
-                  <SelectItem value="combined">
-                    Soulseek section in library search
-                  </SelectItem>
-                </Select>
-              </label>
-              <label>
                 Review timing
                 <Select
                   value={draft.reviewTiming}
@@ -341,6 +322,9 @@ export function SoulseekSettings() {
                 </Select>
               </label>
             </div>
+            <p className="soulseek-help">
+              Soulseek search always uses the separate Find music page.
+            </p>
             <p className="soulseek-help">
               Review timing applies to new requests. Automatic routing rules
               bypass review.

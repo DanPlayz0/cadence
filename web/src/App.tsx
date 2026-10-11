@@ -1035,8 +1035,7 @@ export function App() {
             </div>
             {(view === "songs" || view === "search") &&
               query &&
-              soulseek.allowed &&
-              soulseek.presentation === "separate" && (
+              soulseek.allowed && (
                 <Button
                   variant="ghost"
                   className="soulseek-search-link"
@@ -1434,23 +1433,6 @@ export function App() {
               CADENCE <span>Music on your terms.</span>
             </footer>
           </section>
-        )}
-        {soulseek.allowed && soulseek.presentation === "combined" && (
-          <div
-            className="find-pane combined-find-pane"
-            hidden={!((view === "songs" || view === "search") && query)}
-          >
-            <FindMusic
-              embedded
-              query={
-                view === "songs" || view === "search"
-                  ? query
-                  : remembered.current.search?.query || ""
-              }
-              capabilities={soulseek}
-              admin={session.user.admin}
-            />
-          </div>
         )}
         {soulseek.allowed && (
           <div className="find-pane" hidden={view !== "find"}>

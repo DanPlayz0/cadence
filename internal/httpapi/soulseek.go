@@ -56,7 +56,7 @@ func (s *Server) soulseekCapabilities(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	write(w, 200, map[string]any{"configured": s.Soulseek.Configured, "enabled": cfg.Enabled, "allowed": s.Soulseek.Configured && cfg.Allows(current(r).User), "presentation": cfg.Presentation, "losslessOnly": cfg.LosslessOnly, "allowedFormats": cfg.AllowedFormats})
+	write(w, 200, map[string]any{"configured": s.Soulseek.Configured, "enabled": cfg.Enabled, "allowed": s.Soulseek.Configured && cfg.Allows(current(r).User), "presentation": "separate", "losslessOnly": cfg.LosslessOnly, "allowedFormats": cfg.AllowedFormats})
 }
 func (s *Server) soulseekSettings(w http.ResponseWriter, r *http.Request) {
 	if s.Soulseek == nil {
@@ -121,6 +121,7 @@ func (s *Server) soulseekSettings(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
+	cfg.Presentation = "separate"
 	write(w, 200, map[string]any{"settings": cfg, "configured": s.Soulseek.Configured, "writableRoots": s.Soulseek.WritableRoots, "staging": s.Soulseek.Stage})
 }
 func (s *Server) soulseekSearch(w http.ResponseWriter, r *http.Request) {

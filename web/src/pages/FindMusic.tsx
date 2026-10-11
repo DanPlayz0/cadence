@@ -21,14 +21,12 @@ export function FindMusic({
   query = "",
   capabilities,
   admin = false,
-  embedded = false,
   onQuery,
   onLibrary,
 }: {
   query?: string;
   capabilities: SoulseekCapabilities;
   admin?: boolean;
-  embedded?: boolean;
   onQuery?: (q: string) => void;
   onLibrary?: () => void;
 }) {
@@ -174,12 +172,10 @@ export function FindMusic({
       </section>
     );
   return (
-    <section
-      className={embedded ? "soulseek soulseek-embedded" : "content soulseek"}
-    >
+    <section className="content soulseek">
       <div className="soulseek-row">
         <div>
-          {embedded ? <h2>Soulseek</h2> : <h1>Find music</h1>}
+          <h1>Find music</h1>
           <p>Search beyond your library and request songs or albums.</p>
         </div>
         {onLibrary && (
@@ -197,14 +193,11 @@ export function FindMusic({
         requests omit tracks that do not match this policy.
       </p>
       <Form onSubmit={(e) => void start(e)} className="soulseek-search">
-        <label
-          className="sr-only"
-          htmlFor={embedded ? "soulseek-inline-query" : "soulseek-query"}
-        >
+        <label className="sr-only" htmlFor="soulseek-query">
           Soulseek search
         </label>
         <Input
-          id={embedded ? "soulseek-inline-query" : "soulseek-query"}
+          id="soulseek-query"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Artist, song, or album"

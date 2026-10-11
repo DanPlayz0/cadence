@@ -16,7 +16,7 @@ export type SoulseekCapabilities = SoulseekDownloadPolicy & {
   configured: boolean;
   enabled: boolean;
   allowed: boolean;
-  presentation: "separate" | "combined";
+  presentation: "separate";
 };
 export type SoulseekRule = {
   subject: string;
@@ -28,7 +28,7 @@ export type SoulseekSettings = SoulseekDownloadPolicy & {
   enabled: boolean;
   users: string[];
   groups: string[];
-  presentation: "separate" | "combined";
+  presentation: "separate";
   reviewTiming: "before" | "after";
   default: SoulseekRule;
   userRules: SoulseekRule[];
