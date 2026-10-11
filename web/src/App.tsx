@@ -874,12 +874,14 @@ export function App() {
             <p className="nav-empty">A place for your next mix.</p>
           )}
         </nav>
-        <div className="sidebar-bottom">
-          <div className="instance">
-            <span className={player.offline ? "status offline" : "status"} />
-            {player.offline ? "Offline session" : "Connected to your instance"}
+        {player.offline && (
+          <div className="sidebar-bottom">
+            <div className="instance">
+              <span className="status offline" />
+              Offline session
+            </div>
           </div>
-        </div>
+        )}
       </aside>
       <main ref={mainElement} id="main-content" tabIndex={-1}>
         <header className="topbar">
