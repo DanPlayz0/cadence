@@ -3,6 +3,7 @@ WORKDIR /src/web
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
+COPY internal/domain/playlist_icons_generated.go /src/internal/domain/playlist_icons_generated.go
 RUN npm run build
 
 FROM golang:1.26.9-bookworm AS backend
