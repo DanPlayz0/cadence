@@ -8,8 +8,8 @@ export default defineConfig({
   plugins: [react(), pwa()],
   server: {
     proxy: {
-      "/api": "http://127.0.0.1:8080",
-      "/healthz": "http://127.0.0.1:8080",
+      "/api": "http://127.0.0.1:6450",
+      "/healthz": "http://127.0.0.1:6450",
     },
   },
 });

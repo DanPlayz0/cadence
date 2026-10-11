@@ -12,7 +12,7 @@ See [the validation record](docs/VALIDATION.md) for tested behavior, benchmarks,
 4. Open http://localhost:6450 and create the administrator account with a display name, lowercase username, and password (at least 3 characters, up to 72 bytes). Setup is available only until the first account is created. Display names preserve capitalization; usernames are normalized to lowercase and sign-in is case-insensitive.
 5. Open **Instance settings → Libraries → Add library**, choose one or more mounted folders, and select users, groups, or Everyone to share with. Saving requests an incremental scan. Fresh installations scan nothing until a library is configured; subsequent automatic scans run at startup and hourly by default.
 
-`.env` supplies Compose substitutions. The default host port is `6450`; the app listens on `8080` inside Docker. To change the host port, set `PORT` and update `PUBLIC_URL` to match the browser address. Existing `.env` values continue to override these defaults. `MUSIC_PATH` is only a shortcut for one storage mount and is not passed to the app. You can configure mounts directly in Compose instead. The app uses `MUSIC_ROOTS` (container paths, separated by semicolons) as the starting points in the UI folder picker. Libraries, selected subfolders, and sharing are saved through the UI.
+`.env` supplies Compose substitutions. The default host port is `6450`; the app listens on `6450` inside Docker. To change the host port, set `PORT` and update `PUBLIC_URL` to match the browser address. Existing `.env` values continue to override these defaults. `MUSIC_PATH` is only a shortcut for one storage mount and is not passed to the app. You can configure mounts directly in Compose instead. The app uses `MUSIC_ROOTS` (container paths, separated by semicolons) as the starting points in the UI folder picker. Libraries, selected subfolders, and sharing are saved through the UI.
 
 To browse a whole Windows drive, use `MUSIC_PATH=C:/` or `MUSIC_PATH=D:/`; its root appears as `/music` in the UI. To browse multiple drives, copy [compose.storage.example.yaml](compose.storage.example.yaml) to `compose.override.yaml`, adjust/remove the example C: and D: mounts, and run `docker compose up -d app`. Compose automatically merges that override. The picker starts at `/drives/c` and `/drives/d`, and you choose the folders to scan. Linux hosts can mount a folder or filesystem root the same way using a host path such as `/mnt/media` or `/`, with a matching container path in `MUSIC_ROOTS`. A whole-drive mount makes all readable files on that drive available to the container; use a narrower folder when desired. [Docker bind mounts](https://docs.docker.com/engine/storage/bind-mounts/) determine which host files are visible inside the container.
 
@@ -89,7 +89,7 @@ music.example.com {
 }
 ```
 
-When the proxy runs in Docker, connect it to the app's network and proxy to `app:8080`. Configure sufficient proxy read timeouts for conversion. LAN-only HTTP can use `BIND_ADDRESS=0.0.0.0` and a matching HTTP `PUBLIC_URL`; use HTTPS for internet access. Authentication throttling uses the direct peer address, so proxy users share that rate limit. Use proxy-side login throttling for per-client controls.
+When the proxy runs in Docker, connect it to the app's network and proxy to `app:6450`. Configure sufficient proxy read timeouts for conversion. LAN-only HTTP can use `BIND_ADDRESS=0.0.0.0` and a matching HTTP `PUBLIC_URL`; use HTTPS for internet access. Authentication throttling uses the direct peer address, so proxy users share that rate limit. Use proxy-side login throttling for per-client controls.
 
 By default, `ALLOW_ANY_ORIGIN=false` restricts mutation requests (including login/setup) to `PUBLIC_URL` and any additional comma-separated origins in `PUBLIC_URLS`. When neither is set, the request's own origin is accepted. To allow a local HTTP domain and an external HTTPS domain, set these values in the server's `.env`:
 
@@ -119,7 +119,7 @@ npm ci
 npm run dev
 ```
 
-For a production local build, run `npm run build` in `web`, set `PUBLIC_URL=http://localhost:8080`, and run the Go server from the project root. The server serves `web/dist`. Health: `/healthz`. API: `/api/v1`; contract: [docs/openapi.yaml](docs/openapi.yaml).
+For a production local build, run `npm run build` in `web`, set `PUBLIC_URL=http://localhost:6450`, and run the Go server from the project root. The server serves `web/dist`. Health: `/healthz`. API: `/api/v1`; contract: [docs/openapi.yaml](docs/openapi.yaml).
 
 ```text
 go test ./...

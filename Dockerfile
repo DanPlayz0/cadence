@@ -24,7 +24,7 @@ COPY docs/openapi.yaml /app/docs/openapi.yaml
 COPY LICENSE COPYING NOTICE THIRD_PARTY_NOTICES.md /app/
 COPY GO_DEPENDENCY_NOTICES.txt web/DEPENDENCY_NOTICES.txt /app/
 USER cadence
-ENV LISTEN_ADDR=:8080 DATA_DIR=/data WEB_DIR=/app/web/dist MUSIC_ROOTS=/music
-EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD curl -fsS http://127.0.0.1:8080/healthz || exit 1
+ENV LISTEN_ADDR=:6450 DATA_DIR=/data WEB_DIR=/app/web/dist MUSIC_ROOTS=/music
+EXPOSE 6450
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD curl -fsS http://127.0.0.1:6450/healthz || exit 1
 ENTRYPOINT ["cadence"]

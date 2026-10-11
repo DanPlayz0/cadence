@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     init: true
     ports:
-      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-6450}:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-6450}:6450"
     environment:
       DATABASE_URL: postgres://cadence:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/cadence?sslmode=disable
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:6450}

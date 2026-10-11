@@ -9,7 +9,7 @@ npm run build
 npm test
 ```
 
-The development server proxies API requests to `http://127.0.0.1:8080`.
+The development server proxies API requests to `http://127.0.0.1:6450`.
 
 ## Source layout
 
