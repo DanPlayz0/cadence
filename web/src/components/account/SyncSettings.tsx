@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Form } from "../ui/form";
+import { Input } from "../ui/input";
+import { Select, SelectItem } from "../ui/select";
+import { DateField, validDate } from "../ui/date-field";
 import { useEffect, useState } from "react";
 import { api, APIError } from "../../services/api";
 import type {
@@ -234,7 +238,7 @@ export function SyncSettings({
                   )}
                 </>
               ) : (
-                <form
+                <Form
                   onSubmit={(e) => {
                     e.preventDefault();
                     void action(async () => {
@@ -247,7 +251,7 @@ export function SyncSettings({
                 >
                   <label>
                     Personal token{" "}
-                    <input
+                    <Input
                       type="password"
                       autoComplete="off"
                       value={token}
@@ -266,7 +270,7 @@ export function SyncSettings({
                   <Button type="submit" disabled={!token.trim()}>
                     {c ? "Reconnect" : "Connect"} ListenBrainz
                   </Button>
-                </form>
+                </Form>
               )}
             </fieldset>
           );
@@ -281,33 +285,32 @@ export function SyncSettings({
           </p>
           <label>
             Service{" "}
-            <select
+            <Select
               value={provider}
               onChange={(e) => {
                 setProvider(e.target.value as Provider);
                 setPreview(undefined);
               }}
             >
-              <option
+              <SelectItem
                 value="lastfm"
                 disabled={!connections.some((c) => c.provider === "lastfm")}
               >
                 Last.fm
-              </option>
-              <option
+              </SelectItem>
+              <SelectItem
                 value="listenbrainz"
                 disabled={
                   !connections.some((c) => c.provider === "listenbrainz")
                 }
               >
                 ListenBrainz
-              </option>
-            </select>
+              </SelectItem>
+            </Select>
           </label>
           <label>
             From{" "}
-            <input
-              type="date"
+            <DateField
               value={from}
               onChange={(e) => {
                 setFrom(e.target.value);
@@ -317,8 +320,7 @@ export function SyncSettings({
           </label>
           <label>
             Through{" "}
-            <input
-              type="date"
+            <DateField
               value={to}
               onChange={(e) => {
                 setTo(e.target.value);
@@ -327,7 +329,9 @@ export function SyncSettings({
             />
           </label>
           <Button
-            disabled={!exportConnection?.plays}
+            disabled={
+              !exportConnection?.plays || !validDate(from) || !validDate(to)
+            }
             onClick={() =>
               void action(async () => {
                 setPreview(
@@ -349,6 +353,8 @@ export function SyncSettings({
               <Button
                 disabled={
                   !exportConnection?.plays ||
+                  !validDate(from) ||
+                  !validDate(to) ||
                   preview.eligible <= preview.previouslySent
                 }
                 onClick={() =>

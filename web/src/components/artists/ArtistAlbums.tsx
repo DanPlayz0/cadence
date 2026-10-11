@@ -59,7 +59,8 @@ export function ArtistAlbums({
       </div>
       <div className="album-grid">
         {albums.map((album) => (
-          <button
+          <Button
+            variant="ghost"
             className="album-card"
             key={album.id}
             onClick={() => onAlbum(album.id)}
@@ -79,7 +80,7 @@ export function ArtistAlbums({
             <span>
               {album.tracks} {album.tracks === 1 ? "song" : "songs"}
             </span>
-          </button>
+          </Button>
         ))}
       </div>
       {loading && <p role="status">Loading albums…</p>}

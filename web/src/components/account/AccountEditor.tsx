@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
+import { FileUpload } from "../ui/file-upload";
+import { Input } from "../ui/input";
+import { Form } from "../ui/form";
+import {
+  CollapsibleContent,
+  Collapsible,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Camera, X } from "lucide-react";
 import { api, APIError, uploadAvatar, type User } from "../../services/api";
 import { Checkbox } from "../ui/Checkbox";
 import { UserAvatar } from "./UserAvatar";
-import { useDialogDismiss } from "../../hooks/useDialogDismiss";
+import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 
 type Group = { id: string; name: string };
 type EditorProps = {
@@ -80,7 +89,8 @@ export function AccountEditor({
   return (
     <div className="account-editor" aria-busy={!!busy}>
       <div className="profile-identity">
-        <button
+        <Button
+          variant="ghost"
           type="button"
           className={`avatar-edit ${dragging ? "dragging" : ""}`}
           disabled={!!busy}
@@ -112,11 +122,10 @@ export function AccountEditor({
             className="avatar-edit-indicator"
             aria-hidden="true"
           />
-        </button>
-        <input
+        </Button>
+        <FileUpload
           ref={avatarInput}
-          type="file"
-          hidden
+
           aria-label="Avatar file"
           accept="image/jpeg,image/png"
           disabled={!!busy}
@@ -127,7 +136,7 @@ export function AccountEditor({
         />
         <div className="profile-name">
           {editingName ? (
-            <input
+            <Input
               ref={nameInput}
               form="account-details"
               aria-label="Display name"
@@ -139,7 +148,8 @@ export function AccountEditor({
               onChange={(event) => setDisplayName(event.target.value)}
             />
           ) : (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               className="name-edit"
               disabled={!!busy}
@@ -151,20 +161,22 @@ export function AccountEditor({
             >
               <strong>{account.displayName}</strong>
               <Pencil size={14} aria-hidden="true" />
-            </button>
+            </Button>
           )}
           <p>@{account.username}</p>
           <small>{account.admin ? "Administrator" : "Listener"}</small>
           {editingName && !adminMode && (
             <div className="inline-edit-actions">
-              <button
+              <Button
+                variant="ghost"
                 form="account-details"
                 className="primary"
                 disabled={!!busy || !displayName.trim()}
               >
                 {busy === "details" ? "Saving…" : "Save name"}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 type="button"
                 className="subtle"
                 disabled={!!busy}
@@ -174,7 +186,7 @@ export function AccountEditor({
                 }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -183,7 +195,8 @@ export function AccountEditor({
         <div className="avatar-confirm">
           <p>Remove this avatar and return to initials?</p>
           <div className="inline-edit-actions">
-            <button
+            <Button
+              variant="ghost"
               type="button"
               className="subtle"
               disabled={!!busy}
@@ -196,23 +209,25 @@ export function AccountEditor({
               }
             >
               Remove avatar
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               type="button"
               className="subtle"
               disabled={!!busy}
               onClick={() => avatarInput.current?.click()}
             >
               Replace
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               type="button"
               className="subtle"
               disabled={!!busy}
               onClick={() => setConfirmAvatar(false)}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -226,7 +241,7 @@ export function AccountEditor({
           {notice}
         </p>
       )}
-      <form
+      <Form
         id="account-details"
         className={adminMode ? "" : "profile-details-form"}
         onSubmit={(event) => {
@@ -261,7 +276,7 @@ export function AccountEditor({
               <>
                 <label>
                   Username
-                  <input
+                  <Input
                     value={username}
                     required
                     maxLength={120}
@@ -304,7 +319,8 @@ export function AccountEditor({
                 </fieldset>
               </>
             )}
-            <button
+            <Button
+              variant="ghost"
               className="primary"
               disabled={
                 !displayName.trim() || (adminMode && !username.trim()) || !!busy
@@ -315,93 +331,97 @@ export function AccountEditor({
                 : adminMode
                   ? "Save user"
                   : "Save profile"}
-            </button>
+            </Button>
           </fieldset>
         )}
-      </form>
-      <details className="password-settings">
-        <summary>{adminMode ? "Reset password" : "Change password"}</summary>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = event.currentTarget,
-              fields = new FormData(form);
-            const password = String(fields.get("password")),
-              confirm = String(fields.get("confirmPassword"));
-            void run("password", async () => {
-              if (password !== confirm)
-                throw new Error("New passwords do not match.");
-              if (
-                [...password].length < 3 ||
-                new TextEncoder().encode(password).length > 72
-              )
-                throw new Error(
-                  "Use a password of at least 3 characters, up to 72 bytes.",
-                );
-              await api(`${path}/password`, "POST", {
-                password,
-                ...(!adminMode
-                  ? { currentPassword: fields.get("currentPassword") }
-                  : {}),
+      </Form>
+      <Collapsible className="password-settings">
+        <CollapsibleTrigger>
+          {adminMode ? "Reset password" : "Change password"}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget,
+                fields = new FormData(form);
+              const password = String(fields.get("password")),
+                confirm = String(fields.get("confirmPassword"));
+              void run("password", async () => {
+                if (password !== confirm)
+                  throw new Error("New passwords do not match.");
+                if (
+                  [...password].length < 3 ||
+                  new TextEncoder().encode(password).length > 72
+                )
+                  throw new Error(
+                    "Use a password of at least 3 characters, up to 72 bytes.",
+                  );
+                await api(`${path}/password`, "POST", {
+                  password,
+                  ...(!adminMode
+                    ? { currentPassword: fields.get("currentPassword") }
+                    : {}),
+                });
+                form.reset();
+                if (adminMode) onRevoked(account.id);
+                return adminMode
+                  ? "Password reset. All sessions for this user were signed out."
+                  : "Password changed. Your other sessions were signed out.";
               });
-              form.reset();
-              if (adminMode) onRevoked(account.id);
-              return adminMode
-                ? "Password reset. All sessions for this user were signed out."
-                : "Password changed. Your other sessions were signed out.";
-            });
-          }}
-        >
-          <fieldset disabled={!!busy}>
-            {!adminMode && (
+            }}
+          >
+            <fieldset disabled={!!busy}>
+              {!adminMode && (
+                <label>
+                  Current password
+                  <Input
+                    name="currentPassword"
+                    type="password"
+                    required
+                    maxLength={72}
+                    autoComplete="current-password"
+                  />
+                </label>
+              )}
               <label>
-                Current password
-                <input
-                  name="currentPassword"
+                New password
+                <Input
+                  name="password"
                   type="password"
                   required
+                  minLength={3}
                   maxLength={72}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
               </label>
-            )}
-            <label>
-              New password
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={3}
-                maxLength={72}
-                autoComplete="new-password"
-              />
-            </label>
-            <label>
-              Confirm new password
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                minLength={3}
-                maxLength={72}
-                autoComplete="new-password"
-              />
-            </label>
-            <p className="muted">
-              {adminMode
-                ? "Resetting the password signs out all of this user's sessions."
-                : "Enter your current password to confirm. This session stays signed in."}
-            </p>
-            <button className="primary" disabled={!!busy}>
-              {busy === "password"
-                ? "Updating…"
-                : adminMode
-                  ? "Reset password"
-                  : "Change password"}
-            </button>
-          </fieldset>
-        </form>
-      </details>
+              <label>
+                Confirm new password
+                <Input
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  minLength={3}
+                  maxLength={72}
+                  autoComplete="new-password"
+                />
+              </label>
+              <p className="muted">
+                {adminMode
+                  ? "Resetting the password signs out all of this user's sessions."
+                  : "Enter your current password to confirm. This session stays signed in."}
+              </p>
+              <Button variant="ghost" className="primary" disabled={!!busy}>
+                {busy === "password"
+                  ? "Updating…"
+                  : adminMode
+                    ? "Reset password"
+                    : "Change password"}
+              </Button>
+            </fieldset>
+          </Form>
+        </CollapsibleContent>
+      </Collapsible>
       {adminMode && (
         <fieldset disabled={!!busy}>
           <legend>Sessions</legend>
@@ -409,7 +429,8 @@ export function AccountEditor({
             Sign this user out on all devices. They can sign in again with their
             password.
           </p>
-          <button
+          <Button
+            variant="ghost"
             className="subtle"
             onClick={() =>
               void run("sessions", async () => {
@@ -420,7 +441,7 @@ export function AccountEditor({
             }
           >
             {busy === "sessions" ? "Revoking…" : "Revoke sessions"}
-          </button>
+          </Button>
         </fieldset>
       )}
     </div>
@@ -438,47 +459,52 @@ export function UserEditorDialog({
   groups: Group[];
   onClose: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
-  const dismiss = useDialogDismiss(busy);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
   return (
-    <dialog
-      {...dismiss}
-      className="account-dialog user-editor-dialog"
-      ref={dialog}
-      aria-labelledby="user-editor-title"
-      onClose={onClose}
-      onCancel={(event) => {
-        if (busy) event.preventDefault();
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onClose();
       }}
     >
-      <div className="row dialog-heading">
-        <h2 id="user-editor-title">Manage user</h2>
-        <button
-          aria-label="Close user editor"
-          disabled={busy}
-          onClick={() => dialog.current?.close()}
-        >
-          <X size={20} />
-        </button>
-      </div>
-      <AccountEditor
-        user={user}
-        adminMode
-        groups={groups}
-        onUpdated={onUpdated}
-        onRevoked={onRevoked}
-        onExpired={onExpired}
-        onBusy={setBusy}
-      />
-      <form method="dialog">
-        <button className="subtle" disabled={busy}>
-          Done
-        </button>
-      </form>
-    </dialog>
+      <DialogContent
+        className="user-editor-dialog"
+        busy={busy}
+        aria-describedby={undefined}
+      >
+        <div className="row dialog-heading">
+          <DialogTitle asChild>
+            <h2>Manage user</h2>
+          </DialogTitle>
+          <Button
+            variant="ghost"
+            aria-label="Close user editor"
+            disabled={busy}
+            onClick={onClose}
+          >
+            <X size={20} />
+          </Button>
+        </div>
+        <AccountEditor
+          user={user}
+          adminMode
+          groups={groups}
+          onUpdated={onUpdated}
+          onRevoked={onRevoked}
+          onExpired={onExpired}
+          onBusy={setBusy}
+        />
+        <div className="row">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={onClose}
+          >
+            Done
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

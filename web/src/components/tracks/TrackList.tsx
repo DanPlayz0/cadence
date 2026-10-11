@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Check, Clock, Play } from "lucide-react";
 import { duration, type Track } from "../../services/api";
@@ -100,7 +101,8 @@ export function TrackList({
                 }}
                 onDoubleClick={() => onPlay(i)}
               >
-                <button
+                <Button
+                  variant="ghost"
                   className="track-number"
                   aria-label={`Play ${t.title}`}
                   onClick={() => onPlay(i)}
@@ -113,7 +115,7 @@ export function TrackList({
                       <Play size={15} fill="currentColor" />
                     </>
                   )}
-                </button>
+                </Button>
                 <div className="track-title">
                   <Artwork
                     id={t.id}
@@ -121,7 +123,9 @@ export function TrackList({
                     has={t.artwork}
                   />
                   <div>
-                    <button onClick={() => onPlay(i)}>{t.title}</button>
+                    <Button variant="ghost" onClick={() => onPlay(i)}>
+                      {t.title}
+                    </Button>
                     <span>
                       <ArtistLinks
                         libraryId={libraryId}

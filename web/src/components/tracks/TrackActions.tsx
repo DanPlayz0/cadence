@@ -65,7 +65,8 @@ export function TrackActions({
       >
         <DropdownMenuTrigger asChild>
           {contextPosition ? (
-            <button
+            <Button
+              variant="ghost"
               aria-label={`Actions for ${track.title}`}
               style={{
                 position: "fixed",

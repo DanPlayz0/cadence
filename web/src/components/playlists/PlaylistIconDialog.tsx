@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Form } from "../ui/form";
 import { useState } from "react";
 import { X } from "lucide-react";
 import {
@@ -48,7 +49,7 @@ export function PlaylistIconDialog({
             <X size={20} />
           </Button>
         </div>
-        <form
+        <Form
           className="playlist-create"
           aria-busy={busy}
           onSubmit={async (event) => {
@@ -91,7 +92,7 @@ export function PlaylistIconDialog({
             </Button>
             <Button disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
           </div>
-        </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

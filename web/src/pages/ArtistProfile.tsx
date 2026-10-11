@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Form } from "../components/ui/form";
 import { useEffect, useRef, useState } from "react";
 import { RefreshCw, Users, Download } from "lucide-react";
 import { api, APIError } from "../services/api";
@@ -175,7 +176,7 @@ export function ArtistProfile({
       {notice && <p role="status">{notice}</p>}
       {admin && (
         <div className="artist-profile-actions">
-          <form
+          <Form
             onSubmit={async (event) => {
               event.preventDefault();
               if (busy) return;
@@ -218,8 +219,8 @@ export function ArtistProfile({
             <p className="muted">
               Use an HTTPS image URL, or leave blank to remove the avatar.
             </p>
-          </form>
-          <form
+          </Form>
+          <Form
             onSubmit={async (event) => {
               event.preventDefault();
               if (busy) return;
@@ -264,7 +265,7 @@ export function ArtistProfile({
                   ? "Update artist profile"
                   : "Fetch artist profile"}
             </Button>
-          </form>
+          </Form>
           <Button
             variant="outline"
             ref={refreshTrigger}

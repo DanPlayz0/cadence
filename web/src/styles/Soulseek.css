@@ -57,10 +57,10 @@
   margin: 14px 0;
   overflow-wrap: anywhere;
 }
-.soulseek-card details {
+.soulseek-card .ui-collapsible {
   margin-bottom: 12px;
 }
-.soulseek-card progress {
+.soulseek-card .ui-progress {
   width: min(85%, 450px);
   accent-color: var(--accent);
 }
@@ -79,9 +79,9 @@
   min-width: 0;
 }
 .soulseek input:not([type="checkbox"]),
-.soulseek select,
+.soulseek .ui-select,
 .soulseek-destination input,
-.soulseek-destination select {
+.soulseek-destination .ui-select {
   width: 100%;
   min-height: 42px;
   padding: 9px 12px;

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../components/ui/button";
+import { Form } from "../components/ui/form";
+import { Input } from "../components/ui/input";
+import { Checkbox } from "../components/ui/Checkbox";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
 import {
@@ -162,7 +166,11 @@ export function FindMusic({
             ? "Soulseek is disabled or your account has not been granted access."
             : "The optional Soulseek container is not configured."}
         </p>
-        {onLibrary && <button onClick={onLibrary}>Back to your library</button>}
+        {onLibrary && (
+          <Button variant="ghost" onClick={onLibrary}>
+            Back to your library
+          </Button>
+        )}
       </section>
     );
   return (
@@ -174,7 +182,11 @@ export function FindMusic({
           {embedded ? <h2>Soulseek</h2> : <h1>Find music</h1>}
           <p>Search beyond your library and request songs or albums.</p>
         </div>
-        {onLibrary && <button onClick={onLibrary}>Your library</button>}
+        {onLibrary && (
+          <Button variant="ghost" onClick={onLibrary}>
+            Your library
+          </Button>
+        )}
       </div>
       <p className="soulseek-help">
         Download policy:{" "}
@@ -184,14 +196,14 @@ export function FindMusic({
         · Formats: {capabilities.allowedFormats.join(", ").toUpperCase()}. Album
         requests omit tracks that do not match this policy.
       </p>
-      <form onSubmit={(e) => void start(e)} className="soulseek-search">
+      <Form onSubmit={(e) => void start(e)} className="soulseek-search">
         <label
           className="sr-only"
           htmlFor={embedded ? "soulseek-inline-query" : "soulseek-query"}
         >
           Soulseek search
         </label>
-        <input
+        <Input
           id={embedded ? "soulseek-inline-query" : "soulseek-query"}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -199,10 +211,10 @@ export function FindMusic({
           minLength={3}
           maxLength={200}
         />
-        <button disabled={busy || text.trim().length < 3}>
+        <Button variant="ghost" disabled={busy || text.trim().length < 3}>
           Search Soulseek
-        </button>
-      </form>
+        </Button>
+      </Form>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       {search && (
@@ -234,18 +246,20 @@ export function FindMusic({
                     : ""}
                 </p>
                 <div className="soulseek-actions">
-                  <button
+                  <Button
+                    variant="ghost"
                     disabled={busy}
                     onClick={() => void download(result, [result.filename])}
                   >
                     Request song
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     disabled={busy}
                     onClick={() => void openFolder(result)}
                   >
                     View album folder
-                  </button>
+                  </Button>
                 </div>
               </article>
             ))}
@@ -258,14 +272,17 @@ export function FindMusic({
           )}
           <div className="soulseek-actions">
             {offset > 0 && (
-              <button onClick={() => setOffset((v) => Math.max(0, v - 50))}>
+              <Button
+                variant="ghost"
+                onClick={() => setOffset((v) => Math.max(0, v - 50))}
+              >
                 Previous results
-              </button>
+              </Button>
             )}
             {offset + 50 < search.results.length && (
-              <button onClick={() => setOffset((v) => v + 50)}>
+              <Button variant="ghost" onClick={() => setOffset((v) => v + 50)}>
                 Next results
-              </button>
+              </Button>
             )}
           </div>
         </>
@@ -274,7 +291,9 @@ export function FindMusic({
         <section className="soulseek-card">
           <div className="soulseek-row">
             <h2>{fileName(folder.result.folder)}</h2>
-            <button onClick={() => setFolder(null)}>Close folder</button>
+            <Button variant="ghost" onClick={() => setFolder(null)}>
+              Close folder
+            </Button>
           </div>
           <p>
             {folder.result.username} · Audio files matching the download quality
@@ -292,8 +311,7 @@ export function FindMusic({
           <div className="soulseek-folder">
             {folder.files.map((f) => (
               <label key={f.filename}>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={selected.includes(f.filename)}
                   onChange={(e) =>
                     setSelected((v) =>
@@ -308,18 +326,20 @@ export function FindMusic({
             ))}
           </div>
           <div className="soulseek-actions">
-            <button
+            <Button
+              variant="ghost"
               disabled={busy || !selected.length}
               onClick={() => void download(folder.result, selected)}
             >
               Request selected songs
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               disabled={busy || !folder.files.length}
               onClick={() => void download(folder.result, [], true)}
             >
               Request eligible album songs
-            </button>
+            </Button>
           </div>
         </section>
       )}

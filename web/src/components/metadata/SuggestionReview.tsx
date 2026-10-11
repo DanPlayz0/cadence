@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import {
+  CollapsibleContent,
+  Collapsible,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import {
@@ -39,39 +44,43 @@ export function SuggestionReview({
                 ),
               ].join(" · ")}
             </p>
-            <details>
-              <summary>View loaded suggestions ({items.length})</summary>
-              {items.map((s) => (
-                <div className="suggestion" key={s.id}>
-                  <div>
-                    <strong>{metadataFields[s.field] || s.field}</strong>
-                    {s.field === "artwork" ? (
-                      <img
-                        className="suggestion-art"
-                        src={`/api/v1/admin/suggestions/${s.id}/art`}
-                        alt="Proposed artwork"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <p>
-                        <span className="old-value">
-                          {s.current || "(empty)"}
-                        </span>{" "}
-                        → {s.value || "(empty)"}
-                      </p>
-                    )}
-                    <small>{s.source}</small>
+            <Collapsible>
+              <CollapsibleTrigger>
+                View loaded suggestions ({items.length})
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {items.map((s) => (
+                  <div className="suggestion" key={s.id}>
+                    <div>
+                      <strong>{metadataFields[s.field] || s.field}</strong>
+                      {s.field === "artwork" ? (
+                        <img
+                          className="suggestion-art"
+                          src={`/api/v1/admin/suggestions/${s.id}/art`}
+                          alt="Proposed artwork"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <p>
+                          <span className="old-value">
+                            {s.current || "(empty)"}
+                          </span>{" "}
+                          → {s.value || "(empty)"}
+                        </p>
+                      )}
+                      <small>{s.source}</small>
+                    </div>
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => onDismiss(s.id)}
+                    >
+                      Dismiss suggestion
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => onDismiss(s.id)}
-                  >
-                    Dismiss suggestion
-                  </Button>
-                </div>
-              ))}
-            </details>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
           </article>
         ))}
       </div>

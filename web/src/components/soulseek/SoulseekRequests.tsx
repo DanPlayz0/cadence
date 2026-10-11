@@ -1,4 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { FolderInput } from "../ui/folder-input";
+import { Select, SelectItem } from "../ui/select";
+import { Input } from "../ui/input";
+import { Progress } from "../ui/progress";
+import {
+  CollapsibleContent,
+  Collapsible,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
+import { Button } from "../ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../services/api";
 import type { MusicLibrary } from "../../lib/libraries";
@@ -27,7 +37,7 @@ export function SoulseekDestination({
     <div className="soulseek-destination">
       <label>
         Destination library
-        <select
+        <Select
           value={rule.libraryId}
           onChange={(e) => {
             const l = libraries.find((l) => l.id === e.target.value);
@@ -38,27 +48,22 @@ export function SoulseekDestination({
             });
           }}
         >
-          <option value="">Choose a library</option>
+          <SelectItem value="">Choose a library</SelectItem>
           {libraries.map((l) => (
-            <option key={l.id} value={l.id}>
+            <SelectItem key={l.id} value={l.id}>
               {l.name}
-            </option>
+            </SelectItem>
           ))}
-        </select>
+        </Select>
       </label>
       <label>
         Destination folder
-        <input
+        <FolderInput
           value={rule.folder}
-          list={`${id}-folders`}
+          options={library?.folders || []}
           placeholder="Choose a library folder or mounted subfolder"
           onChange={(e) => onChange({ ...rule, folder: e.target.value })}
         />
-        <datalist id={`${id}-folders`}>
-          {library?.folders.map((p) => (
-            <option key={p} value={p} />
-          ))}
-        </datalist>
       </label>
     </div>
   );
@@ -103,7 +108,7 @@ function RequestCard({
       </p>
       {request.state === "downloading" && (
         <>
-          <progress
+          <Progress
             aria-label="Download progress"
             max={100}
             value={requestProgress(request)}
@@ -112,19 +117,21 @@ function RequestCard({
         </>
       )}
       {request.error && <p role="alert">{request.error}</p>}
-      <details>
-        <summary>Files and transfer status</summary>
-        <ul>
-          {request.files.map((f) => (
-            <li key={f.filename}>
-              {fileName(f.filename)} — {stateLabel(f.state)}
-              {f.placeInQueue != null
-                ? ` · Queue position ${f.placeInQueue}`
-                : ""}
-            </li>
-          ))}
-        </ul>
-      </details>
+      <Collapsible>
+        <CollapsibleTrigger>Files and transfer status</CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul>
+            {request.files.map((f) => (
+              <li key={f.filename}>
+                {fileName(f.filename)} — {stateLabel(f.state)}
+                {f.placeInQueue != null
+                  ? ` · Queue position ${f.placeInQueue}`
+                  : ""}
+              </li>
+            ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
       {admin && review && (
         <>
           <SoulseekDestination
@@ -142,19 +149,21 @@ function RequestCard({
       <div className="soulseek-actions">
         {admin && review && (
           <>
-            <button
+            <Button
+              variant="ghost"
               disabled={busy || !destination.libraryId || !destination.folder}
               onClick={() => void onAction(request.id, "approve", destination)}
             >
               Approve{" "}
               {request.state === "review_before" ? "download" : "import"}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               disabled={busy}
               onClick={() => void onAction(request.id, "reject")}
             >
               Reject
-            </button>
+            </Button>
           </>
         )}
         {[
@@ -165,40 +174,43 @@ function RequestCard({
           "failed",
           "blocked",
         ].includes(request.state) && (
-          <button
+          <Button
+            variant="ghost"
             disabled={busy}
             onClick={() => void onAction(request.id, "cancel")}
           >
             Cancel request
-          </button>
+          </Button>
         )}
         {["failed", "cancelled", "blocked"].includes(request.state) && (
-          <button
+          <Button
+            variant="ghost"
             disabled={busy}
             onClick={() => void onAction(request.id, "retry")}
           >
             Retry
-          </button>
+          </Button>
         )}
         {admin &&
           ["rejected", "cancelled", "imported"].includes(request.state) &&
           (deleteConfirm ? (
             <>
               <span>Delete this batch’s staged files?</span>
-              <button
+              <Button
+                variant="ghost"
                 disabled={busy}
                 onClick={() => void onAction(request.id, "delete-staging")}
               >
                 Delete staged files
-              </button>
-              <button onClick={() => setDeleteConfirm(false)}>
+              </Button>
+              <Button variant="ghost" onClick={() => setDeleteConfirm(false)}>
                 Keep files
-              </button>
+              </Button>
             </>
           ) : (
-            <button onClick={() => setDeleteConfirm(true)}>
+            <Button variant="ghost" onClick={() => setDeleteConfirm(true)}>
               Delete staging…
-            </button>
+            </Button>
           ))}
       </div>
     </article>
@@ -314,23 +326,25 @@ export function SoulseekRequests({
         />
       ))}
       <div className="soulseek-actions">
-        <button
+        <Button
+          variant="ghost"
           disabled={busy || offset === 0}
           onClick={() => setOffset((n) => Math.max(0, n - limit))}
         >
           Previous requests
-        </button>
+        </Button>
         <span>Page {Math.floor(offset / limit) + 1}</span>
-        <button
+        <Button
+          variant="ghost"
           disabled={busy || items.length < limit}
           onClick={() => setOffset((n) => n + limit)}
         >
           Next requests
-        </button>
+        </Button>
       </div>
-      <button disabled={busy} onClick={() => void refresh()}>
+      <Button variant="ghost" disabled={busy} onClick={() => void refresh()}>
         Refresh requests
-      </button>
+      </Button>
     </section>
   );
 }

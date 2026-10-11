@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { useEffect, useState } from "react";
 import { Search, RefreshCw } from "lucide-react";
 import { api } from "../../services/api";
@@ -63,7 +65,8 @@ export function ActivityLog() {
           aria-label="Activity category"
         >
           {["all", "user", "system"].map((value) => (
-            <button
+            <Button
+              variant="ghost"
               key={value}
               aria-pressed={filter === value}
               className={filter === value ? "selected" : ""}
@@ -73,12 +76,12 @@ export function ActivityLog() {
               }}
             >
               {value[0].toUpperCase() + value.slice(1)}
-            </button>
+            </Button>
           ))}
         </div>
         <label className="device-search">
           <Search size={18} />
-          <input
+          <Input
             aria-label="Search activity"
             placeholder="Search activity"
             value={query}
@@ -89,12 +92,13 @@ export function ActivityLog() {
             }}
           />
         </label>
-        <button
+        <Button
+          variant="ghost"
           aria-label="Refresh activity"
           onClick={() => setRevision((value) => value + 1)}
         >
           <RefreshCw size={18} />
-        </button>
+        </Button>
       </div>
       {error && <p role="alert">{error}</p>}
       <div className="device-table-scroll" aria-busy={loading}>
@@ -154,18 +158,20 @@ export function ActivityLog() {
             ? `${Math.min(offset + 1, result.total)}–${Math.min(offset + pageSize, result.total)} of ${result.total.toLocaleString()}`
             : "0 events"}
         </span>
-        <button
+        <Button
+          variant="ghost"
           disabled={loading || offset === 0}
           onClick={() => setOffset((value) => Math.max(0, value - pageSize))}
         >
           Previous
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           disabled={loading || offset + pageSize >= result.total}
           onClick={() => setOffset((value) => value + pageSize)}
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

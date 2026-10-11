@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Form } from "../ui/form";
+import { Input } from "../ui/input";
 import { useEffect, useState } from "react";
 import { api, APIError } from "../../services/api";
 import { Button } from "../ui/button";
@@ -95,7 +97,7 @@ export function SyncAdminSettings({ onExpired }: { onExpired: () => void }) {
           Last.fm can return listeners here after authorization.
         </p>
       )}
-      <form
+      <Form
         className="admin-form"
         onSubmit={(e) => {
           e.preventDefault();
@@ -105,7 +107,7 @@ export function SyncAdminSettings({ onExpired }: { onExpired: () => void }) {
         <fieldset className="sync-admin-fields" disabled={busy || !settings}>
           <label>
             API key
-            <input
+            <Input
               aria-label="Last.fm API key"
               type="password"
               autoComplete="off"
@@ -117,7 +119,7 @@ export function SyncAdminSettings({ onExpired }: { onExpired: () => void }) {
           </label>
           <label>
             API secret
-            <input
+            <Input
               aria-label="Last.fm API secret"
               type="password"
               autoComplete="off"
@@ -144,7 +146,7 @@ export function SyncAdminSettings({ onExpired }: { onExpired: () => void }) {
             Disable Last.fm
           </Button>
         </fieldset>
-      </form>
+      </Form>
       {notice && <p role="status">{notice}</p>}
       {error && <p role="alert">{error}</p>}
       <p className="muted">

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Form } from "../ui/form";
 import { useRef, useState } from "react";
 import {
   ChevronDown,
@@ -242,7 +243,7 @@ export function AccountMenu({
               </p>
             </div>
           )}
-          <form
+          <Form
             onSubmit={(event) => {
               event.preventDefault();
               if (!editingBusy) {
@@ -252,7 +253,7 @@ export function AccountMenu({
             }}
           >
             <Button disabled={editingBusy}>Done</Button>
-          </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

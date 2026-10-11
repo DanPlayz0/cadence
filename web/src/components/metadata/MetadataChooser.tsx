@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Radio, RadioGroup } from "../ui/radio-group";
+import { Select, SelectItem } from "../ui/select";
 import { useEffect, useState } from "react";
 import { api, cover, type Track } from "../../services/api";
 import { Button } from "../ui/button";
@@ -170,22 +172,25 @@ export function MetadataChooser({
                   disabled={busy}
                 >
                   <legend>{metadataFields[field] || field}</legend>
-                  <div className="comparison-columns">
+                  <RadioGroup
+                    className="comparison-columns"
+                    value={id ? "replace" : "keep"}
+                    disabled={busy}
+                    onValueChange={(value) =>
+                      setChoices({
+                        ...choices,
+                        [field]: value === "keep" ? "" : items[0].id,
+                      })
+                    }
+                    aria-label={metadataFields[field] || field}
+                  >
                     <label
                       className={
                         !id ? "comparison-value chosen" : "comparison-value"
                       }
                     >
                       <span>
-                        <input
-                          type="radio"
-                          name={`choice-${field}`}
-                          checked={!id}
-                          onChange={() =>
-                            setChoices({ ...choices, [field]: "" })
-                          }
-                        />{" "}
-                        Keep current
+                        <Radio value="keep" /> Keep current
                       </span>
                       {field === "artwork" ? (
                         track?.artwork ? (
@@ -209,35 +214,27 @@ export function MetadataChooser({
                       }
                     >
                       <label>
-                        <input
-                          type="radio"
-                          name={`choice-${field}`}
-                          checked={!!id}
-                          onChange={() =>
-                            setChoices({ ...choices, [field]: items[0].id })
-                          }
-                        />{" "}
-                        Replace with
+                        <Radio value="replace" /> Replace with
                       </label>
                       <label className="comparison-source">
                         Source for {metadataFields[field] || field}
-                        <select
+                        <Select
                           aria-label={`Source for ${metadataFields[field] || field}`}
                           value={id}
                           onChange={(e) =>
                             setChoices({ ...choices, [field]: e.target.value })
                           }
                         >
-                          <option value="">Choose a suggestion</option>
+                          <SelectItem value="">Choose a suggestion</SelectItem>
                           {items.map((s) => (
-                            <option key={s.id} value={s.id}>
+                            <SelectItem key={s.id} value={s.id}>
                               {s.source} ·{" "}
                               {field === "artwork"
                                 ? "Artwork"
                                 : s.value || "(empty)"}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </select>
+                        </Select>
                       </label>
                       {candidate &&
                         (field === "artwork" ? (
@@ -265,7 +262,7 @@ export function MetadataChooser({
                           />
                         ))}
                     </div>
-                  </div>
+                  </RadioGroup>
                 </fieldset>
               );
             })}

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Select, SelectItem } from "../ui/select";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Form } from "../ui/form";
 import { useEffect, useState } from "react";
 import { api, type Page } from "../../services/api";
 const attributes = {
@@ -62,7 +66,7 @@ export function BulkMetadataEditor({
         <legend>Filter by attribute</legend>
         <label>
           Attribute
-          <select
+          <Select
             value={field}
             onChange={(event) => {
               setField(event.target.value as Field);
@@ -72,15 +76,15 @@ export function BulkMetadataEditor({
             }}
           >
             {Object.entries(attributes).map(([key, label]) => (
-              <option key={key} value={key}>
+              <SelectItem key={key} value={key}>
                 {label}
-              </option>
+              </SelectItem>
             ))}
-          </select>
+          </Select>
         </label>
         <label>
           Matches exactly
-          <input
+          <Input
             value={match}
             maxLength={500}
             placeholder="Leave blank to match an empty attribute"
@@ -129,27 +133,29 @@ export function BulkMetadataEditor({
                     {offset + 1}–{Math.min(offset + 25, page.total)} of{" "}
                     {page.total}
                   </span>
-                  <button
+                  <Button
+                    variant="ghost"
                     disabled={saving || offset === 0}
                     onClick={() =>
                       setOffset((value) => Math.max(0, value - 25))
                     }
                   >
                     Previous
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     disabled={saving || offset + 25 >= page.total}
                     onClick={() => setOffset((value) => value + 25)}
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               )}
             </>
           )
         )}
       </div>
-      <form
+      <Form
         className="admin-form"
         onSubmit={async (event) => {
           event.preventDefault();
@@ -179,7 +185,7 @@ export function BulkMetadataEditor({
       >
         <label className="wide">
           New {attributes[field].toLowerCase()}
-          <input
+          <Input
             value={replacement}
             disabled={saving || disabled}
             required={required}
@@ -206,15 +212,16 @@ export function BulkMetadataEditor({
               " Songs with an empty album appear as singles after you accept the changes."}
           </p>
         )}
-        <button
+        <Button
+          variant="ghost"
           className="primary"
           disabled={saving || disabled || searching || !page?.total}
         >
           {saving
             ? "Saving…"
             : `Save suggestions for ${page?.total.toLocaleString() || 0} songs`}
-        </button>
-      </form>
+        </Button>
+      </Form>
       {notice && <p role="status">{notice}</p>}
     </div>
   );

@@ -1,4 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+} from "./components/ui/alert-dialog";
+import { Select, SelectItem } from "./components/ui/select";
+import { Form } from "./components/ui/form";
+import { Input } from "./components/ui/input";
+import { Slider } from "./components/ui/slider";
 import React, {
   useCallback,
   useEffect,
@@ -99,6 +111,9 @@ export function App() {
   const [error, setError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(""), 6000);
@@ -423,7 +438,7 @@ export function App() {
       if (
         !session ||
         document.querySelector(
-          'dialog[open], [role="dialog"], [role="menu"]',
+          '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]',
         ) ||
         e.repeat
       )
@@ -449,7 +464,7 @@ export function App() {
         e.altKey ||
         e.shiftKey ||
         (e.target as HTMLElement).closest(
-          "input,textarea,select,button,a,summary,[contenteditable],[role=menu],[role=slider]",
+          "input,textarea,select,button,a,summary,[contenteditable],[role=menu],[role=slider],[role=combobox],[role=radio],[role=checkbox],[role=tab]",
         )
       )
         return;
@@ -472,15 +487,24 @@ export function App() {
     if (!playlist || !session) return;
     const request = ++playlistRequest.current;
     const user = session.user.id;
-    const source = { name: playlist.name, route: { view: `playlist:${playlist.id}` } };
-    const valid = () => request === playlistRequest.current && activeUser.current === user;
+    const source = {
+      name: playlist.name,
+      route: { view: `playlist:${playlist.id}` },
+    };
+    const valid = () =>
+      request === playlistRequest.current && activeUser.current === user;
     setPlaylistPending(true);
     try {
       const songs = await playlistTracks(playlist.id, valid);
       if (!songs || !valid()) return;
-      if (!songs.length) { setNotice("This playlist has no playable songs."); return; }
+      if (!songs.length) {
+        setNotice("This playlist has no playable songs.");
+        return;
+      }
       player.replaceUpcoming(songs, source);
-      setNotice(`Loaded “${playlist.name}” after the current song and manual queue.`);
+      setNotice(
+        `Loaded “${playlist.name}” after the current song and manual queue.`,
+      );
     } catch (error) {
       if (valid()) {
         if (error instanceof APIError && error.status === 401) expire();
@@ -509,20 +533,20 @@ export function App() {
   const librarySelector = (
     <label className="library-switcher">
       Library
-      <select
+      <Select
         aria-label="Choose library"
         value={route.libraryId || ""}
         onChange={(event) => {
           navigate({ ...route, libraryId: event.target.value || undefined });
         }}
       >
-        <option value="">All accessible music</option>
+        <SelectItem value="">All accessible music</SelectItem>
         {libraries.map((item) => (
-          <option key={item.id} value={item.id}>
+          <SelectItem key={item.id} value={item.id}>
             {item.name}
-          </option>
+          </SelectItem>
         ))}
-      </select>
+      </Select>
     </label>
   );
   const destinations = Object.fromEntries(
@@ -562,11 +586,11 @@ export function App() {
               ? "Create the administrator account for this instance."
               : "Sign in and pick up where you left off."}
           </p>
-          <form onSubmit={auth}>
+          <Form onSubmit={auth}>
             {setup && (
               <label>
                 Display name
-                <input
+                <Input
                   name="displayName"
                   required
                   maxLength={120}
@@ -576,7 +600,7 @@ export function App() {
             )}
             <label>
               Username
-              <input
+              <Input
                 name="username"
                 required
                 maxLength={120}
@@ -590,7 +614,7 @@ export function App() {
             </label>
             <label>
               Password
-              <input
+              <Input
                 name="password"
                 type="password"
                 required
@@ -599,11 +623,11 @@ export function App() {
                 autoComplete={setup ? "new-password" : "current-password"}
               />
             </label>
-            <button className="primary" disabled={authBusy}>
+            <Button variant="ghost" className="primary" disabled={authBusy}>
               {authBusy ? "Connecting…" : setup ? "Create instance" : "Sign in"}{" "}
               <ChevronRight size={18} />
-            </button>
-          </form>
+            </Button>
+          </Form>
           {error && (
             <p role="alert" className="auth-error">
               {error}
@@ -641,29 +665,33 @@ export function App() {
         </div>
         <nav aria-label="Browse music">
           {soulseek.allowed && (
-            <button
+            <Button
+              variant="ghost"
               className={view === "find" ? "active" : ""}
               aria-current={view === "find" ? "page" : undefined}
               onClick={() => navigate({ view: "find", query })}
             >
               <Search /> Find music
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="ghost"
             className={view === "home" ? "active" : ""}
             aria-current={view === "home" ? "page" : undefined}
             onClick={() => browse("home")}
           >
             <Home /> Home
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             className={view === "songs" ? "active" : ""}
             aria-current={view === "songs" ? "page" : undefined}
             onClick={() => browse("songs")}
           >
             <Music2 /> Songs
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             className={view === "albums" ? "active" : ""}
             aria-current={
               view === "albums" || view === "album" ? "page" : undefined
@@ -671,8 +699,9 @@ export function App() {
             onClick={() => browse("albums")}
           >
             <AlbumIcon /> Albums
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             className={view === "artists" ? "active" : ""}
             aria-current={
               view === "artists" || view === "artist" ? "page" : undefined
@@ -680,38 +709,42 @@ export function App() {
             onClick={() => browse("artists")}
           >
             <Users /> Artists
-          </button>
+          </Button>
         </nav>
         <div className="nav-label">YOUR LIBRARY</div>
         <nav aria-label="Your library">
-          <button
+          <Button
+            variant="ghost"
             className={view === "likes" ? "active" : ""}
             aria-current={view === "likes" ? "page" : undefined}
             onClick={() => browse("likes")}
           >
             <Heart /> Liked songs
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             className={view === "history" ? "active" : ""}
             aria-current={view === "history" ? "page" : undefined}
             onClick={() => browse("history")}
           >
             <Clock /> Recently played
-          </button>
+          </Button>
         </nav>
         <div className="nav-label row">
           PLAYLISTS
-          <button
+          <Button
+            variant="ghost"
             title="Create playlist"
             aria-label="Create playlist"
             onClick={() => setAddingPlaylist(true)}
           >
             <Plus size={17} />
-          </button>
+          </Button>
         </div>
         <nav className="playlist-nav" aria-label="Playlists">
           {playlists.map((p) => (
-            <button
+            <Button
+              variant="ghost"
               key={p.id}
               className={view === `playlist:${p.id}` ? "active" : ""}
               aria-current={view === `playlist:${p.id}` ? "page" : undefined}
@@ -719,7 +752,7 @@ export function App() {
             >
               <PlaylistIcon name={p.icon} />
               {p.name}
-            </button>
+            </Button>
           ))}
           {!playlists.length && (
             <p className="nav-empty">A place for your next mix.</p>
@@ -737,7 +770,8 @@ export function App() {
       <main ref={mainElement} id="main-content" tabIndex={-1}>
         <header className="topbar">
           <div className="back-buttons">
-            <button
+            <Button
+              variant="ghost"
               aria-label="Go back"
               title="Go back"
               disabled={
@@ -752,14 +786,14 @@ export function App() {
               }}
             >
               <ChevronLeft />
-            </button>
+            </Button>
           </div>
           <span className="phone-page-title">{heading}</span>
           <div
             className={`search ${view === "search" || view === "find" || ((view === "songs" || view === "search") && query) ? "phone-search-visible" : ""}`}
           >
             <Search size={18} />
-            <input
+            <Input
               ref={searchInput}
               aria-label="Search music"
               placeholder={
@@ -788,12 +822,13 @@ export function App() {
               <kbd title="Search: Control K or Command K">⌘ / Ctrl K</kbd>
             )}
             {query && (
-              <button
+              <Button
+                variant="ghost"
                 aria-label="Clear search"
                 onClick={() => navigate({ ...route, query: "" }, true)}
               >
                 <X size={16} />
-              </button>
+              </Button>
             )}
           </div>
           {!mobilePlayback &&
@@ -828,31 +863,37 @@ export function App() {
             <span>
               <Check size={16} /> {notice}
             </span>
-            <button
+            <Button
+              variant="ghost"
               aria-label="Dismiss notification"
               onClick={() => setNotice("")}
             >
               <X size={16} />
-            </button>
+            </Button>
           </div>
         )}
         {miniPlayer.error && (
           <div className="toast" role="alert">
             <span>{miniPlayer.error}</span>
-            <button
+            <Button
+              variant="ghost"
               aria-label="Dismiss mini player error"
               onClick={miniPlayer.clearError}
             >
               <X size={16} />
-            </button>
+            </Button>
           </div>
         )}
         {error && (
           <div className="toast" role="alert">
             {error}
-            <button aria-label="Dismiss error" onClick={() => setError("")}>
+            <Button
+              variant="ghost"
+              aria-label="Dismiss error"
+              onClick={() => setError("")}
+            >
               <X size={16} />
-            </button>
+            </Button>
           </div>
         )}
         {view === "admin" ? (
@@ -889,9 +930,12 @@ export function App() {
               Search your collection by title, artist, or album.
             </p>
             {soulseek.allowed && (
-              <button onClick={() => navigate({ view: "find" })}>
+              <Button
+                variant="ghost"
+                onClick={() => navigate({ view: "find" })}
+              >
                 Find music beyond your library
-              </button>
+              </Button>
             )}
           </section>
         ) : (
@@ -900,7 +944,8 @@ export function App() {
               view !== mobileTab &&
               view !== "find" &&
               !(view === "songs" && query) && (
-                <button
+                <Button
+                  variant="ghost"
                   className="tab-breadcrumb"
                   onClick={() =>
                     navigate(
@@ -923,10 +968,10 @@ export function App() {
                     : mobileTab === "search"
                       ? "Search"
                       : "Library"}
-                </button>
+                </Button>
               )}
             <div className="mobile-nav">
-              <select
+              <Select
                 aria-label="Go to collection"
                 value={
                   view === "album"
@@ -948,29 +993,32 @@ export function App() {
                   ["likes", "Liked songs"],
                   ["history", "Recently played"],
                 ].map(([id, name]) => (
-                  <option value={id} key={id}>
+                  <SelectItem value={id} key={id}>
                     {name}
-                  </option>
+                  </SelectItem>
                 ))}
                 {playlists.map((p) => (
-                  <option key={p.id} value={`playlist:${p.id}`}>
+                  <SelectItem key={p.id} value={`playlist:${p.id}`}>
                     {p.name}
-                  </option>
+                  </SelectItem>
                 ))}
-                {soulseek.allowed && <option value="find">Find music</option>}
-                <option value="__new">Create playlist…</option>
-              </select>
+                {soulseek.allowed && (
+                  <SelectItem value="find">Find music</SelectItem>
+                )}
+                <SelectItem value="__new">Create playlist…</SelectItem>
+              </Select>
             </div>
             {(view === "songs" || view === "search") &&
               query &&
               soulseek.allowed &&
               soulseek.presentation === "separate" && (
-                <button
+                <Button
+                  variant="ghost"
                   className="soulseek-search-link"
                   onClick={() => navigate({ view: "find", query })}
                 >
                   Find “{query}” on Soulseek
-                </button>
+                </Button>
               )}
             <div className="page-heading">
               {playlist && (
@@ -1047,9 +1095,13 @@ export function App() {
                   <span className="eyebrow">THE WHOLE COLLECTION</span>
                   <h2>Set the mood.</h2>
                   <p>Your library is the only algorithm you need.</p>
-                  <button className="primary" onClick={() => browse("songs")}>
+                  <Button
+                    variant="ghost"
+                    className="primary"
+                    onClick={() => browse("songs")}
+                  >
                     <Music2 size={17} /> Explore songs
-                  </button>
+                  </Button>
                 </div>
                 <div className="vinyl">
                   <div>
@@ -1080,7 +1132,8 @@ export function App() {
                   !albumView &&
                   !artistView &&
                   tracks.length > 0 && (
-                    <button
+                    <Button
+                      variant="ghost"
                       className="primary small"
                       disabled={loading}
                       onClick={() =>
@@ -1091,62 +1144,108 @@ export function App() {
                       }
                     >
                       <Play size={16} fill="currentColor" /> Play loaded songs
-                    </button>
+                    </Button>
                   )}
                 {playlist && (
-                  <button
+                  <Button
+                    variant="ghost"
                     className="subtle"
-                    disabled={playlistPending || !collectionReady || total === 0}
+                    disabled={
+                      playlistPending || !collectionReady || total === 0
+                    }
                     onClick={() => void playPlaylistNext()}
                   >
-                    {playlistPending ? "Loading playlist…" : "Play after current song"}
-                  </button>
+                    {playlistPending
+                      ? "Loading playlist…"
+                      : "Play after current song"}
+                  </Button>
                 )}
                 {playlist && (
-                  <button
-                    className="subtle"
-                    onClick={async () => {
-                      try {
-                        if (
-                          !window.confirm(
-                            `Delete “${playlist.name}”? Your songs will stay in the library.`,
-                          )
-                        )
-                          return;
-                        await api(`/playlists/${playlist.id}`, "DELETE");
-                        invalidateCollection();
-                        await refreshPlaylists();
-                        setNotice(
-                          "Playlist deleted. Your songs are still in the library.",
-                        );
-                        browse("home");
-                      } catch (e) {
-                        setError((e as Error).message);
+                  <AlertDialog
+                    open={deleteOpen}
+                    onOpenChange={(open) => {
+                      if (!deleteBusy) {
+                        setDeleteOpen(open);
+                        setDeleteError("");
                       }
                     }}
                   >
-                    Delete playlist
-                  </button>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" type="button">
+                        Delete playlist
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent
+                      onEscapeKeyDown={(event) => {
+                        if (deleteBusy) event.preventDefault();
+                      }}
+                    >
+                      <AlertDialogTitle>
+                        Delete “{playlist.name}”?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your songs will stay in the library.
+                      </AlertDialogDescription>
+                      {deleteError && (
+                        <p role="alert" className="auth-error">
+                          {deleteError}
+                        </p>
+                      )}
+                      <div className="row">
+                        <AlertDialogCancel asChild>
+                          <Button variant="outline" disabled={deleteBusy}>
+                            Cancel
+                          </Button>
+                        </AlertDialogCancel>
+                        <Button
+                          disabled={deleteBusy}
+                          onClick={async () => {
+                            if (deleteBusy) return;
+                            setDeleteBusy(true);
+                            setDeleteError("");
+                            try {
+                              await api(`/playlists/${playlist.id}`, "DELETE");
+                              invalidateCollection();
+                              await refreshPlaylists();
+                              setDeleteOpen(false);
+                              setNotice(
+                                "Playlist deleted. Your songs are still in the library.",
+                              );
+                              browse("home");
+                            } catch (error) {
+                              setDeleteError((error as Error).message);
+                            } finally {
+                              setDeleteBusy(false);
+                            }
+                          }}
+                        >
+                          {deleteBusy ? "Deleting…" : "Delete playlist"}
+                        </Button>
+                      </div>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
                 {playlist && (
-                  <button
+                  <Button
+                    variant="ghost"
                     className="subtle"
                     onClick={() => setEditingPlaylistIcon(playlist)}
                   >
                     Change icon
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
             {collectionReady && collectionError?.key === collectionKey && (
               <div className="toast" role="alert">
                 <span>{collectionError.message}</span>
-                <button
+                <Button
+                  variant="ghost"
                   disabled={loading}
                   onClick={() => setReload((value) => value + 1)}
                 >
                   Try again
-                </button>
+                </Button>
               </div>
             )}
             {!collectionReady ? (
@@ -1155,12 +1254,13 @@ export function App() {
                   <div className="empty" role="alert">
                     <h3>Couldn’t load this collection.</h3>
                     <p>{collectionError.message}</p>
-                    <button
+                    <Button
+                      variant="ghost"
                       className="primary"
                       onClick={() => setReload((value) => value + 1)}
                     >
                       Try again
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <p className="empty" role="status">
@@ -1171,7 +1271,8 @@ export function App() {
             ) : albumView ? (
               <div className="album-grid">
                 {albums.map((a) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     className="album-card"
                     key={a.id}
                     onClick={() => {
@@ -1194,13 +1295,14 @@ export function App() {
                     </div>
                     <strong>{a.title}</strong>
                     <span>{a.artist}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : artistView ? (
               <div className="album-grid">
                 {artists.map((a) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     className="album-card artist-card"
                     key={a.name}
                     onClick={() => {
@@ -1214,7 +1316,7 @@ export function App() {
                     <ArtistAvatar name={a.name} image={a.image} />
                     <strong>{a.name}</strong>
                     <span>{a.tracks.toLocaleString()} songs</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : (
@@ -1288,13 +1390,14 @@ export function App() {
                 </div>
               )}
             {collectionReady && more && (
-              <button
+              <Button
+                variant="ghost"
                 className="load-more"
                 disabled={loading}
                 onClick={() => void loadMore()}
               >
                 Load more <ChevronRight size={16} />
-              </button>
+              </Button>
             )}
             <footer className="content-footer">
               CADENCE <span>Music on your terms.</span>
@@ -1491,7 +1594,8 @@ export function App() {
         </div>
         <div className="transport">
           <div className="controls">
-            <button
+            <Button
+              variant="ghost"
               title="Shuffle"
               aria-label="Shuffle"
               aria-pressed={player.shuffle}
@@ -1499,15 +1603,17 @@ export function App() {
               onClick={() => player.setShuffle((v) => !v)}
             >
               <Shuffle size={17} />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               aria-label="Previous track"
               disabled={!player.canPrevious}
               onClick={() => player.next(true)}
             >
               <SkipBack size={20} fill="currentColor" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               className="play-button"
               aria-label={player.playing ? "Pause" : "Play"}
               disabled={!player.current && !player.canNext}
@@ -1518,15 +1624,17 @@ export function App() {
               ) : (
                 <Play size={21} fill="currentColor" />
               )}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               aria-label="Next track"
               disabled={!player.canNext}
               onClick={() => player.next()}
             >
               <SkipForward size={20} fill="currentColor" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               title={`Repeat: ${player.repeat}`}
               aria-label={`Repeat: ${player.repeat}`}
               className={player.repeat !== "off" ? "enabled" : ""}
@@ -1538,15 +1646,15 @@ export function App() {
             >
               <Repeat size={17} />
               {player.repeat === "one" && <small>1</small>}
-            </button>
+            </Button>
           </div>
           <div className="timeline">
             <span>{duration(player.position)}</span>
-            <input
+            <Slider
               aria-label="Seek"
               aria-valuetext={`${duration(player.position)} of ${duration(player.length)}`}
               disabled={!player.current || !player.length}
-              type="range"
+
               min={0}
               max={player.length || 1}
               step={0.1}
@@ -1557,7 +1665,8 @@ export function App() {
           </div>
         </div>
         <div className="player-extras">
-          <button
+          <Button
+            variant="ghost"
             aria-label="Live lyrics"
             title="Live lyrics"
             aria-expanded={queueOpen && queueTab === "lyrics"}
@@ -1569,8 +1678,9 @@ export function App() {
             }}
           >
             <Mic2 size={20} />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             title={`Queue · Session cache ${(player.cacheBytes / 1048576).toFixed(0)} MB`}
             aria-label="Play queue"
             aria-expanded={queueOpen && queueTab === "queue"}
@@ -1582,7 +1692,7 @@ export function App() {
             }}
           >
             <ListMusic size={20} />
-          </button>
+          </Button>
           {player.offline && <WifiOff size={17} />}
           <QualitySelect
             value={player.quality}
@@ -1590,14 +1700,15 @@ export function App() {
             compact
           />
           <VolumeControl value={player.volume} onChange={player.setVolume} />
-          <button
+          <Button
+            variant="ghost"
             aria-label="Open mini player"
             title={miniPlayer.error || "Open mini player"}
             disabled={!player.current}
             onClick={() => void miniPlayer.open()}
           >
             <PictureInPicture2 size={18} />
-          </button>
+          </Button>
         </div>
       </footer>
     </div>

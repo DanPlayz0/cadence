@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
+import { Slider } from "../ui/slider";
 import { useState, useEffect } from "react";
 import {
   Home,
@@ -86,7 +88,8 @@ export function CompactPlayer({
   if (!player.current) return null;
   return (
     <div className="compact-player" aria-label="Music player">
-      <button
+      <Button
+        variant="ghost"
         className="compact-track"
         aria-label={`Open Now Playing: ${player.current.title}`}
         onClick={onOpen}
@@ -99,13 +102,14 @@ export function CompactPlayer({
           <strong>{player.current.title}</strong>
           <small>{player.current.artist}</small>
         </span>
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
         aria-label={player.playing ? "Pause" : "Play"}
         onClick={player.toggle}
       >
         {player.playing ? <Pause size={23} /> : <Play size={23} />}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -132,23 +136,29 @@ export function LibraryOverview({
           ["likes", "Liked songs"],
           ["history", "Recently played"],
         ].map(([view, label]) => (
-          <button key={view} onClick={() => onNavigate(view)}>
+          <Button variant="ghost" key={view} onClick={() => onNavigate(view)}>
             {label}
             <span aria-hidden="true">›</span>
-          </button>
+          </Button>
         ))}
       </div>
       <div className="section-heading">
         <h2>Playlists</h2>
-        <button onClick={onCreate}>Create playlist</button>
+        <Button variant="ghost" onClick={onCreate}>
+          Create playlist
+        </Button>
       </div>
       <div className="library-destinations">
         {playlists.map((p) => (
-          <button key={p.id} onClick={() => onNavigate(`playlist:${p.id}`)}>
+          <Button
+            variant="ghost"
+            key={p.id}
+            onClick={() => onNavigate(`playlist:${p.id}`)}
+          >
             <PlaylistIcon name={p.icon} />
             <span>{p.name}</span>
             <span aria-hidden="true">›</span>
-          </button>
+          </Button>
         ))}
       </div>
       {!playlists.length && (
@@ -182,8 +192,7 @@ export function NowPlaying({
       </div>
       <div className="timeline">
         <span>{duration(player.position)}</span>
-        <input
-          type="range"
+        <Slider
           aria-label="Seek"
           aria-valuetext={`${duration(player.position)} of ${duration(player.length)}`}
           min={0}
@@ -196,37 +205,42 @@ export function NowPlaying({
         <span>{duration(player.length)}</span>
       </div>
       <div className="controls">
-        <button
+        <Button
+          variant="ghost"
           aria-label="Shuffle"
           aria-pressed={player.shuffle}
           className={player.shuffle ? "enabled" : ""}
           onClick={() => player.setShuffle((v) => !v)}
         >
           <Shuffle size={21} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           aria-label="Previous track"
           disabled={!player.canPrevious}
           onClick={() => player.next(true)}
         >
           <SkipBack size={24} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           className="play-button"
           aria-label={player.playing ? "Pause" : "Play"}
           disabled={!track && !player.canNext}
           onClick={player.toggle}
         >
           {player.playing ? <Pause size={26} /> : <Play size={26} />}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           aria-label="Next track"
           disabled={!player.canNext}
           onClick={() => player.next()}
         >
           <SkipForward size={24} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           aria-label={`Repeat: ${player.repeat}`}
           className={player.repeat !== "off" ? "enabled" : ""}
           onClick={() =>
@@ -237,17 +251,17 @@ export function NowPlaying({
         >
           <Repeat size={21} />
           {player.repeat === "one" && <small>1</small>}
-        </button>
+        </Button>
       </div>
       <div className="now-playing-utilities">
-        <button onClick={() => onPanel("queue")}>
+        <Button variant="ghost" onClick={() => onPanel("queue")}>
           <ListMusic size={21} />
           Queue
-        </button>
-        <button onClick={() => onPanel("lyrics")}>
+        </Button>
+        <Button variant="ghost" onClick={() => onPanel("lyrics")}>
           <Mic2 size={21} />
           Lyrics
-        </button>
+        </Button>
         <QualitySelect
           value={player.quality}
           onChange={player.changeQuality}

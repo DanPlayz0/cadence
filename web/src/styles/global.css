@@ -23,7 +23,7 @@
   gap: 8px;
 }
 .sync-provider input,
-.sync-provider select {
+.sync-provider .ui-select {
   max-width: 100%;
 }
 :root {
@@ -241,7 +241,7 @@ body {
   font-size: 11px;
   color: var(--muted);
 }
-:where(a, summary, [tabindex]):focus-visible {
+:where(a, .ui-collapsible-trigger, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -256,7 +256,7 @@ main:focus {
 }
 button,
 input,
-select {
+.ui-select {
   font: inherit;
 }
 button {
@@ -278,12 +278,12 @@ button:hover {
 }
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
+.ui-select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 input,
-select {
+.ui-select {
   background: #22251f;
   border: 1px solid #3a3e33;
   color: #eeefea;
@@ -294,7 +294,7 @@ select {
 input::placeholder {
   color: #81867a;
 }
-select {
+.ui-select {
   cursor: pointer;
 }
 h1,
@@ -684,8 +684,8 @@ main {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.song-suggestion-card summary,
-.bulk-review-section > summary {
+.song-suggestion-card .ui-collapsible-trigger,
+.bulk-review-section > .ui-collapsible-trigger {
   cursor: pointer;
   color: var(--muted);
   padding: 12px 0;
@@ -744,7 +744,7 @@ main {
   font-size: 12px;
   color: var(--muted);
 }
-.comparison-source select,
+.comparison-source .ui-select,
 .comparison-value input {
   width: 100%;
   min-width: 0;
@@ -826,12 +826,12 @@ main {
   border-top: 1px solid var(--line);
   padding-top: 14px;
 }
-.password-settings summary {
+.password-settings .ui-collapsible-trigger {
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
 }
-.password-settings[open] summary {
+.password-settings[data-state="open"] .ui-collapsible-trigger {
   margin-bottom: 14px;
 }
 .account-editor .password-settings fieldset {
@@ -1155,7 +1155,7 @@ main {
   color: #979e8a;
   margin-bottom: 15px;
 }
-.track-toolbar select {
+.track-toolbar .ui-select {
   padding: 6px;
   font-size: 11px;
   margin-left: 8px;
@@ -1624,12 +1624,12 @@ main,
   border-top: 1px solid var(--line);
   padding-top: 16px;
 }
-.queue-history summary {
+.queue-history .ui-collapsible-trigger {
   cursor: pointer;
   font-size: 13px;
   padding: 8px 0;
 }
-.queue-history summary span {
+.queue-history .ui-collapsible-trigger span {
   color: var(--muted);
   margin-left: 6px;
 }
@@ -1894,7 +1894,7 @@ main,
   display: block;
   margin-top: 8px;
 }
-.scan summary {
+.scan .ui-collapsible-trigger {
   font-size: 11px;
   color: #d3b48b;
   cursor: pointer;
@@ -2173,7 +2173,7 @@ main,
     flex-direction: column;
     gap: 6px;
   }
-  .track-toolbar select {
+  .track-toolbar .ui-select {
     margin-left: 0;
     max-width: 100%;
   }
@@ -2322,7 +2322,7 @@ main,
     display: block;
     margin-bottom: 22px;
   }
-  .mobile-nav > select {
+  .mobile-nav > .ui-select {
     width: 100%;
     padding: 9px;
     font-size: 11px;
@@ -2435,7 +2435,7 @@ main,
   overscroll-behavior: contain;
   box-shadow: 0 20px 60px #0006;
 }
-.account-dialog :where(input, select, textarea, button) {
+.account-dialog :where(input, .ui-select, textarea, button) {
   max-width: 100%;
 }
 .account-dialog:not(.playback-sheet) .row {
@@ -3274,7 +3274,7 @@ input[type="range"] {
   .panel p {
     font-size: 13px;
   }
-  .mobile-nav > select {
+  .mobile-nav > .ui-select {
     min-height: 44px;
     font-size: 16px;
   }
@@ -3447,7 +3447,7 @@ input[type="range"] {
 @media (forced-colors: active) {
   button,
   input,
-  select,
+  .ui-select,
   .panel,
   .checkbox-box {
     border: 1px solid ButtonText;
@@ -3562,18 +3562,18 @@ input[type="range"] {
   min-width: 44px;
   min-height: 44px;
 }
-.queue-panel > [role="tabpanel"] {
+.queue-panel .playback-tab-content[data-state="active"] {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
 }
-#queue-content {
+.queue-tab-content {
   min-width: 0;
   overflow-x: hidden;
 }
-.queue-panel #lyrics-content {
+.queue-panel .lyrics-tab-content[data-state="active"] {
   display: flex;
   flex-direction: column;
 }
@@ -4079,11 +4079,11 @@ input[type="range"] {
   margin-top: 4px;
   color: var(--muted);
 }
-.device-table details {
+.device-table .ui-collapsible {
   margin-top: 8px;
   max-width: 400px;
 }
-.device-table summary {
+.device-table .ui-collapsible-trigger {
   cursor: pointer;
   color: var(--muted);
   font-size: 12px;
@@ -4184,7 +4184,7 @@ input[type="range"] {
   font-size: 0.75rem;
   min-width: 0;
 }
-.library-switcher select {
+.library-switcher .ui-select {
   max-width: 200px;
   min-width: 0;
 }
@@ -4203,7 +4203,7 @@ input[type="range"] {
     order: 3;
     flex-basis: 100%;
   }
-  .library-switcher select {
+  .library-switcher .ui-select {
     max-width: 100%;
   }
 }

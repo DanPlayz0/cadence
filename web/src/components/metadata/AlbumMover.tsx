@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Input } from "../ui/input";
 import { useEffect, useState } from "react";
 import { api, type Album, type Track } from "../../services/api";
 import {
@@ -63,7 +64,7 @@ export function AlbumMover({
         </DialogDescription>
         <label>
           Search albums
-          <input
+          <Input
             value={query}
             disabled={busy}
             onChange={(e) => setQuery(e.target.value)}

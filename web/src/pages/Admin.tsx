@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import {
+  CollapsibleContent,
+  Collapsible,
+  CollapsibleTrigger,
+} from "../components/ui/collapsible";
+import { Form } from "../components/ui/form";
+import { Select, SelectItem } from "../components/ui/select";
 import { useCallback, useEffect, useState } from "react";
 import {
   RefreshCw,
@@ -334,7 +343,8 @@ export function Admin({
             >
               <h2 id={`admin-group-${group.id}`}>{group.label}</h2>
               {group.sections.map(({ id, label, icon: Icon }) => (
-                <button
+                <Button
+                  variant="ghost"
                   key={id}
                   aria-current={tab === id ? "page" : undefined}
                   className={tab === id ? "selected" : ""}
@@ -346,7 +356,7 @@ export function Admin({
                 >
                   <Icon size={18} />
                   <span>{label}</span>
-                </button>
+                </Button>
               ))}
             </div>
           ))}
@@ -363,20 +373,21 @@ export function Admin({
               </p>
             </div>
             {tab === "people" && (
-              <button
+              <Button
+                variant="ghost"
                 className="add-user-button"
                 aria-label="Add user"
                 onClick={() => setCreatingUser(true)}
               >
                 <Plus size={22} />
-              </button>
+              </Button>
             )}
           </div>
           {tab === "devices" && (
             <div className="panel devices-panel">
               <label className="device-search">
                 <Search size={18} />
-                <input
+                <Input
                   aria-label="Search devices"
                   placeholder="Search users, devices, or clients"
                   value={deviceQuery}
@@ -433,15 +444,20 @@ export function Admin({
                                     ? `Cadence Web ${device.clientVersion}`
                                     : `${client.name}${client.version ? ` ${client.version}` : ""}`}
                                 </span>
-                                <details>
-                                  <summary>User agent</summary>
-                                  <code>
-                                    {device.userAgent || "Not provided"}
-                                  </code>
-                                </details>
+                                <Collapsible>
+                                  <CollapsibleTrigger>
+                                    User agent
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <code>
+                                      {device.userAgent || "Not provided"}
+                                    </code>
+                                  </CollapsibleContent>
+                                </Collapsible>
                               </td>
                               <td>
-                                <button
+                                <Button
+                                  variant="ghost"
                                   className="device-user"
                                   onClick={() => setSelectedUser(device.user)}
                                 >
@@ -450,7 +466,7 @@ export function Admin({
                                     <strong>{device.user.displayName}</strong>
                                     <small>@{device.user.username}</small>
                                   </span>
-                                </button>
+                                </Button>
                               </td>
                             </tr>
                           );
@@ -479,7 +495,7 @@ export function Admin({
                 Choose the name listeners see on the login page, in the app, and
                 in their browser tab.
               </p>
-              <form
+              <Form
                 className="admin-form"
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -497,7 +513,7 @@ export function Admin({
               >
                 <label className="wide">
                   Instance name
-                  <input
+                  <Input
                     value={brandingName}
                     required
                     maxLength={120}
@@ -508,13 +524,14 @@ export function Admin({
                     }}
                   />
                 </label>
-                <button
+                <Button
+                  variant="ghost"
                   className="primary"
                   disabled={loading || !brandingName.trim()}
                 >
                   {loading ? "Saving…" : "Save"}
-                </button>
-              </form>
+                </Button>
+              </Form>
               {brandingNotice && <p role="status">{brandingNotice}</p>}
             </div>
           )}
@@ -534,14 +551,15 @@ export function Admin({
                     target: "permissions",
                   },
                 ].map((item) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     className="admin-stat"
                     key={item.label}
                     onClick={() => onTab(item.target)}
                   >
                     <strong>{item.value.toLocaleString()}</strong>
                     <span>{item.label}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
               <div className="panel">
@@ -559,7 +577,8 @@ export function Admin({
                   </p>
                 )}
                 <div className="row">
-                  <button
+                  <Button
+                    variant="ghost"
                     className="primary"
                     disabled={
                       loading || scans.some((scan) => scan.status === "running")
@@ -574,13 +593,13 @@ export function Admin({
                     }
                   >
                     <RefreshCw size={16} /> Scan library
-                  </button>
-                  <button onClick={() => onTab("library")}>
+                  </Button>
+                  <Button variant="ghost" onClick={() => onTab("library")}>
                     <Library size={16} /> Manage library
-                  </button>
-                  <button onClick={() => onTab("scans")}>
+                  </Button>
+                  <Button variant="ghost" onClick={() => onTab("scans")}>
                     View scan activity
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="panel">
@@ -590,17 +609,18 @@ export function Admin({
                   Review suggested changes before applying them to your catalog.
                 </p>
                 <div className="row">
-                  <button onClick={() => onTab("metadata")}>
+                  <Button variant="ghost" onClick={() => onTab("metadata")}>
                     Configure metadata
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       onTab("suggestions");
                       void loadSuggestions();
                     }}
                   >
                     Review changes
-                  </button>
+                  </Button>
                 </div>
               </div>
             </>
@@ -628,7 +648,7 @@ export function Admin({
                 <div className="row scan-controls">
                   <div className="scan-mode">
                     <label htmlFor="library-scan-mode">Refresh mode</label>
-                    <select
+                    <Select
                       id="library-scan-mode"
                       aria-describedby="library-scan-description"
                       value={scanMode}
@@ -637,14 +657,14 @@ export function Admin({
                       }
                       onChange={(e) => setScanMode(e.target.value)}
                     >
-                      <option value="incremental">
+                      <SelectItem value="incremental">
                         Scan for new and updated files
-                      </option>
-                      <option value="missing">
+                      </SelectItem>
+                      <SelectItem value="missing">
                         Search for missing metadata
-                      </option>
-                      <option value="full">Replace all metadata</option>
-                    </select>
+                      </SelectItem>
+                      <SelectItem value="full">Replace all metadata</SelectItem>
+                    </Select>
                     <p id="library-scan-description" className="muted">
                       {scanMode === "incremental"
                         ? "Index new files and re-read changed files. Unchanged files are skipped."
@@ -657,7 +677,8 @@ export function Admin({
                       Review suggested changes before applying them.
                     </p>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
                     className="primary"
                     disabled={
                       loading || scans.some((s) => s.status === "running")
@@ -672,7 +693,7 @@ export function Admin({
                     }
                   >
                     <RefreshCw size={16} /> Scan library
-                  </button>
+                  </Button>
                 </div>
               </div>
             </>
@@ -717,16 +738,18 @@ export function Admin({
                     </div>
                     <small>{new Date(s.started).toLocaleString()}</small>
                     {s.errors.length > 0 && (
-                      <details>
-                        <summary>
+                      <Collapsible>
+                        <CollapsibleTrigger>
                           {s.errors.length} reported issues (first 200)
-                        </summary>
-                        {s.errors.map((e, i) => (
-                          <p key={i} className="scan-error">
-                            {e}
-                          </p>
-                        ))}
-                      </details>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          {s.errors.map((e, i) => (
+                            <p key={i} className="scan-error">
+                              {e}
+                            </p>
+                          ))}
+                        </CollapsibleContent>
+                      </Collapsible>
                     )}
                   </div>
                 ))}
@@ -745,18 +768,19 @@ export function Admin({
                 <DialogContent busy={loading}>
                   <div className="row dialog-heading">
                     <DialogTitle>Add user</DialogTitle>
-                    <button
+                    <Button
+                      variant="ghost"
                       aria-label="Close add user"
                       disabled={loading}
                       onClick={() => setCreatingUser(false)}
                     >
                       <X size={20} />
-                    </button>
+                    </Button>
                   </div>
                   <DialogDescription>
                     Create an account for a new listener.
                   </DialogDescription>
-                  <form
+                  <Form
                     className="admin-form add-user-form"
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -778,7 +802,7 @@ export function Admin({
                   >
                     <label>
                       Display name
-                      <input
+                      <Input
                         name="displayName"
                         required
                         maxLength={120}
@@ -787,7 +811,7 @@ export function Admin({
                     </label>
                     <label>
                       Username
-                      <input
+                      <Input
                         name="username"
                         required
                         maxLength={120}
@@ -802,7 +826,7 @@ export function Admin({
                     </label>
                     <label>
                       Initial password
-                      <input
+                      <Input
                         name="password"
                         type="password"
                         required
@@ -817,15 +841,20 @@ export function Admin({
                       description="Can manage listeners, library scans, and instance settings."
                       disabled={loading}
                     />
-                    <button className="primary" disabled={loading}>
+                    <Button
+                      variant="ghost"
+                      className="primary"
+                      disabled={loading}
+                    >
                       Create account
-                    </button>
-                  </form>
+                    </Button>
+                  </Form>
                 </DialogContent>
               </Dialog>
               <div className="listener-grid">
                 {users.map((u) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     className="listener-card"
                     key={u.id}
@@ -851,7 +880,7 @@ export function Admin({
                       </span>
                       <Pencil size={18} aria-hidden="true" />
                     </span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </>
@@ -864,7 +893,7 @@ export function Admin({
                   Everyone starts with access to all music. Exclusions from any
                   assigned group win, including for administrators.
                 </p>
-                <form
+                <Form
                   className="row"
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -878,17 +907,21 @@ export function Admin({
                     });
                   }}
                 >
-                  <input
+                  <Input
                     aria-label="Group name"
                     name="name"
                     placeholder="New group name"
                     required
                     maxLength={120}
                   />
-                  <button className="primary" disabled={loading}>
+                  <Button
+                    variant="ghost"
+                    className="primary"
+                    disabled={loading}
+                  >
                     Create group
-                  </button>
-                </form>
+                  </Button>
+                </Form>
                 <div className="group-toggles">
                   {groups.map((g) => (
                     <span className="badge" key={g.id}>
@@ -904,7 +937,7 @@ export function Admin({
                   folder path inside a configured root. A folder exclusion also
                   applies to its descendants.
                 </p>
-                <form
+                <Form
                   className="admin-form"
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -922,38 +955,39 @@ export function Admin({
                 >
                   <label>
                     Group
-                    <select name="groupId" required>
-                      <option value="">Choose group</option>
+                    <Select name="groupId" required>
+                      <SelectItem value="">Choose group</SelectItem>
                       {groups.map((g) => (
-                        <option key={g.id} value={g.id}>
+                        <SelectItem key={g.id} value={g.id}>
                           {g.name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                   <label>
                     Exclude by
-                    <select name="kind">
-                      <option value="folder">Folder</option>
-                      <option value="album">Album ID</option>
-                      <option value="track">Track ID</option>
-                    </select>
+                    <Select name="kind">
+                      <SelectItem value="folder">Folder</SelectItem>
+                      <SelectItem value="album">Album ID</SelectItem>
+                      <SelectItem value="track">Track ID</SelectItem>
+                    </Select>
                   </label>
                   <label className="wide">
                     Folder path or ID
-                    <input
+                    <Input
                       name="target"
                       required
                       placeholder="/music/Artist/Album"
                     />
                   </label>
-                  <button
+                  <Button
+                    variant="ghost"
                     className="primary"
                     disabled={loading || !groups.length}
                   >
                     Add exclusion
-                  </button>
-                </form>
+                  </Button>
+                </Form>
                 {exclusions.map((e) => (
                   <div className="exclusion row" key={e.id}>
                     <div>
@@ -963,7 +997,8 @@ export function Admin({
                       </strong>
                       <code>{e.target}</code>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
                       aria-label="Delete exclusion"
                       disabled={loading}
                       onClick={() =>
@@ -973,7 +1008,7 @@ export function Admin({
                       }
                     >
                       <Trash2 size={17} />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -991,77 +1026,82 @@ export function Admin({
                   Choose metadata for a song to compare all of its pending
                   sources and replace individual fields.
                 </p>
-                <details className="bulk-review-section">
-                  <summary>Bulk accept by field</summary>
-                  <fieldset className="bulk-review" disabled={loading}>
-                    <legend>Fields to accept</legend>
-                    <div className="bulk-review-fields">
-                      {Object.entries(reviewFields).map(([field, label]) => (
-                        <Checkbox
-                          key={field}
-                          label={label}
-                          checked={acceptFields.includes(field)}
-                          onChange={(event) => {
+                <Collapsible className="bulk-review-section">
+                  <CollapsibleTrigger>Bulk accept by field</CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <fieldset className="bulk-review" disabled={loading}>
+                      <legend>Fields to accept</legend>
+                      <div className="bulk-review-fields">
+                        {Object.entries(reviewFields).map(([field, label]) => (
+                          <Checkbox
+                            key={field}
+                            label={label}
+                            checked={acceptFields.includes(field)}
+                            onChange={(event) => {
+                              setBulkNotice("");
+                              setAcceptFields((current) =>
+                                event.target.checked
+                                  ? [...current, field]
+                                  : current.filter((value) => value !== field),
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <div className="row bulk-review-actions">
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          className="subtle"
+                          onClick={() => {
+                            setAcceptFields(Object.keys(reviewFields));
                             setBulkNotice("");
-                            setAcceptFields((current) =>
-                              event.target.checked
-                                ? [...current, field]
-                                : current.filter((value) => value !== field),
-                            );
                           }}
-                        />
-                      ))}
-                    </div>
-                    <div className="row bulk-review-actions">
-                      <button
-                        type="button"
-                        className="subtle"
-                        onClick={() => {
-                          setAcceptFields(Object.keys(reviewFields));
-                          setBulkNotice("");
-                        }}
-                      >
-                        Select all fields
-                      </button>
-                      <button
-                        type="button"
-                        className="subtle"
-                        onClick={() => {
-                          setAcceptFields([]);
-                          setBulkNotice("");
-                        }}
-                      >
-                        Clear selection
-                      </button>
-                      <button
-                        type="button"
-                        className="primary"
-                        disabled={!acceptFields.length || !suggestions.length}
-                        onClick={() =>
-                          void perform(async () => {
+                        >
+                          Select all fields
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          className="subtle"
+                          onClick={() => {
+                            setAcceptFields([]);
                             setBulkNotice("");
-                            const result = await api<{ accepted: number }>(
-                              "/admin/suggestions/accept-all",
-                              "POST",
-                              { fields: acceptFields },
-                            );
-                            setBulkNotice(
-                              `${result.accepted} ${result.accepted === 1 ? "change" : "changes"} accepted.`,
-                            );
-                            await loadSuggestions();
-                          })
-                        }
-                      >
-                        {loading ? "Working…" : "Accept all selected fields"}
-                      </button>
-                    </div>
-                    <p className="muted">
-                      Applies to all pending changes in these fields, including
-                      those not loaded below. If a song has conflicting changes
-                      for one field, the newest wins.
-                    </p>
-                  </fieldset>
-                </details>
+                          }}
+                        >
+                          Clear selection
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          className="primary"
+                          disabled={!acceptFields.length || !suggestions.length}
+                          onClick={() =>
+                            void perform(async () => {
+                              setBulkNotice("");
+                              const result = await api<{ accepted: number }>(
+                                "/admin/suggestions/accept-all",
+                                "POST",
+                                { fields: acceptFields },
+                              );
+                              setBulkNotice(
+                                `${result.accepted} ${result.accepted === 1 ? "change" : "changes"} accepted.`,
+                              );
+                              await loadSuggestions();
+                            })
+                          }
+                        >
+                          {loading ? "Working…" : "Accept all selected fields"}
+                        </Button>
+                      </div>
+                      <p className="muted">
+                        Applies to all pending changes in these fields,
+                        including those not loaded below. If a song has
+                        conflicting changes for one field, the newest wins.
+                      </p>
+                    </fieldset>
+                  </CollapsibleContent>
+                </Collapsible>
                 {bulkNotice && (
                   <p className="bulk-review-notice" role="status">
                     {bulkNotice}
@@ -1087,13 +1127,14 @@ export function Admin({
                   </p>
                 )}
                 {more && (
-                  <button
+                  <Button
+                    variant="ghost"
                     className="load-more"
                     disabled={loading}
                     onClick={() => void loadSuggestions(suggestionOffset + 100)}
                   >
                     Load more
-                  </button>
+                  </Button>
                 )}
               </div>
             </>

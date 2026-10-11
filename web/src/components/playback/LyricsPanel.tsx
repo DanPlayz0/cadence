@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, APIError, type Track } from "../../services/api";
 import { activeLyric, parseLRC, type Lyrics } from "../../lib/lyrics";
@@ -100,12 +101,13 @@ export function LyricsPanel({
       {error && (
         <div>
           <p role="alert">{error}</p>
-          <button
+          <Button
+            variant="ghost"
             className="subtle"
             onClick={() => setRetry((value) => value + 1)}
           >
             Try again
-          </button>
+          </Button>
         </div>
       )}
       {lyrics &&
@@ -122,13 +124,14 @@ export function LyricsPanel({
                   : "Plain lyrics · no timings available"}
               </span>
               {lines.length > 0 && (
-                <button
+                <Button
+                  variant="ghost"
                   className="subtle"
                   aria-pressed={follow}
                   onClick={() => setFollow((value) => !value)}
                 >
                   {follow ? "Following playback" : "Follow playback"}
-                </button>
+                </Button>
               )}
             </div>
             <div
@@ -154,7 +157,8 @@ export function LyricsPanel({
             >
               {lines.length ? (
                 lines.map((line, i) => (
-                  <button
+                  <Button
+                    variant="ghost"
                     key={`${line.time}:${i}`}
                     ref={i === index ? active : undefined}
                     className={
@@ -174,7 +178,7 @@ export function LyricsPanel({
                     title="Seek to this line"
                   >
                     {line.text || "♪"}
-                  </button>
+                  </Button>
                 ))
               ) : (
                 <p className="plain-lyrics">

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { Slider } from "../ui/slider";
 import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
@@ -165,64 +167,42 @@ export function PlaybackPanel({
       </div>
       <PlaybackStatus player={player} />
       {tab !== "now" && (
-        <div
-          className="playback-tabs"
-          role="tablist"
-          aria-label="Playback panel"
-          onKeyDown={(event) => {
-            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-              event.preventDefault();
-              const next = tab === "queue" ? "lyrics" : "queue";
-              onTab(next);
-              event.currentTarget
-                .querySelector<HTMLButtonElement>(`[id="${next}-tab"]`)
-                ?.focus();
-            }
-          }}
+        <Tabs
+          className="playback-panel-tabs"
+          value={tab}
+          onValueChange={(value) => onTab(value as "queue" | "lyrics")}
         >
-          <button
-            id="queue-tab"
-            role="tab"
-            aria-selected={tab === "queue"}
-            aria-controls="queue-content"
-            tabIndex={tab === "queue" ? 0 : -1}
-            onClick={() => onTab("queue")}
+          <TabsList className="playback-tabs" aria-label="Playback panel">
+            <TabsTrigger value="queue">Queue</TabsTrigger>
+            <TabsTrigger value="lyrics">Lyrics</TabsTrigger>
+          </TabsList>
+          <TabsContent
+            value="queue"
+            className="playback-tab-content queue-tab-content"
           >
-            Queue
-          </button>
-          <button
-            id="lyrics-tab"
-            role="tab"
-            aria-selected={tab === "lyrics"}
-            aria-controls="lyrics-content"
-            tabIndex={tab === "lyrics" ? 0 : -1}
-            onClick={() => onTab("lyrics")}
+            <QueuePanel
+              player={player}
+              onArtist={onArtist}
+              onNavigate={onNavigate}
+              onAdded={onAdded}
+            />
+          </TabsContent>
+          <TabsContent
+            value="lyrics"
+            className="playback-tab-content lyrics-tab-content"
           >
-            Lyrics
-          </button>
-        </div>
+            <LyricsPanel
+              onArtist={onArtist}
+              track={player.current}
+              position={player.position}
+              onSeek={player.seek}
+              onExpired={onExpired}
+            />
+          </TabsContent>
+        </Tabs>
       )}
-      {tab === "now" ? (
+      {tab === "now" && (
         <NowPlaying player={player} onArtist={onArtist} onPanel={onTab} />
-      ) : tab === "lyrics" ? (
-        <div id="lyrics-content" role="tabpanel" aria-labelledby="lyrics-tab">
-          <LyricsPanel
-            onArtist={onArtist}
-            track={player.current}
-            position={player.position}
-            onSeek={player.seek}
-            onExpired={onExpired}
-          />
-        </div>
-      ) : (
-        <div id="queue-content" role="tabpanel" aria-labelledby="queue-tab">
-          <QueuePanel
-            player={player}
-            onArtist={onArtist}
-            onNavigate={onNavigate}
-            onAdded={onAdded}
-          />
-        </div>
       )}
 
       {mobile && tab !== "now" && (
@@ -231,33 +211,35 @@ export function PlaybackPanel({
           aria-label="Playback controls"
         >
           <div className="controls">
-            <button
+            <Button
+              variant="ghost"
               aria-label="Previous track"
               disabled={!player.canPrevious}
               onClick={() => player.next(true)}
             >
               <SkipBack size={20} />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               className="play-button"
               aria-label={player.playing ? "Pause" : "Play"}
               disabled={!player.current && !player.canNext}
               onClick={player.toggle}
             >
               {player.playing ? <Pause size={21} /> : <Play size={21} />}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               aria-label="Next track"
               disabled={!player.canNext}
               onClick={() => player.next()}
             >
               <SkipForward size={20} />
-            </button>
+            </Button>
           </div>
           <div className="timeline">
             <span>{duration(player.position)}</span>
-            <input
-              type="range"
+            <Slider
               aria-label="Seek"
               aria-valuetext={`${duration(player.position)} of ${duration(player.length)}`}
               min={0}

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
+import { Form } from "../ui/form";
+import { Input } from "../ui/input";
 import { useCallback, useEffect, useState } from "react";
 import { Folder, Plus, Pencil, Trash2, X, ChevronRight } from "lucide-react";
 import { api, User } from "../../services/api";
@@ -141,7 +144,8 @@ export function LibraryManager({
     <section className="panel library-manager">
       <div className="row">
         <h2>Libraries</h2>
-        <button
+        <Button
+          variant="ghost"
           className="primary"
           disabled={!loaded || busy}
           onClick={() =>
@@ -156,7 +160,7 @@ export function LibraryManager({
           }
         >
           <Plus size={16} /> Add library
-        </button>
+        </Button>
       </div>
       <p className="muted">
         Choose folders from mounted storage and share each library with
@@ -165,7 +169,10 @@ export function LibraryManager({
       </p>
       {error && !draft && (
         <p role="alert">
-          {error} <button onClick={() => void load()}>Retry</button>
+          {error}{" "}
+          <Button variant="ghost" onClick={() => void load()}>
+            Retry
+          </Button>
         </p>
       )}
       {loaded && libraries.length === 0 && (
@@ -178,20 +185,22 @@ export function LibraryManager({
         <article className="library-card" key={value.id}>
           <div className="row">
             <h3>{value.name}</h3>
-            <button
+            <Button
+              variant="ghost"
               disabled={busy}
               aria-label={`Edit ${value.name}`}
               onClick={() => open(value)}
             >
               <Pencil size={16} />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               disabled={busy}
               aria-label={`Delete ${value.name}`}
               onClick={() => setDeleting(value.id)}
             >
               <Trash2 size={16} />
-            </button>
+            </Button>
           </div>
           {value.folders.map((path) => (
             <code key={path}>{path}</code>
@@ -215,12 +224,20 @@ export function LibraryManager({
                 catalog data will be preserved.
               </p>
               <div className="row">
-                <button disabled={busy} onClick={() => void remove(value.id)}>
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => void remove(value.id)}
+                >
                   Remove library
-                </button>
-                <button disabled={busy} onClick={() => setDeleting(null)}>
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => setDeleting(null)}
+                >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -241,7 +258,7 @@ export function LibraryManager({
             every library; group exclusions still apply.
           </DialogDescription>
           {draft && (
-            <form
+            <Form
               onSubmit={(event) => {
                 event.preventDefault();
                 void save();
@@ -249,7 +266,7 @@ export function LibraryManager({
             >
               <fieldset disabled={busy}>
                 <label htmlFor="music-library-name">Library name</label>
-                <input
+                <Input
                   id="music-library-name"
                   required
                   maxLength={120}
@@ -269,7 +286,8 @@ export function LibraryManager({
                 {draft.folders.map((path) => (
                   <div className="row" key={path}>
                     <code>{path}</code>
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       aria-label={`Remove folder ${path}`}
                       onClick={() =>
@@ -280,7 +298,7 @@ export function LibraryManager({
                       }
                     >
                       <X size={16} />
-                    </button>
+                    </Button>
                   </div>
                 ))}
                 <h3>Browse mounted folders</h3>
@@ -290,24 +308,30 @@ export function LibraryManager({
                   then return here to choose your music folders.
                 </p>
                 <div className="row">
-                  <button type="button" onClick={() => browse("")}>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    onClick={() => browse("")}
+                  >
                     Mounted storage
-                  </button>
+                  </Button>
                   {folderPath && (
                     <>
-                      <button
+                      <Button
+                        variant="ghost"
                         type="button"
                         onClick={() => browse(page?.parent || "")}
                       >
                         Up
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
                         type="button"
                         disabled={!page}
                         onClick={() => addFolder(page!.path)}
                       >
                         Add this folder
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -317,18 +341,23 @@ export function LibraryManager({
                 <div className="folder-picker">
                   {page?.items.map((folder) => (
                     <div className="row" key={`${folder.path}:${folder.name}`}>
-                      <button type="button" onClick={() => browse(folder.path)}>
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        onClick={() => browse(folder.path)}
+                      >
                         <Folder size={16} />
                         <span>{folder.name}</span>
                         <ChevronRight size={16} />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
                         type="button"
                         disabled={draft.folders.includes(folder.path)}
                         onClick={() => addFolder(folder.path)}
                       >
                         Add
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -339,24 +368,26 @@ export function LibraryManager({
                 )}
                 {page && page.total > 50 && (
                   <div className="row">
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       disabled={offset === 0}
                       onClick={() => setOffset(Math.max(0, offset - 50))}
                     >
                       Previous
-                    </button>
+                    </Button>
                     <span>
                       {offset + 1}–{Math.min(offset + 50, page.total)} of{" "}
                       {page.total}
                     </span>
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       disabled={offset + 50 >= page.total}
                       onClick={() => setOffset(offset + 50)}
                     >
                       Next
-                    </button>
+                    </Button>
                   </div>
                 )}
                 <h3>Sharing</h3>
@@ -406,21 +437,23 @@ export function LibraryManager({
               </fieldset>
               {error && <p role="alert">{error}</p>}
               <div className="row">
-                <button
+                <Button
+                  variant="ghost"
                   className="primary"
                   disabled={busy || !draft.name.trim() || !draft.folders.length}
                 >
                   {busy ? "Saving…" : "Save library"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   type="button"
                   disabled={busy}
                   onClick={() => setDraft(null)}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
-            </form>
+            </Form>
           )}
         </DialogContent>
       </Dialog>

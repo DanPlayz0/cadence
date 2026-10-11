@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Input } from "../ui/input";
+import { Form } from "../ui/form";
 import { useEffect, useState } from "react";
 import { api, type Track, type Page } from "../../services/api";
 import { BulkMetadataEditor } from "./BulkMetadataEditor";
@@ -211,7 +213,7 @@ export function TrackMetadataEditor({
             <>
               <label className="metadata-search">
                 Search library
-                <input
+                <Input
                   type="search"
                   value={query}
                   placeholder="Song title, artist, or album"
@@ -236,7 +238,8 @@ export function TrackMetadataEditor({
                   <p role="status">Searching library…</p>
                 ) : (
                   results.map((track) => (
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       key={track.id}
                       disabled={busy || dirty}
@@ -247,7 +250,7 @@ export function TrackMetadataEditor({
                       <span>
                         {track.artist} · {track.album || "Single"}
                       </span>
-                    </button>
+                    </Button>
                   ))
                 )}
                 {!searching && !searchError && !results.length && (
@@ -255,7 +258,8 @@ export function TrackMetadataEditor({
                 )}
               </div>
               {!searching && results.length < total && limit < 500 && (
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   className="subtle"
                   disabled={busy}
@@ -264,7 +268,7 @@ export function TrackMetadataEditor({
                   }
                 >
                   Show more songs ({results.length} of {total})
-                </button>
+                </Button>
               )}
               {!searching && limit >= 500 && results.length < total && (
                 <p className="muted">
@@ -287,7 +291,7 @@ export function TrackMetadataEditor({
       )}
       {trackId && busy && !selected && <p role="status">Loading metadata…</p>}
       {(trackId || mode !== "attributes") && selected && draft && baseline && (
-        <form
+        <Form
           className="admin-form metadata-form"
           aria-busy={busy}
           onSubmit={async (event) => {
@@ -350,7 +354,7 @@ export function TrackMetadataEditor({
             <div className="metadata-field" key={field}>
               <label>
                 {fields[field]}
-                <input
+                <Input
                   value={draft[field]}
                   placeholder={
                     field === "album" ? "No album — Single" : undefined
@@ -374,14 +378,15 @@ export function TrackMetadataEditor({
                   }
                 />
               </label>
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 className="metadata-restore"
                 disabled={busy}
                 onClick={() => void restore(field)}
               >
                 Restore extracted {fields[field].toLowerCase()}
-              </button>
+              </Button>
             </div>
           ))}
           <p className="wide muted">
@@ -400,7 +405,8 @@ export function TrackMetadataEditor({
               {notice}
             </p>
           )}
-          <button
+          <Button
+            variant="ghost"
             className="primary"
             disabled={
               busy ||
@@ -408,8 +414,8 @@ export function TrackMetadataEditor({
             }
           >
             {busy ? "Saving…" : "Save suggestions"}
-          </button>
-        </form>
+          </Button>
+        </Form>
       )}
       {chooser && selected && (
         <MetadataChooser

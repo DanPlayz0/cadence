@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
+import {
+  CollapsibleContent,
+  Collapsible,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 import { useRef, useState } from "react";
 import {
   ArrowDown,
@@ -98,7 +104,8 @@ export function QueuePanel({
         <h3>
           {heading}
           {key === "manual" && (
-            <button
+            <Button
+              variant="ghost"
               className="subtle small"
               disabled={!entries.length}
               onClick={() => {
@@ -107,7 +114,7 @@ export function QueuePanel({
               }}
             >
               Clear manual queue
-            </button>
+            </Button>
           )}
           {key === "remaining" && q.source && (
             <SourceLink source={q.source} onNavigate={onNavigate} />
@@ -157,16 +164,18 @@ export function QueuePanel({
                 <GripVertical size={14} />
               </span>
               <div className="queue-credit">
-                <button
+                <Button
+                  variant="ghost"
                   className="queue-title"
                   title={`Play ${entry.track.title} and skip earlier songs`}
                   onClick={() => player.jump(key, entry.id)}
                 >
                   {entry.track.title}
-                </button>
+                </Button>
                 <Credit entry={entry} onArtist={onArtist} />
               </div>
-              <button
+              <Button
+                variant="ghost"
                 aria-label={`Move ${entry.track.title} up`}
                 disabled={index === 0}
                 onClick={() => {
@@ -177,8 +186,9 @@ export function QueuePanel({
                 }}
               >
                 <ArrowUp size={14} />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 aria-label={`Move ${entry.track.title} down`}
                 disabled={index === entries.length - 1}
                 onClick={() => {
@@ -189,12 +199,15 @@ export function QueuePanel({
                 }}
               >
                 <ArrowDown size={14} />
-              </button>
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button aria-label={`Queue options for ${entry.track.title}`}>
+                  <Button
+                    variant="ghost"
+                    aria-label={`Queue options for ${entry.track.title}`}
+                  >
                     <MoreHorizontal size={16} />
-                  </button>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => player.jump(key, entry.id)}>
@@ -212,12 +225,13 @@ export function QueuePanel({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <button
+              <Button
+                variant="ghost"
                 aria-label={`Remove ${entry.track.title} from queue`}
                 onClick={() => player.remove(key, entry.id)}
               >
                 <X size={14} />
-              </button>
+              </Button>
             </li>
           ))}
         </ol>
@@ -276,39 +290,42 @@ export function QueuePanel({
             : "No upcoming songs. Add a song to the queue."}
         </p>
       )}
-      <details className="queue-history">
-        <summary>
+      <Collapsible className="queue-history">
+        <CollapsibleTrigger>
           Previously played <span>{q.history.length}</span>
-        </summary>
-        {q.history.length ? (
-          <ol className="queue-entries">
-            {[...q.history].reverse().map((entry, index) => (
-              <li className="queue-track" key={`${entry.id}:${index}`}>
-                <div className="queue-credit">
-                  <span
-                    className="queue-history-title"
-                    title={entry.track.title}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {q.history.length ? (
+            <ol className="queue-entries">
+              {[...q.history].reverse().map((entry, index) => (
+                <li className="queue-track" key={`${entry.id}:${index}`}>
+                  <div className="queue-credit">
+                    <span
+                      className="queue-history-title"
+                      title={entry.track.title}
+                    >
+                      {entry.track.title}
+                    </span>
+                    <Credit entry={entry} onArtist={onArtist} />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    aria-label={`Add ${entry.track.title} to queue`}
+                    title="Add to queue"
+                    onClick={() => add(entry)}
                   >
-                    {entry.track.title}
-                  </span>
-                  <Credit entry={entry} onArtist={onArtist} />
-                </div>
-                <button
-                  aria-label={`Add ${entry.track.title} to queue`}
-                  title="Add to queue"
-                  onClick={() => add(entry)}
-                >
-                  <Plus size={16} />
-                </button>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="muted">
-            Your listening history will appear here as you play songs.
-          </p>
-        )}
-      </details>
+                    <Plus size={16} />
+                  </Button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="muted">
+              Your listening history will appear here as you play songs.
+            </p>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
       <span className="sr-only" role="status">
         {announcement}
       </span>

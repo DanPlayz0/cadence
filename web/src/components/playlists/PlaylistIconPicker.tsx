@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Radio, RadioGroup } from "../ui/radio-group";
 import { useEffect, useId, useRef, useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -31,21 +32,22 @@ export function PlaylistIconPicker({
   const pages = Math.max(1, Math.ceil(results.length / playlistIconPageSize));
   function choices(names: string[], group: string) {
     return (
-      <div className="playlist-icons">
+      <RadioGroup
+        className="playlist-icons"
+        name={`${id}-${group}`}
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled}
+        aria-label={group === "quick" ? "Quick icon choices" : "Icon results"}
+      >
         {names.map((name) => (
           <label key={name} className={name === value ? "selected" : ""}>
-            <Input
-              type="radio"
-              name={`${id}-${group}`}
-              value={name}
-              checked={name === value}
-              onChange={() => onChange(name)}
-            />
+            <Radio value={name} />
             <PlaylistIcon name={name} size={22} />
             <span>{playlistIconLabel(name)}</span>
           </label>
         ))}
-      </div>
+      </RadioGroup>
     );
   }
   return (

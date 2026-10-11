@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Form } from "../ui/form";
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -55,7 +56,7 @@ export function PlaylistDialog({
             <X size={20} />
           </Button>
         </div>
-        <form
+        <Form
           className="playlist-create"
           aria-busy={busy}
           onSubmit={async (event) => {
@@ -118,7 +119,7 @@ export function PlaylistDialog({
               {busy ? "Creating…" : "Create playlist"}
             </Button>
           </div>
-        </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

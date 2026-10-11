@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { FolderInput } from "../ui/folder-input";
+import { Select, SelectItem } from "../ui/select";
+import { Button } from "../ui/button";
+import { Form } from "../ui/form";
+import { Checkbox } from "../ui/Checkbox";
+import { Input } from "../ui/input";
 import { useEffect, useState } from "react";
 import { api, type User } from "../../services/api";
 import type { MusicLibrary } from "../../lib/libraries";
@@ -32,15 +38,17 @@ function RuleEditor({
     <>
       <label>
         Import policy
-        <select
+        <Select
           value={rule.mode}
           onChange={(e) =>
             onChange({ ...rule, mode: e.target.value as SoulseekRule["mode"] })
           }
         >
-          <option value="review">Require administrator review</option>
-          <option value="auto">Automatically import into a library</option>
-        </select>
+          <SelectItem value="review">Require administrator review</SelectItem>
+          <SelectItem value="auto">
+            Automatically import into a library
+          </SelectItem>
+        </Select>
       </label>
       <SoulseekDestination
         id={id}
@@ -79,7 +87,7 @@ function RuleList({
           <div className="soulseek-fields">
             <label>
               {id === "groups" ? "Group" : "User"}
-              <select
+              <Select
                 value={r.subject}
                 onChange={(e) =>
                   onChange(
@@ -89,9 +97,9 @@ function RuleList({
                   )
                 }
               >
-                <option value="">
+                <SelectItem value="">
                   Choose {id === "groups" ? "a group" : "a user"}
-                </option>
+                </SelectItem>
                 {subjects
                   .filter(
                     (s) =>
@@ -99,11 +107,11 @@ function RuleList({
                       !rules.some((v) => v.subject === s.id),
                   )
                   .map((s) => (
-                    <option key={s.id} value={s.id}>
+                    <SelectItem key={s.id} value={s.id}>
                       {s.name}
-                    </option>
+                    </SelectItem>
                   ))}
-              </select>
+              </Select>
             </label>
             <RuleEditor
               rule={r}
@@ -117,7 +125,8 @@ function RuleList({
           <div className="soulseek-actions">
             {id === "groups" && (
               <>
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   disabled={i === 0}
                   onClick={() => {
@@ -127,8 +136,9 @@ function RuleList({
                   }}
                 >
                   Move up
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   type="button"
                   disabled={i === rules.length - 1}
                   onClick={() => {
@@ -138,19 +148,21 @@ function RuleList({
                   }}
                 >
                   Move down
-                </button>
+                </Button>
               </>
             )}
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={() => onChange(rules.filter((_, n) => n !== i))}
             >
               Remove rule
-            </button>
+            </Button>
           </div>
         </div>
       ))}
-      <button
+      <Button
+        variant="ghost"
         type="button"
         disabled={rules.length >= subjects.length}
         onClick={() =>
@@ -166,7 +178,7 @@ function RuleList({
         }
       >
         Add {id === "groups" ? "group" : "user"} rule
-      </button>
+      </Button>
     </section>
   );
 }
@@ -276,13 +288,12 @@ export function SoulseekSettings() {
       {info.settings.sharingError && (
         <p role="alert">{info.settings.sharingError}</p>
       )}
-      <form onSubmit={(e) => void save(e)}>
+      <Form onSubmit={(e) => void save(e)}>
         <fieldset disabled={busy}>
           <section className="soulseek-card">
             <label className="soulseek-row">
               <strong>Enable Soulseek search and downloads</strong>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.enabled}
                 disabled={!info.configured}
                 onChange={(e) =>
@@ -293,7 +304,7 @@ export function SoulseekSettings() {
             <div className="soulseek-fields">
               <label>
                 Search placement
-                <select
+                <Select
                   value={draft.presentation}
                   onChange={(e) =>
                     setDraft({
@@ -302,15 +313,17 @@ export function SoulseekSettings() {
                     })
                   }
                 >
-                  <option value="separate">Separate Find music page</option>
-                  <option value="combined">
+                  <SelectItem value="separate">
+                    Separate Find music page
+                  </SelectItem>
+                  <SelectItem value="combined">
                     Soulseek section in library search
-                  </option>
-                </select>
+                  </SelectItem>
+                </Select>
               </label>
               <label>
                 Review timing
-                <select
+                <Select
                   value={draft.reviewTiming}
                   onChange={(e) =>
                     setDraft({
@@ -319,11 +332,13 @@ export function SoulseekSettings() {
                     })
                   }
                 >
-                  <option value="before">Approve before downloading</option>
-                  <option value="after">
+                  <SelectItem value="before">
+                    Approve before downloading
+                  </SelectItem>
+                  <SelectItem value="after">
                     Download first; approve before importing
-                  </option>
-                </select>
+                  </SelectItem>
+                </Select>
               </label>
             </div>
             <p className="soulseek-help">
@@ -335,8 +350,7 @@ export function SoulseekSettings() {
             <h3>Download quality</h3>
             <label className="soulseek-row">
               <strong>Lossless audio only</strong>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={draft.losslessOnly}
                 onChange={(e) =>
                   setDraft({ ...draft, losslessOnly: e.target.checked })
@@ -353,8 +367,7 @@ export function SoulseekSettings() {
               <div className="soulseek-checks">
                 {soulseekAudioFormats.map((format) => (
                   <label key={format}>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={draft.allowedFormats.includes(format)}
                       onChange={(e) =>
                         setDraft({
@@ -397,8 +410,7 @@ export function SoulseekSettings() {
                     .filter((u) => !u.admin)
                     .map((u) => (
                       <label key={u.id}>
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={draft.users.includes(u.id)}
                           onChange={(e) =>
                             toggle("users", u.id, e.target.checked)
@@ -414,8 +426,7 @@ export function SoulseekSettings() {
                 <div className="soulseek-checks">
                   {groups.map((g) => (
                     <label key={g.id}>
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={draft.groups.includes(g.id)}
                         onChange={(e) =>
                           toggle("groups", g.id, e.target.checked)
@@ -470,7 +481,7 @@ export function SoulseekSettings() {
             <h3>Share music on Soulseek</h3>
             <label>
               Sharing mode
-              <select
+              <Select
                 value={draft.sharing}
                 onChange={(e) =>
                   setDraft({
@@ -479,12 +490,14 @@ export function SoulseekSettings() {
                   })
                 }
               >
-                <option value="disabled">Disabled</option>
-                <option value="selected">Selected mounted folders</option>
-                <option value="imported">
+                <SelectItem value="disabled">Disabled</SelectItem>
+                <SelectItem value="selected">
+                  Selected mounted folders
+                </SelectItem>
+                <SelectItem value="imported">
                   Successfully imported downloads only
-                </option>
-              </select>
+                </SelectItem>
+              </Select>
             </label>
             <p>
               Shared music becomes available to Soulseek peers independently of
@@ -494,21 +507,19 @@ export function SoulseekSettings() {
             {draft.sharing === "selected" && (
               <>
                 <div className="soulseek-search">
-                  <input
+                  <FolderInput
                     aria-label="Folder to share"
-                    list="soulseek-share-folders"
+                    options={[
+                      ...new Set(
+                        libraries.flatMap((library) => library.folders),
+                      ),
+                    ]}
                     value={shareFolder}
                     placeholder="Mounted music folder"
                     onChange={(e) => setShareFolder(e.target.value)}
                   />
-                  <datalist id="soulseek-share-folders">
-                    {[...new Set(libraries.flatMap((l) => l.folders))].map(
-                      (p) => (
-                        <option key={p} value={p} />
-                      ),
-                    )}
-                  </datalist>
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     disabled={
                       !shareFolder.trim() ||
@@ -526,12 +537,13 @@ export function SoulseekSettings() {
                     }}
                   >
                     Add folder
-                  </button>
+                  </Button>
                 </div>
                 {draft.shareFolders.map((p) => (
                   <div key={p} className="soulseek-row">
                     <p className="soulseek-path">{p}</p>
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       onClick={() =>
                         setDraft({
@@ -543,17 +555,21 @@ export function SoulseekSettings() {
                       }
                     >
                       Remove folder
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </>
             )}
           </section>
-          <button disabled={busy || !draft.allowedFormats.length} type="submit">
+          <Button
+            variant="ghost"
+            disabled={busy || !draft.allowedFormats.length}
+            type="submit"
+          >
             {busy ? "Saving…" : "Save Soulseek settings"}
-          </button>
+          </Button>
         </fieldset>
-      </form>
+      </Form>
       <SoulseekRequests admin revision={revision} />
     </div>
   );

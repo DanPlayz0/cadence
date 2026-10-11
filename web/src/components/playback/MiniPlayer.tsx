@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+import { Button } from "../ui/button";
+import { Slider } from "../ui/slider";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Music2, Pause, Play, SkipBack, SkipForward, X } from "lucide-react";
@@ -7,6 +9,7 @@ import type { usePlayer } from "../../hooks/usePlayer";
 import { VolumeControl } from "./PlaybackControls";
 import { ArtistLinks } from "../artists/ArtistLinks";
 import { PlaybackStatus } from "./PlaybackStatus";
+import { copyPlayerStyles } from "../../lib/playerStyles";
 
 type Player = ReturnType<typeof usePlayer>;
 type PiP = {
@@ -110,14 +113,7 @@ export function useMiniPlayer(player: Player, userID: string | undefined) {
         mini.document.title = "Cadence mini player";
         mini.document.head.replaceChildren();
         mini.document.body.replaceChildren();
-        for (const style of document.querySelectorAll(
-          'style, link[rel="stylesheet"]',
-        )) {
-          const copy = style.cloneNode(true) as HTMLElement;
-          if (style instanceof HTMLLinkElement)
-            (copy as HTMLLinkElement).href = style.href;
-          mini.document.head.appendChild(copy);
-        }
+        copyPlayerStyles(document, mini.document);
         mini.document.body.classList.add("mini-player-body");
         active.current = { window: mini, automatic };
         mini.addEventListener(
@@ -228,9 +224,13 @@ export function MiniPlayer({
     <main className="mini-player" aria-label="Cadence mini player">
       <div className="mini-player-heading">
         <span>CADENCE</span>
-        <button aria-label="Close mini player" onClick={onClose}>
+        <Button
+          variant="ghost"
+          aria-label="Close mini player"
+          onClick={onClose}
+        >
           <X size={18} />
-        </button>
+        </Button>
       </div>
       <div className="mini-player-track">
         <div className="mini-player-art">
@@ -254,32 +254,34 @@ export function MiniPlayer({
         </div>
       </div>
       <div className="mini-player-controls">
-        <button
+        <Button
+          variant="ghost"
           aria-label="Previous track"
           disabled={!player.canPrevious}
           onClick={() => player.next(true)}
         >
           <SkipBack size={21} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           className="primary mini-player-play"
           aria-label={player.playing ? "Pause" : "Play"}
           onClick={player.toggle}
         >
           {player.playing ? <Pause size={24} /> : <Play size={24} />}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           aria-label="Next track"
           disabled={!player.canNext}
           onClick={() => player.next()}
         >
           <SkipForward size={21} />
-        </button>
+        </Button>
       </div>
       <div className="mini-player-seek">
         <span>{duration(player.position)}</span>
-        <input
-          type="range"
+        <Slider
           aria-label="Seek"
           aria-valuetext={`${duration(player.position)} of ${duration(player.length)}`}
           min={0}
