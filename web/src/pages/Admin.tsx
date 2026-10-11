@@ -559,8 +559,24 @@ export function Admin({
                   </p>
                 )}
                 <div className="row">
-                  <button className="primary" onClick={() => onTab("library")}>
-                    <RefreshCw size={16} /> Manage library
+                  <button
+                    className="primary"
+                    disabled={
+                      loading || scans.some((scan) => scan.status === "running")
+                    }
+                    onClick={() =>
+                      void perform(() =>
+                        api("/admin/scans", "POST", {
+                          full: false,
+                          missingOnly: false,
+                        }),
+                      )
+                    }
+                  >
+                    <RefreshCw size={16} /> Scan library
+                  </button>
+                  <button onClick={() => onTab("library")}>
+                    <Library size={16} /> Manage library
                   </button>
                   <button onClick={() => onTab("scans")}>
                     View scan activity
