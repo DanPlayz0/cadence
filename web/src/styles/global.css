@@ -4643,3 +4643,31 @@ input[type="range"] {
   max-height: 45%;
   overflow-y: auto;
 }
+
+.playlist-submenu {
+  width: min(320px, calc(100vw - 16px));
+  max-height: min(440px, var(--radix-dropdown-menu-content-available-height));
+  padding: 6px;
+  border: 1px solid #444a3b;
+  border-radius: 10px;
+  background: #22261d;
+  box-shadow: 0 12px 32px #0008;
+}
+.playlist-submenu .picker-search {
+  margin: 4px 4px 8px;
+}
+.playlist-submenu .picker-search input {
+  min-width: 0;
+  width: 100%;
+}
+.playlist-submenu-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.playlist-submenu-chevron {
+  margin-left: auto;
+}
+.playlist-submenu p {
+  padding: 6px 10px;
+}

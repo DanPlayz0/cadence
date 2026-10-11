@@ -2,7 +2,7 @@
 import { Button } from "../ui/button";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Check, Clock, Play } from "lucide-react";
-import { duration, type Track } from "../../services/api";
+import { duration, type Track, type Playlist } from "../../services/api";
 import { Artwork } from "../ui/Artwork";
 import { ArtistLinks } from "../artists/ArtistLinks";
 import { TrackActions } from "./TrackActions";
@@ -20,6 +20,8 @@ export function TrackList({
   onLike,
   onQueue,
   onAdd,
+  playlists,
+  onPlaylistToggle,
   onRemove,
   onEdit,
 }: {
@@ -35,6 +37,12 @@ export function TrackList({
   onLike: (t: Track) => void;
   onQueue: (t: Track) => void;
   onAdd: (t: Track) => void;
+  playlists: Playlist[];
+  onPlaylistToggle: (
+    track: Track,
+    playlist: Playlist,
+    added: boolean,
+  ) => Promise<void>;
   onRemove?: (t: Track) => void;
   onEdit?: (t: Track) => void;
 }) {
@@ -150,6 +158,10 @@ export function TrackList({
                   onLike={() => onLike(t)}
                   onQueue={() => onQueue(t)}
                   onAdd={() => onAdd(t)}
+                  playlists={playlists}
+                  onPlaylistToggle={(playlist, added) =>
+                    onPlaylistToggle(t, playlist, added)
+                  }
                   onRemove={onRemove ? () => onRemove(t) : undefined}
                 />
               </div>

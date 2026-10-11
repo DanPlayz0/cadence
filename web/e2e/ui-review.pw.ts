@@ -545,3 +545,204 @@ test("playback tabs, phone sheets, sliders, mini player and offline fallback", a
   await expect(page.getByRole("link", { name: "Try again" })).toBeVisible();
   expect(failures).toEqual([]);
 });
+
+async function playlistFixture(page: Page) {
+  await fixture(page);
+  const state = {
+    ids: new Set(["p1"]),
+    loads: 0,
+    saves: 0,
+    failLoad: false,
+    failSave: false,
+    creates: 0,
+    delay: 0,
+  };
+  await page.route("**/api/v1/tracks/t1/playlists", async (route) => {
+    state.loads++;
+    await route.fulfill({
+      status: state.failLoad ? 500 : 200,
+      json: state.failLoad
+        ? { error: "Membership failed" }
+        : { playlistIds: [...state.ids] },
+    });
+  });
+  await page.route("**/api/v1/playlists**", async (route) => {
+    const request = route.request(),
+      path = new URL(request.url()).pathname.replace("/api/v1", "");
+    if (path === "/playlists") {
+      if (request.method() === "POST") {
+        state.creates++;
+        await route.fulfill({
+          json: { ...playlist, id: "p2", ...request.postDataJSON() },
+        });
+      } else
+        await route.fulfill({
+          json: [playlist, { id: "p2", name: "Morning", icon: "sun" }],
+        });
+    } else if (path.includes("/tracks")) {
+      state.saves++;
+      if (state.delay)
+        await new Promise((resolve) => setTimeout(resolve, state.delay));
+      if (state.failSave)
+        await route.fulfill({
+          status: 500,
+          json: { error: "Membership save failed" },
+        });
+      else {
+        const id = path.split("/")[2];
+        if (request.method() === "POST") state.ids.add(id);
+        else state.ids.delete(id);
+        await route.fulfill({ json: {} });
+      }
+    } else await route.fallback();
+  });
+  await page.goto("/songs");
+  await expect(
+    page.getByRole("button", { name: "Actions for Evening Light" }),
+  ).toBeVisible();
+  return state;
+}
+async function openPlaylistSubmenu(page: Page, rightClick = false) {
+  if (rightClick) await page.locator(".track-row").click({ button: "right" });
+  else
+    await page
+      .getByRole("button", { name: "Actions for Evening Light" })
+      .click();
+  await page
+    .getByRole("menuitem", { name: "Add to playlist", exact: true })
+    .click();
+}
+test("playlist submenu persists bookmarks and toggles through both menu entry points", async ({
+  page,
+}) => {
+  const state = await playlistFixture(page);
+  await openPlaylistSubmenu(page);
+  const saved = page.getByRole("menuitemcheckbox", {
+    name: "Late Nights: Added",
+  });
+  await expect(saved).toHaveAttribute("aria-checked", "true");
+  await expect(saved.locator(".lucide-bookmark")).toHaveAttribute(
+    "fill",
+    "currentColor",
+  );
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await saved.click();
+  const empty = page.getByRole("menuitemcheckbox", {
+    name: "Late Nights: Not added",
+  });
+  await expect(empty.locator(".lucide-bookmark")).toHaveAttribute(
+    "fill",
+    "none",
+  );
+  await empty.click();
+  await expect(saved).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await openPlaylistSubmenu(page, true);
+  await expect(saved).toHaveAttribute("aria-checked", "true");
+  await page.reload();
+  await openPlaylistSubmenu(page);
+  await expect(saved).toHaveAttribute("aria-checked", "true");
+  expect(state.loads).toBe(3);
+  expect(state.saves).toBe(2);
+});
+test("playlist submenu handles search, keyboard, failures and narrow screens", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  const state = await playlistFixture(page);
+  state.failLoad = true;
+  await openPlaylistSubmenu(page);
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Membership failed" }),
+  ).toBeVisible();
+  await expect(page.getByRole("menuitemcheckbox")).toHaveCount(0);
+  state.failLoad = false;
+  await page.getByRole("menuitem", { name: "Retry loading playlists" }).click();
+  const saved = page.getByRole("menuitemcheckbox", {
+    name: "Late Nights: Added",
+  });
+  await expect(saved).toBeVisible();
+  const bounds = await page.locator(".playlist-submenu").boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+  await page.getByRole("textbox", { name: "Find a playlist" }).fill("Late");
+  await expect(page.getByRole("menuitemcheckbox")).toHaveCount(1);
+  state.failSave = true;
+  await saved.click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Membership save failed" }),
+  ).toBeVisible();
+  await expect(saved).toHaveAttribute("aria-checked", "true");
+  state.failSave = false;
+  state.delay = 200;
+  await saved.dblclick();
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Late Nights: Not added" }),
+  ).toBeVisible();
+  expect(state.saves).toBe(2);
+  await page.keyboard.press("Escape");
+  const trigger = page.getByRole("menuitem", {
+    name: "Add to playlist",
+    exact: true,
+  });
+  await trigger.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Late Nights: Not added" }),
+  ).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("textbox", { name: "Find a playlist" }),
+  ).toBeFocused();
+  await page.keyboard.type("Morning");
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Morning: Not added" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "Morning: Added" }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+});
+test("playlist submenu creates and adds without duplicating a playlist on retry", async ({
+  page,
+}) => {
+  const state = await playlistFixture(page);
+  await openPlaylistSubmenu(page);
+  await page.getByRole("menuitem", { name: "Create playlist" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create playlist" });
+  await dialog.getByRole("textbox", { name: "Playlist name" }).fill("New mix");
+  state.failSave = true;
+  await dialog
+    .getByRole("button", { name: "Create playlist", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toHaveText("Membership save failed");
+  expect(state.creates).toBe(1);
+  state.failSave = false;
+  await dialog
+    .getByRole("button", { name: "Create playlist", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(state.creates).toBe(1);
+  expect(state.ids.has("p2")).toBe(true);
+});
+
+test.describe("touch playlist submenu", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  test("toggles membership with touch", async ({ page }) => {
+    await playlistFixture(page);
+    await page.getByRole("button", { name: "Actions for Evening Light" }).tap();
+    await page
+      .getByRole("menuitem", { name: "Add to playlist", exact: true })
+      .tap();
+    await page
+      .getByRole("menuitemcheckbox", { name: "Late Nights: Added" })
+      .tap();
+    await expect(
+      page.getByRole("menuitemcheckbox", { name: "Late Nights: Not added" }),
+    ).toHaveAttribute("aria-checked", "false");
+  });
+});

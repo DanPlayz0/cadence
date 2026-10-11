@@ -15,6 +15,30 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /tracks/{id}/playlists:
+    get:
+      summary: Read the current user's playlist memberships for an accessible track
+      security:
+        - session: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Playlist membership IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [playlistIds]
+                properties:
+                  playlistIds:
+                    type: array
+                    items: { type: string }
+        "401": { description: Sign in required }
+        "404": { description: Track missing or inaccessible }
   /admin/sync/lastfm:
     get:
       summary: Read Last.fm instance configuration status without returning credentials

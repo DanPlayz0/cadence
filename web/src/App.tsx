@@ -51,6 +51,7 @@ import {
   Playlist,
   Session,
   setSession,
+  syncSession,
   Track,
   User,
 } from "./services/api";
@@ -81,7 +82,6 @@ import { usePlaybackResume } from "./hooks/usePlaybackResume";
 import { ArtistProfile } from "./pages/ArtistProfile";
 import { ArtistLinks } from "./components/artists/ArtistLinks";
 import { TrackMetadataEditor } from "./components/metadata/TrackMetadataEditor";
-import { PlaylistPicker } from "./components/playlists/PlaylistPicker";
 import { PlaylistIconDialog } from "./components/playlists/PlaylistIconDialog";
 import { playlistTracks } from "./lib/playlistPlayback";
 import { usePanelResize } from "./hooks/usePanelResize";
@@ -343,12 +343,37 @@ export function App() {
     )
       restoreScroll();
   }, [collectionReady, route, view, debounced, query, restoreScroll]);
-  const [addingTrack, setAddingTrack] = useState<Track | null>(null);
   const playlistReturnTrack = useRef<Track | null>(null);
+  const createdPlaylistForTrack = useRef<Playlist | null>(null);
+  useEffect(() => {
+    playlistReturnTrack.current = null;
+    createdPlaylistForTrack.current = null;
+    setAddingPlaylist(false);
+  }, [session?.user.id]);
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query), 250);
     return () => clearTimeout(t);
   }, [query]);
+  async function togglePlaylist(
+    track: Track,
+    destination: Playlist,
+    added: boolean,
+  ) {
+    const userID = activeUser.current;
+    await api(
+      added
+        ? `/playlists/${destination.id}/tracks`
+        : `/playlists/${destination.id}/tracks/${track.id}`,
+      added ? "POST" : "DELETE",
+      added ? { trackId: track.id } : undefined,
+    );
+    if (activeUser.current !== userID) return;
+    invalidateCollection();
+    if (view === `playlist:${destination.id}`) setReload((value) => value + 1);
+    setNotice(
+      `${added ? "Added" : "Removed"} “${track.title}” ${added ? "to" : "from"} ${destination.name}.`,
+    );
+  }
   const refreshPlaylists = useCallback(
     () =>
       api<Playlist[]>("/playlists")
@@ -1342,7 +1367,13 @@ export function App() {
                     setNotice(`Added “${track.title}” to the queue.`);
                   }}
                   onEdit={session.user.admin ? setEditingTrack : undefined}
-                  onAdd={setAddingTrack}
+                  playlists={playlists}
+                  onPlaylistToggle={togglePlaylist}
+                  onAdd={(track) => {
+                    playlistReturnTrack.current = track;
+                    createdPlaylistForTrack.current = null;
+                    setAddingPlaylist(true);
+                  }}
                   onRemove={
                     playlist
                       ? async (t) => {
@@ -1476,46 +1507,31 @@ export function App() {
           }}
         />
       )}
-      {addingTrack && (
-        <PlaylistPicker
-          key={addingTrack.id}
-          track={addingTrack}
-          playlists={playlists}
-          onClose={() => setAddingTrack(null)}
-          onCreate={() => {
-            playlistReturnTrack.current = addingTrack;
-            setAddingTrack(null);
-            setAddingPlaylist(true);
-          }}
-          onAdd={async (destination) => {
-            await api(`/playlists/${destination.id}/tracks`, "POST", {
-              trackId: addingTrack.id,
-            });
-            invalidateCollection();
-            if (view === `playlist:${destination.id}`)
-              setReload((value) => value + 1);
-            setNotice(`Added “${addingTrack.title}” to ${destination.name}.`);
-          }}
-        />
-      )}
       <PlaylistDialog
         open={addingPlaylist}
         onClose={() => {
           setAddingPlaylist(false);
-          if (playlistReturnTrack.current) {
-            setAddingTrack(playlistReturnTrack.current);
-            playlistReturnTrack.current = null;
-          }
+          playlistReturnTrack.current = null;
+          createdPlaylistForTrack.current = null;
         }}
         onCreate={async (name, icon) => {
-          const created = await api<Playlist>("/playlists", "POST", {
-            name,
-            icon,
-          });
+          const revision = syncSession().revision;
+          const track = playlistReturnTrack.current;
+          const created =
+            createdPlaylistForTrack.current ??
+            (await api<Playlist>("/playlists", "POST", { name, icon }));
+          if (syncSession().revision !== revision)
+            throw new Error("Your session changed. Reopen the playlist menu.");
+          if (track) createdPlaylistForTrack.current = created;
           await refreshPlaylists();
+          if (syncSession().revision !== revision)
+            throw new Error("Your session changed. Reopen the playlist menu.");
           invalidateCollection();
-          if (!playlistReturnTrack.current) browse(`playlist:${created.id}`);
-          setNotice(`Created “${created.name}”.`);
+          if (track) await togglePlaylist(track, created, true);
+          else {
+            browse(`playlist:${created.id}`);
+            setNotice(`Created “${created.name}”.`);
+          }
         }}
       />
       {editingPlaylistIcon && session && (

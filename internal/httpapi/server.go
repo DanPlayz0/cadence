@@ -262,6 +262,19 @@ func (s *Server) Handler() http.Handler {
 		}
 		write(w, 200, v)
 	})
+	m.HandleFunc("GET /api/v1/tracks/{id}/playlists", func(w http.ResponseWriter, r *http.Request) {
+		ids, err := s.Repo.TrackPlaylistIDs(r.Context(), current(r).User.ID, r.PathValue("id"))
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		if ids == nil {
+			ids = []string{}
+		}
+		write(w, 200, struct {
+			PlaylistIDs []string `json:"playlistIds"`
+		}{ids})
+	})
 	m.HandleFunc("POST /api/v1/playlists", s.createPlaylist)
 	m.HandleFunc("PATCH /api/v1/playlists/{id}", s.updatePlaylistIcon)
 	m.HandleFunc("DELETE /api/v1/playlists/{id}", func(w http.ResponseWriter, r *http.Request) {

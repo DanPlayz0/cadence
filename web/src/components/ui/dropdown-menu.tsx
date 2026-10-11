@@ -5,6 +5,45 @@ import { cn } from "./utils";
 export const DropdownMenu = Primitive.Root;
 export const DropdownMenuTrigger = Primitive.Trigger;
 export const DropdownMenuLabel = Primitive.Label;
+export const DropdownMenuSub = Primitive.Sub;
+export function DropdownMenuSubTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof Primitive.SubTrigger>) {
+  return (
+    <Primitive.SubTrigger
+      className={cn("ui-dropdown-item", className)}
+      {...props}
+    />
+  );
+}
+export function DropdownMenuSubContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof Primitive.SubContent>) {
+  return (
+    <Primitive.Portal>
+      <Primitive.SubContent
+        data-slot="dropdown-menu-content"
+        collisionPadding={8}
+        sideOffset={6}
+        className={cn("ui-dropdown-content", className)}
+        {...props}
+      />
+    </Primitive.Portal>
+  );
+}
+export function DropdownMenuCheckboxItem({
+  className,
+  ...props
+}: React.ComponentProps<typeof Primitive.CheckboxItem>) {
+  return (
+    <Primitive.CheckboxItem
+      className={cn("ui-dropdown-item", className)}
+      {...props}
+    />
+  );
+}
 export function DropdownMenuContent({
   className,
   sideOffset = 6,

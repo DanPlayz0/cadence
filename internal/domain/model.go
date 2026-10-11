@@ -261,6 +261,7 @@ type PersonalRepository interface {
 	Playback(context.Context, string) (Playback, error)
 	SavePlayback(context.Context, string, Playback) (Playback, error)
 	Playlists(context.Context, string) ([]Playlist, error)
+	TrackPlaylistIDs(context.Context, string, string) ([]string, error)
 	CreatePlaylist(context.Context, string, string, string) (Playlist, error)
 	UpdatePlaylistIcon(context.Context, string, string, string) (Playlist, error)
 	DeletePlaylist(context.Context, string, string) error

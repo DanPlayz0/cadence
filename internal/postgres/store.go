@@ -648,6 +648,11 @@ func (s *Store) Playlists(ctx context.Context, user string) ([]domain.Playlist, 
 	}
 	return out, rows.Err()
 }
+func (s *Store) TrackPlaylistIDs(ctx context.Context, user, track string) ([]string, error) {
+	ids := []string{}
+	err := s.pool.QueryRow(ctx, `SELECT ARRAY(SELECT p.id FROM playlists p JOIN playlist_tracks pt ON pt.playlist_id=p.id WHERE p.user_id=$1 AND pt.track_id=t.id ORDER BY p.id) FROM tracks t WHERE t.id=$2 AND `+allowed, user, track).Scan(&ids)
+	return ids, mapped(err)
+}
 func (s *Store) CreatePlaylist(ctx context.Context, user, name, icon string) (domain.Playlist, error) {
 	if !domain.ValidPlaylistIcon(icon) {
 		return domain.Playlist{}, domain.ErrConflict

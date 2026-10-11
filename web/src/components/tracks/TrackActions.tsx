@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-import {
-  Heart,
-  ListMusic,
-  MoreHorizontal,
-  Plus,
-  X,
-  Pencil,
-} from "lucide-react";
+import { Heart, ListMusic, MoreHorizontal, X, Pencil } from "lucide-react";
 import { useState } from "react";
-import type { Track } from "../../services/api";
+import type { Playlist, Track } from "../../services/api";
+import { PlaylistPicker } from "../playlists/PlaylistPicker";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -22,6 +16,8 @@ export function TrackActions({
   onLike,
   onQueue,
   onAdd,
+  playlists,
+  onPlaylistToggle,
   onRemove,
   onEdit,
   contextPosition,
@@ -32,6 +28,8 @@ export function TrackActions({
   onLike: () => void;
   onQueue: () => void;
   onAdd: () => void;
+  playlists: Playlist[];
+  onPlaylistToggle: (playlist: Playlist, added: boolean) => Promise<void>;
   onRemove?: () => void;
   onEdit?: () => void;
   contextPosition?: { x: number; y: number };
@@ -90,6 +88,7 @@ export function TrackActions({
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          data-track-actions={track.id}
           align={contextPosition ? "start" : "end"}
           onCloseAutoFocus={(event) => {
             if (contextPosition) event.preventDefault();
@@ -106,10 +105,12 @@ export function TrackActions({
             <ListMusic size={18} />
             Add to queue
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onAdd}>
-            <Plus size={18} />
-            Add to playlist…
-          </DropdownMenuItem>
+          <PlaylistPicker
+            track={track}
+            playlists={playlists}
+            onCreate={onAdd}
+            onToggle={onPlaylistToggle}
+          />
           {onEdit && (
             <DropdownMenuItem onSelect={onEdit}>
               <Pencil size={18} />
