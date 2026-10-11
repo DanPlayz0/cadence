@@ -150,6 +150,56 @@
   flex: 1;
   overflow-wrap: anywhere;
 }
+.playlist-options > button > svg {
+  flex-shrink: 0;
+}
+.playlist-option-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.playlist-option-copy small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.playlist-options > button.playlist-added:disabled {
+  opacity: 1;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.playlist-options > button.playlist-added small {
+  color: var(--accent);
+}
+.playlist-save-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+.playlist-save-status svg {
+  flex-shrink: 0;
+}
+.playlist-picker-footer {
+  justify-content: space-between;
+  margin-top: 16px;
+  gap: 12px;
+}
+.playlist-saving {
+  animation: playlist-saving-spin 0.8s linear infinite;
+}
+@keyframes playlist-saving-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .playlist-saving {
+    animation: none;
+  }
+}
 @media (max-width: 700px) {
   .song-actions .song-like {
     display: none;
