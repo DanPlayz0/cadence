@@ -16,6 +16,7 @@ import { QualitySelect, VolumeControl } from "../playback/PlaybackControls";
 import { volumeLabel } from "../../lib/volume";
 import { AccountEditor } from "./AccountEditor";
 import { UserAvatar } from "./UserAvatar";
+import { SyncSettings } from "./SyncSettings";
 import {
   Dialog,
   DialogContent,
@@ -193,6 +194,11 @@ export function AccountMenu({
             )
           ) : (
             <div className="listening-settings">
+              <SyncSettings
+                key={user.id}
+                userId={user.id}
+                onExpired={onExpired}
+              />
               <div className="setting-field">
                 <span>Playback quality</span>
                 <QualitySelect value={quality} onChange={onQuality} />

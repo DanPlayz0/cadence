@@ -52,6 +52,12 @@ vi.mock("../services/api", async (importOriginal) => ({
 import { api } from "../services/api";
 import { usePlayer } from "./usePlayer";
 import { SessionCache } from "../lib/cache";
+vi.mock("../services/sync", () => ({
+  flushListens: vi.fn(),
+  submitListen: vi.fn(),
+  submitNowPlaying: vi.fn(),
+}));
+import { submitListen, submitNowPlaying } from "../services/sync";
 
 class TestAudio extends EventTarget {
   src = "";
@@ -60,6 +66,8 @@ class TestAudio extends EventTarget {
   paused = true;
   volume = 1;
   supported = true;
+  readyState = 4;
+  seeking = false;
   onloadedmetadata: (() => void) | null = null;
   canPlayType() {
     return this.supported ? "probably" : "";
@@ -78,6 +86,7 @@ class TestAudio extends EventTarget {
     this.paused = false;
     this.onloadedmetadata?.();
     this.dispatchEvent(new Event("play"));
+    this.dispatchEvent(new Event("playing"));
   }
 }
 const track = (id: string, codec = "mp3"): Track => ({
@@ -143,6 +152,8 @@ beforeEach(() => {
     },
   );
   vi.mocked(api).mockClear();
+  vi.mocked(submitListen).mockClear();
+  vi.mocked(submitNowPlaying).mockClear();
   render();
 });
 afterEach(() => {
@@ -152,6 +163,62 @@ afterEach(() => {
 });
 
 describe("Lossless playback integration", () => {
+  it("separates local play counts from qualified scrobbles and preserves identity across quality changes", async () => {
+    let wall = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => wall);
+    player.play([track("scrobble", "flac")]);
+    await settle();
+    expect(submitNowPlaying).toHaveBeenCalledTimes(1);
+    for (let second = 1; second <= 30; second++) {
+      wall = second * 1000;
+      audio.currentTime = second;
+      audio.dispatchEvent(new Event("timeupdate"));
+    }
+    expect(
+      vi.mocked(api).mock.calls.filter(([path]) => path.endsWith("/plays")),
+    ).toHaveLength(1);
+    expect(submitListen).not.toHaveBeenCalled();
+    player.changeQuality("high");
+    await settle();
+    expect(submitNowPlaying).toHaveBeenCalledTimes(1);
+    for (let second = 31; second <= 60; second++) {
+      wall = second * 1000;
+      audio.currentTime = second;
+      audio.dispatchEvent(new Event("timeupdate"));
+    }
+    expect(submitListen).toHaveBeenCalledTimes(1);
+    const event = vi.mocked(submitListen).mock.calls[0][0];
+    expect(event.eventId).toBe(
+      vi.mocked(submitNowPlaying).mock.calls[0][0].eventId,
+    );
+    expect(event.heard).toBe(50);
+    expect(
+      vi.mocked(api).mock.calls.filter(([path]) => path.endsWith("/plays")),
+    ).toHaveLength(1);
+  });
+  it("does not qualify seeking, buffering, or paused time", async () => {
+    let wall = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => wall);
+    player.play([track("timing", "flac")]);
+    await settle();
+    wall = 1000;
+    audio.currentTime = 1;
+    audio.dispatchEvent(new Event("timeupdate"));
+    wall = 2000;
+    audio.currentTime = 70;
+    audio.dispatchEvent(new Event("seeking"));
+    audio.dispatchEvent(new Event("seeked"));
+    audio.dispatchEvent(new Event("timeupdate"));
+    audio.readyState = 2;
+    wall = 62000;
+    audio.currentTime = 71;
+    audio.dispatchEvent(new Event("timeupdate"));
+    audio.pause();
+    wall = 122000;
+    audio.currentTime = 90;
+    audio.dispatchEvent(new Event("timeupdate"));
+    expect(submitListen).not.toHaveBeenCalled();
+  });
   it("blocks MP3, clears previous audio, and prevents media controls from bypassing policy", async () => {
     player.play([track("flac", "flac")]);
     await settle();

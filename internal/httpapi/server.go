@@ -27,6 +27,7 @@ import (
 	"cadence/internal/library"
 	"cadence/internal/lyrics"
 	"cadence/internal/media"
+	"cadence/internal/scrobble"
 	"cadence/internal/soulseek"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -46,6 +47,7 @@ type Server struct {
 	passwordLimiter loginLimiter
 	Lyrics          *lyrics.Client
 	Soulseek        *soulseek.Service
+	Sync            *scrobble.Service
 	soulseekLimiter loginLimiter
 }
 type sessionKey struct{}
@@ -142,6 +144,17 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("PUT /api/v1/me", s.updateProfile)
 	m.HandleFunc("GET /api/v1/me/playback", s.playback)
 	m.HandleFunc("PUT /api/v1/me/playback", s.playback)
+	m.HandleFunc("GET /api/v1/sync", s.syncStatus)
+	m.HandleFunc("POST /api/v1/sync/lastfm/authorize", s.syncAuthorize)
+	m.HandleFunc("GET /api/v1/sync/lastfm/callback", s.syncCallback)
+	m.HandleFunc("POST /api/v1/sync/listenbrainz/connect", s.syncConnect)
+	m.HandleFunc("PUT /api/v1/sync/{provider}/preferences", s.syncPreferences)
+	m.HandleFunc("DELETE /api/v1/sync/{provider}", s.syncDisconnect)
+	m.HandleFunc("POST /api/v1/sync/listens", s.syncListen)
+	m.HandleFunc("POST /api/v1/sync/now-playing", s.syncNowPlaying)
+	m.HandleFunc("GET /api/v1/sync/{provider}/exports/preview", s.syncExportPreview)
+	m.HandleFunc("POST /api/v1/sync/{provider}/exports", s.syncExportStart)
+	m.HandleFunc("GET /api/v1/sync/exports/{id}", s.syncExportStatus)
 	m.HandleFunc("POST /api/v1/me/password", s.changePassword)
 	m.HandleFunc("PUT /api/v1/me/avatar", s.updateAvatar)
 	m.HandleFunc("DELETE /api/v1/me/avatar", s.updateAvatar)

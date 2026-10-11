@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, APIError, cover, stream, Track } from "../services/api";
+import {
+  countListening,
+  qualifiedListen,
+  type SyncPlayback,
+} from "../lib/scrobbling";
+import { flushListens, submitListen, submitNowPlaying } from "../services/sync";
 import { volumeGain } from "../lib/volume";
 import { completeBlob, SessionCache } from "../lib/cache";
 import {
@@ -28,6 +34,7 @@ import {
   type QueueSection,
 } from "../lib/queue";
 type Resume = {
+  sync?: SyncPlayback;
   position: number;
   autoplay: boolean;
   event: string;
@@ -92,6 +99,7 @@ export function usePlayer(
     fallback: boolean;
     restorePosition: number | null;
     resume: Resume;
+    sync: SyncPlayback;
   } | null>(null);
   const pending = useRef(new Map<string, AbortController>());
   const callbacks = useRef({ onError, onExpired });
@@ -125,6 +133,7 @@ export function usePlayer(
       event: v.event,
       heard: v.heard,
       recorded: v.recorded,
+      sync: v.sync,
     };
     const block = {
       sequence: loadSeq.current,
@@ -189,6 +198,14 @@ export function usePlayer(
         fallback: forced === "high",
         restorePosition: resume?.position ?? 0,
         resume: playbackResume,
+        sync: resume?.sync ?? {
+          startedAt: 0,
+          heard: 0,
+          submitted: false,
+          nowSent: false,
+          position: resume?.position ?? 0,
+          wall: performance.now(),
+        },
       };
       if (policy.block) {
         const block = {
@@ -484,6 +501,27 @@ export function usePlayer(
       const delta = a.currentTime - v.last;
       v.last = a.currentTime;
       if (delta > 0 && delta < 3 && !a.paused) v.heard += delta;
+      countListening(
+        v.sync,
+        a.currentTime,
+        performance.now(),
+        !a.paused && !a.seeking && a.readyState >= 3,
+      );
+      const duration = v.track.duration > 0 ? v.track.duration : a.duration;
+      if (
+        !v.sync.submitted &&
+        v.sync.startedAt > 0 &&
+        qualifiedListen(duration, v.sync.heard)
+      ) {
+        v.sync.submitted = true;
+        submitListen({
+          eventId: v.event,
+          trackId: v.track.id,
+          startedAt: v.sync.startedAt,
+          heard: v.sync.heard,
+          duration,
+        });
+      }
       const threshold = Math.min(
         30,
         Math.max(1, (a.duration || v.track.duration) / 2),
@@ -505,6 +543,35 @@ export function usePlayer(
           : (active.current?.track.duration ?? 0),
       );
     const play = () => setPlaying(true);
+    const playing = () => {
+      const v = active.current;
+      if (!v) return;
+      v.sync.position = a.currentTime;
+      v.sync.wall = performance.now();
+      if (!v.sync.startedAt) v.sync.startedAt = Math.floor(Date.now() / 1000);
+      if (!v.sync.nowSent) {
+        v.sync.nowSent = true;
+        submitNowPlaying({
+          eventId: v.event,
+          trackId: v.track.id,
+          startedAt: v.sync.startedAt,
+          heard: 0,
+          duration:
+            v.track.duration > 0
+              ? v.track.duration
+              : Number.isFinite(a.duration)
+                ? a.duration
+                : 0,
+        });
+      }
+    };
+    const discontinuity = () => {
+      const v = active.current;
+      if (v) {
+        v.sync.position = a.currentTime;
+        v.sync.wall = performance.now();
+      }
+    };
     const pause = () => setPlaying(false);
     const ended = () => {
       const s = state.current;
@@ -528,6 +595,7 @@ export function usePlayer(
           event: v.event,
           heard: v.heard,
           recorded: v.recorded,
+          sync: v.sync,
         });
         return;
       }
@@ -542,6 +610,10 @@ export function usePlayer(
     a.addEventListener("timeupdate", time);
     a.addEventListener("loadedmetadata", loaded);
     a.addEventListener("play", play);
+    a.addEventListener("playing", playing);
+    a.addEventListener("seeking", discontinuity);
+    a.addEventListener("seeked", discontinuity);
+    a.addEventListener("waiting", discontinuity);
     a.addEventListener("pause", pause);
     a.addEventListener("ended", ended);
     a.addEventListener("error", error);
@@ -549,6 +621,10 @@ export function usePlayer(
       a.removeEventListener("timeupdate", time);
       a.removeEventListener("loadedmetadata", loaded);
       a.removeEventListener("play", play);
+      a.removeEventListener("playing", playing);
+      a.removeEventListener("seeking", discontinuity);
+      a.removeEventListener("seeked", discontinuity);
+      a.removeEventListener("waiting", discontinuity);
       a.removeEventListener("pause", pause);
       a.removeEventListener("ended", ended);
       a.removeEventListener("error", error);
@@ -559,15 +635,21 @@ export function usePlayer(
   }, [volume]);
   useEffect(() => {
     const online = () => {
+      flushListens();
       setOffline(false);
       void refresh();
     };
     const off = () => setOffline(true);
     window.addEventListener("online", online);
     window.addEventListener("offline", off);
+    window.addEventListener("cadence-session", flushListens);
+    flushListens();
+    const syncTimer = window.setInterval(flushListens, 30000);
     const timer = window.setInterval(() => void refresh(), 60000);
     return () => {
       clearInterval(timer);
+      clearInterval(syncTimer);
+      window.removeEventListener("cadence-session", flushListens);
       window.removeEventListener("online", online);
       window.removeEventListener("offline", off);
       clear();
@@ -634,6 +716,7 @@ export function usePlayer(
         event: v.event,
         heard: v.heard,
         recorded: v.recorded,
+        sync: v.sync,
       }
     );
   }

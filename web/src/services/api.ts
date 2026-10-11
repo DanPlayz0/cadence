@@ -46,8 +46,17 @@ export type Page = {
 export type Session = { user: User; csrf: string };
 declare const __CLIENT_VERSION__: string;
 let csrf = "";
+let sessionUser = "";
+let sessionRevision = 0;
+export function syncSession() {
+  return { userId: sessionUser, revision: sessionRevision };
+}
 export function setSession(s: Session | null) {
+  if (sessionUser !== (s?.user.id ?? "") || csrf !== (s?.csrf ?? ""))
+    sessionRevision++;
+  sessionUser = s?.user.id ?? "";
   csrf = s?.csrf ?? "";
+  window.dispatchEvent(new Event("cadence-session"));
 }
 export class APIError extends Error {
   constructor(

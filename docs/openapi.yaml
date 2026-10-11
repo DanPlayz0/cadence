@@ -14,6 +14,231 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /sync:
+    get:
+      summary: Read per-user sync connections and health
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncStatus"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/lastfm/authorize:
+    post:
+      summary: Start a ten-minute Last.fm browser authorization
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncAuthorization"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/lastfm/callback:
+    get:
+      summary: Consume account-bound Last.fm authorization and connect
+      security:
+        - session: []
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string } }
+        - { name: token, in: query, required: true, schema: { type: string } }
+      responses:
+        "303": { description: Connected; redirect to Songs }
+        "400": { description: Invalid, expired, replayed, or failed authorization }
+        "401": { description: Sign in required }
+        "503": { description: Sync unavailable }
+  /sync/listenbrainz/connect:
+    post:
+      summary: Validate and connect a ListenBrainz personal token
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncToken"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncOK"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/{provider}/preferences:
+    put:
+      summary: Set per-service sync preferences; cancel disabled pending categories
+      security:
+        - session: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [lastfm, listenbrainz] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPreferences"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncOK"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/{provider}:
+    delete:
+      summary: Disconnect and cancel unsent work
+      security:
+        - session: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [lastfm, listenbrainz] } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncOK"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/listens:
+    post:
+      summary: Accept an idempotent qualified listen; snapshot accessible catalog metadata
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncEvent"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncOK"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/now-playing:
+    post:
+      summary: Send a transient now-playing notification without retries
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncEvent"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncOK"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/{provider}/exports/preview:
+    get:
+      summary: Preview verified history and excluded local plays
+      security:
+        - session: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [lastfm, listenbrainz] } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncExport"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/{provider}/exports:
+    post:
+      summary: Explicitly queue verified history; plays preference must be enabled
+      security:
+        - session: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [lastfm, listenbrainz] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncExportRange"
+      responses:
+        "202":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncExport"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
+  /sync/exports/{id}:
+    get:
+      summary: Read owned export progress and first 25 rejected records
+      security:
+        - session: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncExport"
+        "400": { description: Invalid input or expired authorization }
+        "401": { description: Sign in required }
+        "403": { description: CSRF token or origin rejected }
+        "404": { description: Resource not owned or accessible }
+        "503": { description: Sync unavailable }
   /soulseek/capabilities:
     get:
       summary: Read current user Soulseek capabilities
@@ -4540,6 +4765,100 @@ components:
       in: cookie
       name: cadence_session
   schemas:
+    SyncOK:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+    SyncAuthorization:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri }
+    SyncToken:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string, minLength: 16, maxLength: 256, writeOnly: true }
+    SyncPreferences:
+      type: object
+      additionalProperties: false
+      required: [plays, nowPlaying, likes]
+      properties:
+        plays: { type: boolean, default: true }
+        nowPlaying: { type: boolean, default: true }
+        likes: { type: boolean, default: false }
+    SyncEvent:
+      type: object
+      additionalProperties: false
+      required: [eventId, trackId, startedAt, heard, duration]
+      properties:
+        eventId: { type: string, minLength: 16, maxLength: 100, pattern: "^[0-9a-fA-F-]+$" }
+        trackId: { type: string, minLength: 1, maxLength: 120 }
+        startedAt:
+          type: integer
+          format: int64
+          description: Original playback start in Unix seconds; at most 30 days old.
+        heard:
+          type: number
+          minimum: 0
+          maximum: 172800
+          description: Actual listening seconds, excluding seek, pause, and buffering.
+        duration:
+          type: number
+          minimum: 0
+          maximum: 172800
+          description: Seconds; server catalog duration takes precedence when known.
+    SyncConnection:
+      type: object
+      properties:
+        provider: { type: string, enum: [lastfm, listenbrainz] }
+        username: { type: string }
+        plays: { type: boolean }
+        nowPlaying: { type: boolean }
+        likes: { type: boolean }
+        paused: { type: boolean }
+        error: { type: string }
+        lastSuccess: { type: string, format: date-time, nullable: true }
+        pending: { type: integer }
+        waitingFeedback: { type: integer, description: Like changes awaiting a ListenBrainz recording identifier. }
+    SyncStatus:
+      type: object
+      properties:
+        connections:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncConnection"
+        lastfmConfigured: { type: boolean }
+        lastfmAuthorizationAvailable: { type: boolean }
+    SyncExportRange:
+      type: object
+      additionalProperties: false
+      required: [from, to]
+      properties:
+        from: { type: string, format: date-time, description: Inclusive start. }
+        to: { type: string, format: date-time, description: Exclusive end. }
+    SyncExport:
+      type: object
+      properties:
+        id: { type: string, description: Empty for a preview. }
+        eligible: { type: integer }
+        previouslySent: { type: integer }
+        excluded: { type: integer }
+        pending: { type: integer }
+        sent: { type: integer }
+        rejected: { type: integer }
+        cancelled: { type: integer }
+        failures:
+          type: array
+          maxItems: 25
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              artist: { type: string }
+              error: { type: string }
     LibrarySummary:
       type: object
       required:

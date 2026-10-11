@@ -18,6 +18,7 @@ import (
 	"cadence/internal/library"
 	"cadence/internal/media"
 	"cadence/internal/postgres"
+	"cadence/internal/scrobble"
 	"cadence/internal/soulseek"
 )
 
@@ -116,6 +117,12 @@ func run() error {
 	}
 	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://"), AllowAnyOrigin: allowAnyOrigin}}
 	app.Soulseek = soul
+	syncService, err := scrobble.New(repo, repo, scrobble.NewProviders(os.Getenv("LASTFM_API_KEY"), os.Getenv("LASTFM_API_SECRET")), data)
+	if err != nil {
+		return fmt.Errorf("initialize sync: %w", err)
+	}
+	app.Sync = syncService
+	go syncService.Run(ctx)
 	go soul.Run(ctx)
 	server := &http.Server{Addr: env("LISTEN_ADDR", ":8080"), Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	go func() {

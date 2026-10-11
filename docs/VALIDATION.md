@@ -1,5 +1,12 @@
 # Validation record
 
+## Last.fm and ListenBrainz sync (2026-10-10)
+
+- `go test ./...` and `go vet ./...` passed with a real disposable PostgreSQL 17 container. Sync tests cover account-bound, expiring, single-use authorization; session/CSRF/origin/access checks; catalog duration and metadata precedence; credential redaction/encryption/restart recovery; transactional listen deduplication; coalesced likes and stale acknowledgements; cancellation; paused authorization and reconnection; ListenBrainz identifier-dependent feedback; history previews/exports/account isolation; and upgrade from schema 14 without changing local play records.
+- Mock provider servers verify Last.fm signatures/session exchange, original timestamps, ignored responses and API errors, ListenBrainz token validation/now-playing query parameters/feedback clearing, retry-after handling, and worker retry/auth/permanent-failure classification. No real provider accounts or credentials were used.
+- Frontend: 78 tests across 16 files passed, including playback timing, separate local/external thresholds, quality-change event identity, browser queue persistence, retries, permanent failures, and account switches during in-flight requests. TypeScript and production Vite build passed; the existing bundle-size warning remains. Environment setup tests passed. OpenAPI validation passed with 75 paths.
+- The in-app browser checked the running production build against the disposable database: Listening settings rendered both services, configuration guidance, connection health, independent switches, and history export controls in a narrow viewport. A seeded fake connection/listen produced the expected export preview, and disabling plays disabled export. No live authorization or submission was attempted. Test app data and build files stayed in ignored `.local/` and `.cache/`; the temporary server/database were removed after verification.
+
 ## Lossless playback (2026-10-10)
 
 - Added Lossless playback for original FLAC, ALAC, and uncompressed PCM sources, with MP3 exceptions for one queue occurrence or the open session. Other lossy/unknown sources stay blocked; unsupported originals never fall back automatically to MP3.

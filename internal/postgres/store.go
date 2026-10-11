@@ -60,6 +60,9 @@ var librariesMigration string
 //go:embed 014_soulseek.sql
 var soulseekMigration string
 
+//go:embed 015_sync.sql
+var syncMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -257,6 +260,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(14)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=15)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, syncMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(15)"); err != nil {
 			return err
 		}
 	}
@@ -614,15 +628,34 @@ func (s *Store) RemovePlaylistTrack(ctx context.Context, user, playlist, track s
 	return affected(s.pool.Exec(ctx, "DELETE FROM playlist_tracks pt USING playlists p WHERE p.id=pt.playlist_id AND p.user_id=$1 AND p.id=$2 AND pt.track_id=$3", user, playlist, track))
 }
 func (s *Store) Like(ctx context.Context, user, track string, on bool) error {
-	if _, err := s.Track(ctx, user, track); err != nil {
+	t, err := s.Track(ctx, user, track)
+	if err != nil {
 		return err
 	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	var changed int64
 	if on {
-		_, err := s.pool.Exec(ctx, "INSERT INTO likes VALUES($1,$2) ON CONFLICT DO NOTHING", user, track)
+		tag, e := tx.Exec(ctx, "INSERT INTO likes VALUES($1,$2) ON CONFLICT DO NOTHING", user, track)
+		err = e
+		changed = tag.RowsAffected()
+	} else {
+		tag, e := tx.Exec(ctx, "DELETE FROM likes WHERE user_id=$1 AND track_id=$2", user, track)
+		err = e
+		changed = tag.RowsAffected()
+	}
+	if err != nil {
 		return err
 	}
-	_, err := s.pool.Exec(ctx, "DELETE FROM likes WHERE user_id=$1 AND track_id=$2", user, track)
-	return err
+	if changed > 0 && strings.TrimSpace(t.Title) != "" && strings.TrimSpace(t.Artist) != "" && !strings.EqualFold(t.Artist, "Unknown artist") {
+		if err = enqueueSyncLike(ctx, tx, user, domain.SyncPayload{TrackID: t.ID, Title: t.Title, Artist: t.Artist, Album: t.Album, Liked: on}); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }
 func (s *Store) RecordPlay(ctx context.Context, user, track, event string) error {
 	if _, err := s.Track(ctx, user, track); err != nil {
