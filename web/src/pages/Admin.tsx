@@ -63,12 +63,6 @@ type Scan = {
 };
 const sections = [
   {
-    id: "sync",
-    label: "Sync",
-    icon: RefreshCw,
-    description: "Configure listening sync services for this instance.",
-  },
-  {
     id: "soulseek",
     label: "Soulseek",
     icon: Search,
@@ -110,6 +104,12 @@ const sections = [
     label: "Metadata",
     icon: Tags,
     description: "Configure external metadata providers.",
+  },
+  {
+    id: "sync",
+    label: "Last.fm",
+    icon: RefreshCw,
+    description: "Configure Last.fm application credentials for this instance.",
   },
   {
     id: "suggestions",
