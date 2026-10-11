@@ -6,6 +6,18 @@ import { pwa } from "./pwa.mjs";
 export default defineConfig({
   define: { __CLIENT_VERSION__: JSON.stringify(packageInfo.version) },
   plugins: [react(), pwa()],
+  build: {
+    rollupOptions: {
+      output: {
+        chunkFileNames: (chunk) =>
+          chunk.facadeModuleId
+            ?.replaceAll("\\", "/")
+            .includes("/lucide-react/dist/esm/icons/")
+            ? "assets/playlist-icon-[name]-[hash].js"
+            : "assets/[name]-[hash].js",
+      },
+    },
+  },
   server: {
     proxy: {
       "/api": "http://127.0.0.1:6450",

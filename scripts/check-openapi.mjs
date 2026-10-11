@@ -8,7 +8,7 @@ if (spec.openapi !== "3.0.3" || !spec.paths || !spec.components)
   throw new Error("Invalid OpenAPI document");
 const routeSource = fs.readdirSync("internal/httpapi").filter(name => name.endsWith(".go") && !name.endsWith("_test.go")).map(name => fs.readFileSync(`internal/httpapi/${name}`, "utf8")).join("\n");
 for (const match of routeSource.matchAll(
-  /HandleFunc\("(GET|POST|PUT|DELETE|HEAD) \/api\/v1([^" ]+)"/g,
+  /HandleFunc\("(GET|POST|PUT|PATCH|DELETE|HEAD) \/api\/v1([^" ]+)"/g,
 )) {
   const [, method, path] = match;
   if (!spec.paths[path]?.[method.toLowerCase()])

@@ -2,10 +2,5 @@
 package domain
 
 func ValidPlaylistIcon(icon string) bool {
-	switch icon {
-	case "", "music", "heart", "headphones", "disc", "sparkles", "moon":
-		return true
-	default:
-		return false
-	}
+	return icon == "" || playlistIconNames[icon]
 }

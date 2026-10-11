@@ -8,34 +8,10 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Disc3,
-  Headphones,
-  Heart,
-  Moon,
-  Music2,
-  Sparkles,
-  X,
-} from "lucide-react";
-
-const icons = {
-  music: Music2,
-  heart: Heart,
-  headphones: Headphones,
-  disc: Disc3,
-  sparkles: Sparkles,
-  moon: Moon,
-};
-export function PlaylistIcon({
-  name,
-  size = 19,
-}: {
-  name?: string;
-  size?: number;
-}) {
-  const Icon = icons[name as keyof typeof icons] || Music2;
-  return <Icon size={size} aria-hidden="true" />;
-}
+import { X } from "lucide-react";
+import { PlaylistIcon } from "./PlaylistIcon";
+import { PlaylistIconPicker } from "./PlaylistIconPicker";
+export { PlaylistIcon } from "./PlaylistIcon";
 
 export function PlaylistDialog({
   open,
@@ -117,24 +93,12 @@ export function PlaylistDialog({
               onChange={(event) => setName(event.target.value)}
             />
           </label>
-          <fieldset disabled={busy}>
-            <legend>Choose an icon</legend>
-            <div className="playlist-icons">
-              {Object.keys(icons).map((value) => (
-                <label key={value} className={value === icon ? "selected" : ""}>
-                  <Input
-                    type="radio"
-                    name="playlist-icon"
-                    value={value}
-                    checked={value === icon}
-                    onChange={() => setIcon(value)}
-                  />
-                  <PlaylistIcon name={value} size={22} />
-                  <span>{value}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <PlaylistIconPicker
+            key={String(open)}
+            value={icon}
+            onChange={setIcon}
+            disabled={busy}
+          />
           {error && (
             <p role="alert" className="auth-error">
               {error}

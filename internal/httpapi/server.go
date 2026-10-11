@@ -263,6 +263,7 @@ func (s *Server) Handler() http.Handler {
 		write(w, 200, v)
 	})
 	m.HandleFunc("POST /api/v1/playlists", s.createPlaylist)
+	m.HandleFunc("PATCH /api/v1/playlists/{id}", s.updatePlaylistIcon)
 	m.HandleFunc("DELETE /api/v1/playlists/{id}", func(w http.ResponseWriter, r *http.Request) {
 		s.ok(w, s.Repo.DeletePlaylist(r.Context(), current(r).User.ID, r.PathValue("id")))
 	})
@@ -718,6 +719,24 @@ func (s *Server) createPlaylist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 201, p)
+}
+func (s *Server) updatePlaylistIcon(w http.ResponseWriter, r *http.Request) {
+	var v struct {
+		Icon string `json:"icon"`
+	}
+	if !decode(w, r, &v) {
+		return
+	}
+	if v.Icon == "" || !domain.ValidPlaylistIcon(v.Icon) {
+		write(w, 400, map[string]string{"error": "Invalid playlist icon"})
+		return
+	}
+	p, err := s.Repo.UpdatePlaylistIcon(r.Context(), current(r).User.ID, r.PathValue("id"), v.Icon)
+	if err != nil {
+		failure(w, err)
+		return
+	}
+	write(w, 200, p)
 }
 func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var v struct {

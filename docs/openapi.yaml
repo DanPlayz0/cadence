@@ -2669,9 +2669,62 @@ paths:
                 icon:
                   type: string
                   default: music
-                  enum: ["", music, heart, headphones, disc, sparkles, moon]
-                  description: Optional built-in playlist icon; omitted or empty uses music.
+                  description: Optional icon name from the bundled Lucide catalog (lowercase, hyphen-separated). Omitted or empty uses music. Legacy music and disc retain their original artwork.
   /playlists/{id}:
+    patch:
+      summary: Change own playlist icon
+      tags:
+        - Music
+      security:
+        - session: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [icon]
+              properties:
+                icon:
+                  type: string
+                  minLength: 1
+                  description: Supported icon name from the bundled Lucide catalog.
+                  example: tree-pine
+      responses:
+        "200":
+          description: Updated playlist; name and tracks are unchanged.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playlist"
+        "400":
+          description: Invalid JSON, missing icon, or unsupported icon.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sign in required
+        "403":
+          description: CSRF or origin rejected
+        "404":
+          description: Playlist does not exist or belongs to another user.
+        "415":
+          description: Use application/json
+        "500":
+          description: Server failure
     delete:
       summary: Delete own playlist
       tags:
@@ -5253,7 +5306,7 @@ components:
       properties:
         icon:
           type: string
-          enum: [music, heart, headphones, disc, sparkles, moon]
+          description: Icon name from the bundled Lucide catalog. Legacy music and disc use Music2 and Disc3 artwork.
         id:
           type: string
         name:

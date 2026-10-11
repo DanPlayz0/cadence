@@ -6,8 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
-    "test": "vitest run"
+    "build": "npm run icons:check && tsc --noEmit && vite build",
+    "test": "vitest run",
+    "icons:generate": "node scripts/playlist-icons.mjs",
+    "icons:check": "node scripts/playlist-icons.mjs --check"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.2.0",

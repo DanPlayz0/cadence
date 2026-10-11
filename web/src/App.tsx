@@ -70,6 +70,7 @@ import { ArtistProfile } from "./pages/ArtistProfile";
 import { ArtistLinks } from "./components/artists/ArtistLinks";
 import { TrackMetadataEditor } from "./components/metadata/TrackMetadataEditor";
 import { PlaylistPicker } from "./components/playlists/PlaylistPicker";
+import { PlaylistIconDialog } from "./components/playlists/PlaylistIconDialog";
 import { playlistTracks } from "./lib/playlistPlayback";
 import { usePanelResize } from "./hooks/usePanelResize";
 import { Button } from "./components/ui/button";
@@ -159,6 +160,7 @@ export function App() {
     if (!session) {
       player.clear();
       setPlaylists([]);
+      setEditingPlaylistIcon(null);
     }
   }, [session, player.clear]);
   useEffect(() => {
@@ -212,6 +214,8 @@ export function App() {
   const selectedAlbumId = route.albumId;
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [addingPlaylist, setAddingPlaylist] = useState(false);
+  const [editingPlaylistIcon, setEditingPlaylistIcon] =
+    useState<Playlist | null>(null);
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
   const collectionKey = JSON.stringify([
     view,
@@ -1124,6 +1128,14 @@ export function App() {
                     Delete playlist
                   </button>
                 )}
+                {playlist && (
+                  <button
+                    className="subtle"
+                    onClick={() => setEditingPlaylistIcon(playlist)}
+                  >
+                    Change icon
+                  </button>
+                )}
               </div>
             </div>
             {collectionReady && collectionError?.key === collectionKey && (
@@ -1403,6 +1415,25 @@ export function App() {
           setNotice(`Created “${created.name}”.`);
         }}
       />
+      {editingPlaylistIcon && session && (
+        <PlaylistIconDialog
+          key={editingPlaylistIcon.id}
+          name={editingPlaylistIcon.name}
+          initialIcon={editingPlaylistIcon.icon}
+          onClose={() => setEditingPlaylistIcon(null)}
+          onSave={async (icon) => {
+            const updated = await api<Playlist>(
+              `/playlists/${editingPlaylistIcon.id}`,
+              "PATCH",
+              { icon },
+            );
+            setPlaylists((current) =>
+              current.map((item) => (item.id === updated.id ? updated : item)),
+            );
+            setNotice(`Updated icon for “${updated.name}”.`);
+          }}
+        />
+      )}
       <PlaybackPanel
         fromNowPlaying={fromNowPlaying}
         open={queueOpen}

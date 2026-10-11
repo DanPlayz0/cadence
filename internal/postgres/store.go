@@ -66,6 +66,9 @@ var syncMigration string
 //go:embed 016_playback_queue.sql
 var playbackQueueMigration string
 
+//go:embed 017_playlist_icon_catalog.sql
+var playlistIconCatalogMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -285,6 +288,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(16)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=17)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, playlistIconCatalogMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(17)"); err != nil {
 			return err
 		}
 	}
@@ -621,6 +635,9 @@ func (s *Store) Playlists(ctx context.Context, user string) ([]domain.Playlist, 
 	return out, rows.Err()
 }
 func (s *Store) CreatePlaylist(ctx context.Context, user, name, icon string) (domain.Playlist, error) {
+	if !domain.ValidPlaylistIcon(icon) {
+		return domain.Playlist{}, domain.ErrConflict
+	}
 	if icon == "" {
 		icon = "music"
 	}
@@ -630,6 +647,14 @@ func (s *Store) CreatePlaylist(ctx context.Context, user, name, icon string) (do
 }
 func (s *Store) DeletePlaylist(ctx context.Context, user, id string) error {
 	return affected(s.pool.Exec(ctx, "DELETE FROM playlists WHERE id=$1 AND user_id=$2", id, user))
+}
+func (s *Store) UpdatePlaylistIcon(ctx context.Context, user, id, icon string) (domain.Playlist, error) {
+	if icon == "" || !domain.ValidPlaylistIcon(icon) {
+		return domain.Playlist{}, domain.ErrConflict
+	}
+	var p domain.Playlist
+	err := s.pool.QueryRow(ctx, "UPDATE playlists SET icon=$3 WHERE id=$2 AND user_id=$1 RETURNING id,name,icon", user, id, icon).Scan(&p.ID, &p.Name, &p.Icon)
+	return p, mapped(err)
 }
 func (s *Store) AddPlaylistTrack(ctx context.Context, user, playlist, track string) error {
 	if _, err := s.Track(ctx, user, track); err != nil {

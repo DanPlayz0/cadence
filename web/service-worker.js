@@ -34,13 +34,24 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE).then((cache) => cache.match("/offline.html")),
       ),
     );
-  } else if (!url.search && FILES.includes(url.pathname)) {
+  } else if (
+    !url.search &&
+    (FILES.includes(url.pathname) ||
+      /^\/assets\/playlist-icon-[^/]+\.js$/.test(url.pathname))
+  ) {
     event.respondWith(
-      caches
-        .open(CACHE)
-        .then(
-          async (cache) => (await cache.match(url.pathname)) || fetch(request),
-        ),
+      caches.open(CACHE).then(async (cache) => {
+        const cached = await cache.match(url.pathname);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) {
+          // Storage limits must not prevent a successfully fetched icon from rendering.
+          try {
+            await cache.put(url.pathname, response.clone());
+          } catch {}
+        }
+        return response;
+      }),
     );
   }
 });

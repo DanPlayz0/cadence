@@ -100,6 +100,30 @@ func Run(t *testing.T, newRepo func(*testing.T) domain.Repository) {
 		must(t, r.AddPlaylistTrack(ctx, listener.ID, pl.ID, id))
 		must(t, r.AddPlaylistTrack(ctx, listener.ID, pl.ID, id)) // Duplicate additions are idempotent.
 		must(t, r.AddPlaylistTrack(ctx, listener.ID, pl.ID, id2))
+		updated, e := r.UpdatePlaylistIcon(ctx, listener.ID, pl.ID, "tree-pine")
+		must(t, e)
+		if updated.ID != pl.ID || updated.Name != pl.Name || updated.Icon != "tree-pine" {
+			t.Fatal("icon update changed playlist identity or name")
+		}
+		owned, e = r.Playlists(ctx, listener.ID)
+		must(t, e)
+		if len(owned) != 1 || owned[0].Icon != "tree-pine" {
+			t.Fatal("updated icon not persisted")
+		}
+		if _, e = r.UpdatePlaylistIcon(ctx, admin.ID, pl.ID, "coffee"); !errors.Is(e, domain.ErrNotFound) {
+			t.Fatal("foreign playlist update permitted")
+		}
+		if _, e = r.UpdatePlaylistIcon(ctx, listener.ID, "missing", "coffee"); !errors.Is(e, domain.ErrNotFound) {
+			t.Fatal("missing playlist update did not return not found")
+		}
+		for _, icon := range []string{"", "unknown"} {
+			if _, e = r.UpdatePlaylistIcon(ctx, listener.ID, pl.ID, icon); e == nil {
+				t.Fatal("invalid repository icon update accepted")
+			}
+		}
+		if _, e = r.CreatePlaylist(ctx, listener.ID, "Invalid", "unknown"); e == nil {
+			t.Fatal("invalid repository icon creation accepted")
+		}
 		must(t, r.Like(ctx, listener.ID, id, true))
 		must(t, r.RecordPlay(ctx, listener.ID, id, "an-idempotent-play-event"))
 		must(t, r.RecordPlay(ctx, listener.ID, id, "an-idempotent-play-event"))

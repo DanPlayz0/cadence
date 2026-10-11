@@ -15,7 +15,11 @@ export function pwa() {
       ];
       const hash = createHash("sha256");
       for (const [name, entry] of Object.entries(bundle).sort()) {
-        if (name.startsWith("assets/")) files.push(`/${name}`);
+        if (
+          name.startsWith("assets/") &&
+          !name.startsWith("assets/playlist-icon-")
+        )
+          files.push(`/${name}`);
         hash
           .update(name)
           .update(entry.type === "chunk" ? entry.code : entry.source);

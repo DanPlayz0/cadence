@@ -90,7 +90,7 @@ func TestPlaylistIconUpgrade(t *testing.T) {
 		t.Fatal("default icon missing", e)
 	}
 	// Recreate the pre-icon schema inside this test's isolated namespace.
-	if _, e = c.Exec(ctx, "ALTER TABLE playlists DROP COLUMN icon; DELETE FROM schema_migrations WHERE version=3"); e != nil {
+	if _, e = c.Exec(ctx, "ALTER TABLE playlists DROP COLUMN icon; DELETE FROM schema_migrations WHERE version IN (3,17)"); e != nil {
 		t.Fatal(e)
 	}
 	var schema string
@@ -130,6 +130,8 @@ func TestPlaylistIconAPI(t *testing.T) {
 	}{
 		{`{"name":"Default"}`, "music", 201},
 		{`{"name":"Night","icon":"moon"}`, "moon", 201},
+		{`{"name":"Coffee","icon":"coffee"}`, "coffee", 201},
+		{`{"name":"Forest","icon":"tree-pine"}`, "tree-pine", 201},
 		{`{"name":"Invalid","icon":"unknown"}`, "", 400},
 	} {
 		req := httptest.NewRequest("POST", "/api/v1/playlists", strings.NewReader(tc.body))
@@ -149,7 +151,7 @@ func TestPlaylistIconAPI(t *testing.T) {
 		}
 	}
 	playlists, e := r.Playlists(ctx, u.ID)
-	if e != nil || len(playlists) != 2 {
+	if e != nil || len(playlists) != 4 {
 		t.Fatal("invalid playlist persisted or creation failed", e)
 	}
 }

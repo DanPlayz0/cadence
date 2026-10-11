@@ -3,6 +3,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -173,5 +174,60 @@ func TestRejectInvalidPlaylistIcon(t *testing.T) {
 	(&Server{}).createPlaylist(w, r)
 	if w.Code != 400 || !strings.Contains(w.Body.String(), "Invalid playlist icon") {
 		t.Fatalf("unexpected icon validation response: %d %s", w.Code, w.Body.String())
+	}
+}
+
+type playlistIconRepo struct {
+	originRepo
+	icon string
+}
+
+func (r *playlistIconRepo) UpdatePlaylistIcon(_ context.Context, user, id, icon string) (domain.Playlist, error) {
+	if id != "owned" {
+		return domain.Playlist{}, domain.ErrNotFound
+	}
+	r.icon = icon
+	return domain.Playlist{ID: id, Name: "Existing mix", Icon: icon}, nil
+}
+
+func TestUpdatePlaylistIconAPI(t *testing.T) {
+	for _, tc := range []struct {
+		name, id, body, csrf string
+		cookie               bool
+		status               int
+	}{
+		{"new icon", "owned", `{"icon":"tree-pine"}`, "valid-csrf", true, 200},
+		{"legacy icon", "owned", `{"icon":"disc"}`, "valid-csrf", true, 200},
+		{"missing icon", "owned", `{}`, "valid-csrf", true, 400},
+		{"empty icon", "owned", `{"icon":""}`, "valid-csrf", true, 400},
+		{"unknown icon", "owned", `{"icon":"unknown"}`, "valid-csrf", true, 400},
+		{"name edit rejected", "owned", `{"icon":"coffee","name":"Changed"}`, "valid-csrf", true, 400},
+		{"missing playlist", "missing", `{"icon":"coffee"}`, "valid-csrf", true, 404},
+		{"authentication", "owned", `{"icon":"coffee"}`, "valid-csrf", false, 401},
+		{"csrf", "owned", `{"icon":"coffee"}`, "wrong", true, 403},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &playlistIconRepo{}
+			handler := (&Server{Repo: repo, Config: Config{PublicURL: "http://example.test"}}).Handler()
+			req := httptest.NewRequest("PATCH", "/api/v1/playlists/"+tc.id, strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-CSRF-Token", tc.csrf)
+			if tc.cookie {
+				req.AddCookie(&http.Cookie{Name: "cadence_session", Value: "test"})
+			}
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+			if w.Code != tc.status {
+				t.Fatalf("want %d got %d: %s", tc.status, w.Code, w.Body.String())
+			}
+			if tc.status == 200 {
+				var p domain.Playlist
+				if err := json.Unmarshal(w.Body.Bytes(), &p); err != nil || p.Icon != repo.icon || p.Name != "Existing mix" {
+					t.Fatal("unexpected update response", err)
+				}
+			} else if repo.icon != "" {
+				t.Fatal("rejected update reached repository")
+			}
+		})
 	}
 }
