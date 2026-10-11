@@ -37,6 +37,7 @@ type Config struct {
 	SecureCookie              bool
 	AllowAnyOrigin            bool
 	Roots                     []string
+	PublicURLs                []string
 }
 type Server struct {
 	Repo            domain.Repository
@@ -523,14 +524,18 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		if mutating && !s.Config.AllowAnyOrigin {
 			origin := r.Header.Get("Origin")
 			expected := strings.TrimRight(s.Config.PublicURL, "/")
-			if expected == "" {
+			if expected == "" && len(s.Config.PublicURLs) == 0 {
 				scheme := "http"
 				if r.TLS != nil {
 					scheme = "https"
 				}
 				expected = scheme + "://" + r.Host
 			}
-			if origin != "" && origin != expected {
+			allowed := origin == expected
+			for _, public := range s.Config.PublicURLs {
+				allowed = allowed || origin == public
+			}
+			if origin != "" && !allowed {
 				write(w, 403, map[string]string{"error": "Origin rejected"})
 				return
 			}
@@ -662,7 +667,7 @@ func (s *Server) newSession(w http.ResponseWriter, r *http.Request, u domain.Use
 		failure(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "cadence_session", Value: token, Path: "/", HttpOnly: true, Secure: s.Config.SecureCookie, SameSite: http.SameSiteStrictMode, Expires: expires})
+	http.SetCookie(w, &http.Cookie{Name: "cadence_session", Value: token, Path: "/", HttpOnly: true, Secure: s.secureCookie(r), SameSite: http.SameSiteStrictMode, Expires: expires})
 	write(w, 200, map[string]any{"user": u, "csrf": csrf})
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
@@ -671,7 +676,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "cadence_session", Value: "", Path: "/", HttpOnly: true, Secure: s.Config.SecureCookie, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "cadence_session", Value: "", Path: "/", HttpOnly: true, Secure: s.secureCookie(r), SameSite: http.SameSiteStrictMode, MaxAge: -1})
 	write(w, 200, map[string]bool{"ok": true})
 }
 func (s *Server) tracks(w http.ResponseWriter, r *http.Request) {
@@ -1017,6 +1022,48 @@ func ValidatePublicURL(v string) error {
 func (s *Server) updateBranding(w http.ResponseWriter, r *http.Request) {
 	var v struct {
 		Name string `json:"name"`
+// ParsePublicURLs validates additional allowed origins without changing the
+// canonical PUBLIC_URL used by provider callbacks.
+func ParsePublicURLs(value string) ([]string, error) {
+	if strings.TrimSpace(value) == "" {
+		return nil, nil
+	}
+	var origins []string
+	for _, entry := range strings.Split(value, ",") {
+		origin := strings.TrimRight(strings.TrimSpace(entry), "/")
+		if origin == "" {
+			return nil, fmt.Errorf("PUBLIC_URLS must contain non-empty, comma-separated http(s) origins")
+		}
+		if err := ValidatePublicURL(origin); err != nil {
+			return nil, fmt.Errorf("PUBLIC_URLS: %w", err)
+		}
+		origins = append(origins, origin)
+	}
+	return origins, nil
+}
+
+func (s *Server) secureCookie(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	// Match configured hosts even when HTTPS terminates at a reverse proxy.
+	// Never trust forwarded headers to downgrade a configured HTTPS cookie.
+	matched := false
+	for _, origin := range append([]string{s.Config.PublicURL}, s.Config.PublicURLs...) {
+		u, err := url.Parse(origin)
+		if err == nil && u.Host != "" && strings.EqualFold(u.Host, r.Host) {
+			if u.Scheme == "https" {
+				return true
+			}
+			matched = true
+		}
+	}
+	if matched {
+		return false
+	}
+	return s.Config.SecureCookie
+}
+
 	}
 	if !decode(w, r, &v) {
 		return

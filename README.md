@@ -89,7 +89,17 @@ music.example.com {
 
 When the proxy runs in Docker, connect it to the app's network and proxy to `app:8080`. Configure sufficient proxy read timeouts for conversion. LAN-only HTTP can use `BIND_ADDRESS=0.0.0.0` and a matching HTTP `PUBLIC_URL`; use HTTPS for internet access. Authentication throttling uses the direct peer address, so proxy users share that rate limit. Use proxy-side login throttling for per-client controls.
 
-By default, `ALLOW_ANY_ORIGIN=false` restricts mutation requests (including login/setup) to `PUBLIC_URL`, or the request's own origin when `PUBLIC_URL` is empty. To access the same instance through multiple addresses, such as `http://192.168.0.29` and `http://localhost`, set `ALLOW_ANY_ORIGIN=true` in `.env` and rebuild/recreate the app with `docker compose up -d --build app`. Use the actual port in each address if it is not port 80. This opt-in disables the mutation origin check for every origin; authentication, administrator permissions, CSRF tokens, and SameSite cookies still apply. It does not add cross-origin API/CORS support: open the app at the desired address and it calls its API at that same address. `PUBLIC_URL` still controls Secure cookies, so an HTTPS `PUBLIC_URL` requires HTTPS access through every hostname. Sessions are separate for each hostname.
+By default, `ALLOW_ANY_ORIGIN=false` restricts mutation requests (including login/setup) to `PUBLIC_URL` and any additional comma-separated origins in `PUBLIC_URLS`. When neither is set, the request's own origin is accepted. To allow a local HTTP domain and an external HTTPS domain, set these values in the server's `.env`:
+
+```dotenv
+PUBLIC_URL=https://cadence.example.com
+PUBLIC_URLS=http://cadence.media.local,https://cadence.example.com
+ALLOW_ANY_ORIGIN=false
+```
+
+Apply configuration and code changes with `docker compose up -d --build app`. Include the actual scheme and non-default port for every origin. Sessions are separate for each hostname. Cookies for configured HTTPS hosts remain Secure behind a reverse proxy; configured HTTP hosts can use cookies over HTTP. If the same host and port is listed with both schemes, HTTPS takes precedence for cookies. The proxy must preserve the original Host header. Unlisted hosts retain the cookie security setting from `PUBLIC_URL`. `PUBLIC_URL` remains the canonical address for Last.fm callbacks; complete Last.fm connection from that domain.
+
+`ALLOW_ANY_ORIGIN=true` still permits all mutation origins; authentication, administrator permissions, CSRF tokens, and SameSite cookies still apply. These settings do not enable cross-origin API/CORS support: open the app at the desired address and it calls its API at that same address.
 
 ## Development
 

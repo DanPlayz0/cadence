@@ -52,6 +52,10 @@ func run() error {
 	if err := httpapi.ValidatePublicURL(public); err != nil {
 		return err
 	}
+	publicURLs, err := httpapi.ParsePublicURLs(os.Getenv("PUBLIC_URLS"))
+	if err != nil {
+		return err
+	}
 	allowAnyOrigin, err := strconv.ParseBool(env("ALLOW_ANY_ORIGIN", "false"))
 	if err != nil {
 		return fmt.Errorf("ALLOW_ANY_ORIGIN must be a boolean: %w", err)
@@ -115,7 +119,7 @@ func run() error {
 		}
 		scanner.ExcludedRoots = []string{filepath.ToSlash(p)}
 	}
-	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://"), AllowAnyOrigin: allowAnyOrigin}}
+	app := &httpapi.Server{Repo: repo, Scanner: scanner, Cache: cache, Config: httpapi.Config{PublicURL: public, PublicURLs: publicURLs, WebDir: env("WEB_DIR", "web/dist"), ArtDir: art, Roots: roots, SecureCookie: strings.HasPrefix(public, "https://"), AllowAnyOrigin: allowAnyOrigin}}
 	app.Soulseek = soul
 	syncService, err := scrobble.New(repo, repo, scrobble.NewProviders(os.Getenv("LASTFM_API_KEY"), os.Getenv("LASTFM_API_SECRET")), data)
 	if err != nil {
