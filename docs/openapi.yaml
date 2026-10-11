@@ -15,6 +15,61 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /admin/sync/lastfm:
+    get:
+      summary: Read Last.fm instance configuration status without returning credentials
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Administrator-only configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LastFMAdminStatus"
+        "401": { description: Sign in required }
+        "403": { description: Administrator required }
+        "503": { description: Sync unavailable }
+    put:
+      summary: Save encrypted Last.fm application credentials and apply immediately
+      security:
+        - session: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [apiKey, apiSecret]
+              properties:
+                apiKey: { type: string, minLength: 1, maxLength: 256, writeOnly: true }
+                apiSecret: { type: string, minLength: 1, maxLength: 256, writeOnly: true }
+      responses:
+        "200":
+          description: Saved; web settings override environment defaults, changed credentials require listeners to reconnect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LastFMAdminStatus"
+        "400": { description: Missing or invalid credential pair }
+        "401": { description: Sign in required }
+        "403": { description: Administrator, CSRF token, and permitted origin required }
+        "503": { description: Sync unavailable }
+    delete:
+      summary: Persistently disable Last.fm, including environment defaults, and pause existing connections
+      security:
+        - session: []
+      responses:
+        "200":
+          description: Disabled; pending listens are retained
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LastFMAdminStatus"
+        "401": { description: Sign in required }
+        "403": { description: Administrator, CSRF token, and permitted origin required }
+        "503": { description: Sync unavailable }
   /sync:
     get:
       summary: Read per-user sync connections and health
@@ -4766,6 +4821,14 @@ components:
       in: cookie
       name: cadence_session
   schemas:
+    LastFMAdminStatus:
+      type: object
+      required: [configured, source, error, publicUrlConfigured]
+      properties:
+        configured: { type: boolean }
+        source: { type: string, enum: [none, environment, web] }
+        error: { type: string }
+        publicUrlConfigured: { type: boolean }
     SyncOK:
       type: object
       required: [ok]

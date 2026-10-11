@@ -18,6 +18,7 @@ import {
   Search,
 } from "lucide-react";
 import { LibraryManager } from "../components/admin/LibraryManager";
+import { SyncAdminSettings } from "../components/admin/SyncAdminSettings";
 import { ActivityLog } from "../components/admin/ActivityLog";
 import { SoulseekSettings } from "../components/soulseek/SoulseekViews";
 import { describeClient } from "../lib/devices";
@@ -61,6 +62,12 @@ type Scan = {
   errors: string[];
 };
 const sections = [
+  {
+    id: "sync",
+    label: "Sync",
+    icon: RefreshCw,
+    description: "Configure listening sync services for this instance.",
+  },
   {
     id: "soulseek",
     label: "Soulseek",
@@ -647,6 +654,7 @@ export function Admin({
           )}
           {tab === "activity" && <ActivityLog />}
           {tab === "soulseek" && <SoulseekSettings />}
+          {tab === "sync" && <SyncAdminSettings onExpired={onExpired} />}
           {tab === "scans" && (
             <>
               <div className="panel">

@@ -19,6 +19,7 @@ export const adminTabs = [
   "activity",
   "scans",
   "soulseek",
+  "sync",
 ];
 const pages = [
   "home",

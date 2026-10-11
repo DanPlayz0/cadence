@@ -41,8 +41,10 @@ func (s *Server) syncAuthorize(w http.ResponseWriter, r *http.Request) {
 	if !s.syncReady(w) {
 		return
 	}
+	unlock := s.Sync.Lock()
+	defer unlock()
 	if !s.Sync.Providers.Configured() || s.Config.PublicURL == "" {
-		write(w, 400, map[string]string{"error": "Configure LASTFM_API_KEY, LASTFM_API_SECRET, and PUBLIC_URL first"})
+		write(w, 400, map[string]string{"error": "Configure Last.fm in Instance settings → Sync and set PUBLIC_URL first"})
 		return
 	}
 	state := random()
@@ -51,7 +53,7 @@ func (s *Server) syncAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	callback := s.Config.PublicURL + "/api/v1/sync/lastfm/callback?state=" + url.QueryEscape(state)
-	u := "https://www.last.fm/api/auth?" + url.Values{"api_key": {s.Sync.Providers.APIKey}, "cb": {callback}}.Encode()
+	u := s.Sync.Providers.AuthorizationURL(callback)
 	write(w, 200, map[string]string{"url": u})
 }
 func (s *Server) syncCallback(w http.ResponseWriter, r *http.Request) {

@@ -18,10 +18,12 @@ import (
 )
 
 type Service struct {
-	Repo      domain.SyncRepository
-	Catalog   domain.LibraryRepository
-	Providers *Providers
-	aead      cipher.AEAD
+	Repo        domain.SyncRepository
+	Catalog     domain.LibraryRepository
+	Providers   *Providers
+	aead        cipher.AEAD
+	lastFMSaved bool
+	lastFMError string
 	// One process owns an instance. Serialize delivery with preferences/account changes.
 	mu sync.Mutex
 }

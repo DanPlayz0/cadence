@@ -146,6 +146,9 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/me/playback", s.playback)
 	m.HandleFunc("PUT /api/v1/me/playback", s.playback)
 	m.HandleFunc("GET /api/v1/sync", s.syncStatus)
+	m.HandleFunc("GET /api/v1/admin/sync/lastfm", s.adminLastFMSettings)
+	m.HandleFunc("PUT /api/v1/admin/sync/lastfm", s.adminLastFMSettings)
+	m.HandleFunc("DELETE /api/v1/admin/sync/lastfm", s.adminLastFMSettings)
 	m.HandleFunc("POST /api/v1/sync/lastfm/authorize", s.syncAuthorize)
 	m.HandleFunc("GET /api/v1/sync/lastfm/callback", s.syncCallback)
 	m.HandleFunc("POST /api/v1/sync/listenbrainz/connect", s.syncConnect)
@@ -1019,9 +1022,6 @@ func ValidatePublicURL(v string) error {
 	return nil
 }
 
-func (s *Server) updateBranding(w http.ResponseWriter, r *http.Request) {
-	var v struct {
-		Name string `json:"name"`
 // ParsePublicURLs validates additional allowed origins without changing the
 // canonical PUBLIC_URL used by provider callbacks.
 func ParsePublicURLs(value string) ([]string, error) {
@@ -1064,6 +1064,9 @@ func (s *Server) secureCookie(r *http.Request) bool {
 	return s.Config.SecureCookie
 }
 
+func (s *Server) updateBranding(w http.ResponseWriter, r *http.Request) {
+	var v struct {
+		Name string `json:"name"`
 	}
 	if !decode(w, r, &v) {
 		return

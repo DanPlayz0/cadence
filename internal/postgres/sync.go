@@ -4,6 +4,7 @@ package postgres
 import (
 	"cadence/internal/domain"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
@@ -11,6 +12,38 @@ import (
 )
 
 var _ domain.SyncRepository = (*Store)(nil)
+
+func (s *Store) LastFMSettings(ctx context.Context) ([]byte, bool, error) {
+	var value string
+	err := s.pool.QueryRow(ctx, `SELECT value FROM instance_settings WHERE key='lastfm_credentials'`).Scan(&value)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	b, err := base64.StdEncoding.DecodeString(value)
+	return b, true, err
+}
+func (s *Store) SaveLastFMSettings(ctx context.Context, encrypted []byte, changed bool) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `INSERT INTO instance_settings(key,value) VALUES('lastfm_credentials',$1) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value`, base64.StdEncoding.EncodeToString(encrypted)); err != nil {
+		return err
+	}
+	if changed {
+		if _, err = tx.Exec(ctx, `UPDATE sync_connections SET paused=true,error='Last.fm application credentials changed; reconnect Last.fm' WHERE provider='lastfm'`); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `DELETE FROM sync_auth`); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
 
 func (s *Store) SyncConnections(ctx context.Context, user string) ([]domain.SyncConnection, error) {
 	rows, err := s.pool.Query(ctx, `SELECT c.provider,c.id,c.username,c.credential,c.plays,c.now_playing,c.likes,c.paused,c.error,c.last_success,

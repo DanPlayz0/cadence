@@ -95,3 +95,12 @@
   color: var(--muted);
   line-height: 1.6;
 }
+.sync-admin-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}

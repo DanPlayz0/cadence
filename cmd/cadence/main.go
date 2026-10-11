@@ -126,6 +126,9 @@ func run() error {
 		return fmt.Errorf("initialize sync: %w", err)
 	}
 	app.Sync = syncService
+	if err = syncService.LoadLastFMSettings(ctx); err != nil {
+		return fmt.Errorf("load Last.fm settings: %w", err)
+	}
 	go syncService.Run(ctx)
 	go soul.Run(ctx)
 	server := &http.Server{Addr: env("LISTEN_ADDR", ":8080"), Handler: app.Handler(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}

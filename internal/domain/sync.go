@@ -74,6 +74,8 @@ type SyncFailure struct {
 
 // SyncRepository is separate from the catalog contract so integrations remain optional.
 type SyncRepository interface {
+	LastFMSettings(context.Context) ([]byte, bool, error)
+	SaveLastFMSettings(context.Context, []byte, bool) error
 	SyncConnections(context.Context, string) ([]SyncConnection, error)
 	SaveSyncConnection(context.Context, string, SyncConnection) error
 	SetSyncPreferences(context.Context, string, string, SyncPreferences) error

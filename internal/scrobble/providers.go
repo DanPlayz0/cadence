@@ -26,7 +26,8 @@ type providerError struct {
 func (e *providerError) Error() string { return e.message }
 
 type Providers struct {
-	APIKey, Secret             string
+	apiKey, secret             string
+	configMu                   sync.RWMutex
 	client                     *http.Client
 	lastFMURL, listenBrainzURL string
 	mu                         sync.Mutex
@@ -34,9 +35,26 @@ type Providers struct {
 }
 
 func NewProviders(key, secret string) *Providers {
-	return &Providers{APIKey: key, Secret: secret, client: &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, lastFMURL: "https://ws.audioscrobbler.com/2.0/", listenBrainzURL: "https://api.listenbrainz.org/1/"}
+	return &Providers{apiKey: key, secret: secret, client: &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, lastFMURL: "https://ws.audioscrobbler.com/2.0/", listenBrainzURL: "https://api.listenbrainz.org/1/"}
 }
-func (p *Providers) Configured() bool { return p.APIKey != "" && p.Secret != "" }
+func (p *Providers) credentials() (string, string) {
+	p.configMu.RLock()
+	defer p.configMu.RUnlock()
+	return p.apiKey, p.secret
+}
+func (p *Providers) SetLastFM(key, secret string) {
+	p.configMu.Lock()
+	defer p.configMu.Unlock()
+	p.apiKey, p.secret = key, secret
+}
+func (p *Providers) Configured() bool {
+	key, secret := p.credentials()
+	return key != "" && secret != ""
+}
+func (p *Providers) AuthorizationURL(callback string) string {
+	key, _ := p.credentials()
+	return "https://www.last.fm/api/auth?" + url.Values{"api_key": {key}, "cb": {callback}}.Encode()
+}
 func signature(v url.Values, secret string) string {
 	keys := []string{}
 	for k := range v {
@@ -120,8 +138,12 @@ func (p *Providers) request(ctx context.Context, method, endpoint, token string,
 	return v, nil
 }
 func (p *Providers) lastFM(ctx context.Context, v url.Values) (map[string]json.RawMessage, error) {
-	v.Set("api_key", p.APIKey)
-	v.Set("api_sig", signature(v, p.Secret))
+	key, secret := p.credentials()
+	if key == "" || secret == "" {
+		return nil, &providerError{kind: "auth", message: "Last.fm is disabled; ask an administrator to configure it in Instance settings"}
+	}
+	v.Set("api_key", key)
+	v.Set("api_sig", signature(v, secret))
 	v.Set("format", "json")
 	r, err := p.request(ctx, "POST", p.lastFMURL, "", strings.NewReader(v.Encode()), "application/x-www-form-urlencoded")
 	if err != nil {

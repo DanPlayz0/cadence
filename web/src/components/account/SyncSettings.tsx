@@ -228,8 +228,8 @@ export function SyncSettings({
                   </Button>
                   {!status.lastfmAuthorizationAvailable && (
                     <p className="muted">
-                      The instance administrator must configure Last.fm API
-                      credentials and PUBLIC_URL.
+                      The instance administrator must configure Last.fm in
+                      Instance settings → Sync and set PUBLIC_URL.
                     </p>
                   )}
                 </>
