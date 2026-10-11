@@ -1968,7 +1968,7 @@ paths:
                 $ref: "#/components/schemas/Error"
   /tracks/{id}/lyrics:
     get:
-      summary: Fetch LRCLIB lyrics for an accessible song's current metadata
+      summary: Read local LRC lyrics or fetch LRCLIB lyrics for an accessible song
       tags:
         - Music
       parameters:
@@ -1997,7 +1997,7 @@ paths:
                     type: string
                   source:
                     type: string
-                    enum: [LRCLIB]
+                    enum: [LRCLIB, Local LRC]
         "401":
           description: Sign in required
         "404":

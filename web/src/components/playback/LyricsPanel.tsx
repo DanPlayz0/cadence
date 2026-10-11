@@ -84,12 +84,18 @@ export function LyricsPanel({
         <strong>{track.title}</strong>
         <ArtistLinks credit={track.artist} onNavigate={onArtist} />
       </div>
-      <p className="lyrics-source">
-        Lyrics from{" "}
-        <a href="https://lrclib.net/" target="_blank" rel="noreferrer">
-          LRCLIB
-        </a>
-      </p>
+      {lyrics?.found && (
+        <p className="lyrics-source">
+          Lyrics from{" "}
+          {lyrics.source === "LRCLIB" ? (
+            <a href="https://lrclib.net/" target="_blank" rel="noreferrer">
+              LRCLIB
+            </a>
+          ) : (
+            lyrics.source
+          )}
+        </p>
+      )}
       {loading && <p role="status">Finding lyrics…</p>}
       {error && (
         <div>

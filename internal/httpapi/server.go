@@ -240,7 +240,10 @@ func (s *Server) Handler() http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
-		result, err := s.Lyrics.Lookup(ctx, track)
+		result := lyrics.Local(s.Config.Roots, track)
+		if !result.Found {
+			result, err = s.Lyrics.Lookup(ctx, track)
+		}
 		if err != nil {
 			write(w, 503, map[string]string{"error": "Lyrics are temporarily unavailable. Try again later."})
 			return
