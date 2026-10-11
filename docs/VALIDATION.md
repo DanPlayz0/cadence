@@ -1,5 +1,13 @@
 # Validation record
 
+## Lossless playback (2026-10-10)
+
+- Added Lossless playback for original FLAC, ALAC, and uncompressed PCM sources, with MP3 exceptions for one queue occurrence or the open session. Other lossy/unknown sources stay blocked; unsupported originals never fall back automatically to MP3.
+- Go tests and vet passed. New tests cover codec classification, original GET/HEAD streaming and byte ranges, lossy-source rejection, authentication/access/path boundaries, and real FFmpeg/FFprobe FLAC fixtures with lowercase and uppercase extensions and embedded metadata. PostgreSQL integration tests were skipped because `TEST_DATABASE_URL` was not configured for this run.
+- Frontend: 71 tests across 15 files, TypeScript, and the production Vite build passed. New playback tests cover strict blocking, stale prompts/loads, per-occurrence and session MP3 permission, reset/revocation, skip/repeat behavior, paused restoration and seeking, original-only offline caches, decoder rejection, Auto fallback, and listening-history accounting. OpenAPI validation passed with 64 documented paths. The build retains its bundle-size warning.
+- Chromium checks used isolated API fixtures and real generated FLAC/MP3 audio at 1280, 390, and 320 pixels. Original FLAC playback and seeking, paused controls, MP3 prompts/overrides, and permission revocation passed without browser runtime errors or document overflow. Desktop and mobile prompt screenshots were inspected; mobile prompt placement/wrapping was corrected. QA scripts, audio, and screenshots remain in ignored `.local/lossless-qa/`.
+- Browser checks did not use a live database/server, physical devices, other browsers, or real ALAC/PCM audio. Lossless describes source preservation, not recording provenance or the device output path.
+
 ## Soulseek integration (2026-10-10)
 
 - `go test -race ./...` passed with an isolated UTF-8 PostgreSQL database, and `go vet ./...` passed. New checks cover durable settings/private import markers, stale-write rejection, search ownership, session/CSRF/admin enforcement, access revocation, user/group routing precedence, both review timings, automatic-rule bypass, destination removal, retries, partial enqueue cancellation, staging cleanup across attempts, restart recovery, import collisions, symlink escapes, and exclusion of staging from scans.

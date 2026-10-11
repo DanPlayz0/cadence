@@ -4432,3 +4432,35 @@ input[type="range"] {
   width: 80px;
   height: 80px;
 }
+/* Lossless playback choices stay available on desktop and mobile. */
+.playback-source {
+  flex-shrink: 0;
+  padding: 6px 20px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.playback-block {
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.playback-block p {
+  overflow-wrap: anywhere;
+  margin: 0 0 10px;
+}
+.playback-block-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.playback-block-actions button {
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
+  min-height: 44px;
+}
+.queue-panel > .playback-block {
+  max-height: 45%;
+  overflow-y: auto;
+}

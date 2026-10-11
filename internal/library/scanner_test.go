@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -68,5 +69,27 @@ func TestVorbisStreamTags(t *testing.T) {
 	}
 	if track.Title != "Tagged title" || track.Artist != "Tagged artist" || track.Album != "Tagged album" {
 		t.Fatalf("stream tags not indexed: %+v", track)
+	}
+}
+
+func TestFLACProbe(t *testing.T) {
+	for _, tool := range []string{"ffmpeg", "ffprobe"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skip(tool + " missing")
+		}
+	}
+	for _, ext := range []string{".flac", ".FLAC"} {
+		path := filepath.Join(t.TempDir(), "song"+ext)
+		if b, err := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=duration=0.2", "-c:a", "flac", "-metadata", "title=FLAC title", "-metadata", "artist=FLAC artist", "-metadata", "album=FLAC album", "-y", path).CombinedOutput(); err != nil {
+			t.Fatalf("%v %s", err, b)
+		}
+		mime := extensions[filepath.Ext(strings.ToLower(path))]
+		track, _, err := Probe(context.Background(), path, mime)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if track.Codec != "flac" || track.MIME != "audio/flac" || track.Duration <= 0 || track.Title != "FLAC title" || track.Artist != "FLAC artist" || track.Album != "FLAC album" {
+			t.Fatalf("FLAC metadata: %+v", track)
+		}
 	}
 }

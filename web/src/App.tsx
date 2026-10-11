@@ -46,6 +46,7 @@ import {
   User,
 } from "./services/api";
 import { catalogLibrary, type LibrarySummary } from "./lib/libraries";
+import { PlaybackStatus } from "./components/playback/PlaybackStatus";
 import { usePlayer } from "./hooks/usePlayer";
 import { Admin } from "./pages/Admin";
 import { FindMusic } from "./components/soulseek/SoulseekViews";
@@ -147,6 +148,11 @@ export function App() {
     };
   }, [session?.user.id, expire]);
   const player = usePlayer(setError, expire);
+  const playbackUser = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (playbackUser.current !== session?.user.id) player.clear();
+    playbackUser.current = session?.user.id;
+  }, [session?.user.id, player.clear]);
   usePlaybackResume(player, session?.user.id);
   const miniPlayer = useMiniPlayer(player, session?.user.id);
   useEffect(() => {
@@ -950,6 +956,8 @@ export function App() {
             volume={player.volume}
             offline={player.offline}
             onQuality={player.changeQuality}
+            allowMP3Session={player.allowMP3Session}
+            onMP3Session={player.changeMP3Session}
             onVolume={player.setVolume}
             onAdmin={() => browse("admin")}
             onQueue={() => {
@@ -962,6 +970,7 @@ export function App() {
             onExpired={expire}
           />
         </header>
+        <PlaybackStatus player={player} />
         {notice && (
           <div className="toast success" role="status">
             <span>

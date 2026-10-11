@@ -4,6 +4,13 @@ import { api, APIError, cover, stream, Track } from "../services/api";
 import { volumeGain } from "../lib/volume";
 import { completeBlob, SessionCache } from "../lib/cache";
 import {
+  playbackPolicy,
+  originalCacheMode,
+  type Quality,
+  type PlaybackBlock,
+} from "../lib/playbackPolicy";
+export type { Quality } from "../lib/playbackPolicy";
+import {
   advanceQueue,
   emptyQueue,
   hasNext,
@@ -20,13 +27,18 @@ import {
   type PlaybackSource,
   type QueueSection,
 } from "../lib/queue";
-export type Quality = "auto" | "high" | "saver";
 type Resume = {
   position: number;
   autoplay: boolean;
   event: string;
   heard: number;
   recorded: boolean;
+};
+type BlockedPlayback = {
+  sequence: number;
+  entryId: string;
+  reason: PlaybackBlock;
+  resume: Resume;
 };
 function eventID() {
   return typeof crypto.randomUUID === "function"
@@ -55,6 +67,12 @@ export function usePlayer(
   const [length, setLength] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [quality, setQuality] = useState<Quality>("auto");
+  const [allowMP3Session, setAllowMP3Session] = useState(false);
+  const mp3Session = useRef(false);
+  const mp3Entry = useRef<string | null>(null);
+  const [blocked, setBlocked] = useState<BlockedPlayback | null>(null);
+  const blockedRef = useRef<BlockedPlayback | null>(null);
+  const [sourceLabel, setSourceLabel] = useState<string | undefined>();
   const [shuffle, storeShuffle] = useState(false);
   const [repeat, setRepeat] = useState<"off" | "all" | "one">("off");
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -73,22 +91,14 @@ export function usePlayer(
     recorded: boolean;
     fallback: boolean;
     restorePosition: number | null;
+    resume: Resume;
   } | null>(null);
   const pending = useRef(new Map<string, AbortController>());
   const callbacks = useRef({ onError, onExpired });
   callbacks.current = { onError, onExpired };
   const current = queue.current?.track;
-  const modeFor = useCallback(
-    (t: Track, q: Quality) =>
-      q === "auto"
-        ? audio.current.canPlayType(t.mime)
-          ? "original"
-          : "high"
-        : q,
-    [],
-  );
   const cacheTrack = useCallback(async (t: Track, mode: string) => {
-    const key = `${t.id}:${mode}`;
+    const key = `${t.id}:${originalCacheMode(mode)}`;
     if (cache.current.get(key) || pending.current.size >= 1) return;
     const controller = new AbortController();
     pending.current.set(key, controller);
@@ -105,29 +115,94 @@ export function usePlayer(
       if (pending.current.get(key) === controller) pending.current.delete(key);
     }
   }, []);
+  const stopUnsupported = useCallback((autoplay: boolean) => {
+    const v = active.current;
+    if (!v) return;
+    const a = audio.current;
+    const resume = {
+      position: v.restorePosition ?? a.currentTime,
+      autoplay,
+      event: v.event,
+      heard: v.heard,
+      recorded: v.recorded,
+    };
+    const block = {
+      sequence: loadSeq.current,
+      entryId: queueRef.current.current?.id ?? "",
+      reason: "unsupported" as const,
+      resume,
+    };
+    blockedRef.current = block;
+    setBlocked(block);
+    setSourceLabel(undefined);
+    a.pause();
+    a.onloadedmetadata = null;
+    a.removeAttribute("src");
+    a.load();
+    v.restorePosition = resume.position;
+    setPlaying(false);
+  }, []);
   const start = useCallback(
     async (t: Track, forced?: string, resume?: Resume) => {
       const seq = ++loadSeq.current;
       audio.current.pause();
       audio.current.onloadedmetadata = null;
+      active.current = null;
+      audio.current.removeAttribute("src");
+      audio.current.load();
+      blockedRef.current = null;
+      setBlocked(null);
+      setSourceLabel(undefined);
       setPosition(resume?.position ?? 0);
       setLength(t.duration);
-      let mode = forced ?? modeFor(t, state.current.quality);
-      let cached = cache.current.get(`${t.id}:${mode}`);
+      const entryId = queueRef.current.current?.id ?? "";
+      if (mp3Entry.current !== entryId) mp3Entry.current = null;
+      const policy = playbackPolicy(
+        t,
+        state.current.quality,
+        !!audio.current.canPlayType(t.mime),
+        mp3Session.current || mp3Entry.current === entryId,
+      );
+      let mode =
+        state.current.quality === "lossless"
+          ? policy.mode
+          : (forced ?? policy.mode);
+      let cached = cache.current.get(`${t.id}:${originalCacheMode(mode)}`);
       if (!cached && state.current.quality === "auto" && !navigator.onLine) {
         cached = cache.current.get(`${t.id}:high`);
         if (cached) mode = "high";
       }
+      const playbackResume = resume ?? {
+        position: 0,
+        autoplay: true,
+        event: eventID(),
+        heard: 0,
+        recorded: false,
+      };
       active.current = {
         track: t,
         mode,
-        event: resume?.event ?? eventID(),
+        event: playbackResume.event,
         heard: resume?.heard ?? 0,
         last: resume?.position ?? 0,
         recorded: resume?.recorded ?? false,
         fallback: forced === "high",
         restorePosition: resume?.position ?? 0,
+        resume: playbackResume,
       };
+      if (policy.block) {
+        const block = {
+          sequence: seq,
+          entryId,
+          reason: policy.block,
+          resume: active.current.resume,
+        };
+        blockedRef.current = block;
+        setBlocked(block);
+        setPlaying(false);
+        return;
+      }
+      setSourceLabel(policy.label);
       try {
         if (navigator.onLine) {
           try {
@@ -171,6 +246,14 @@ export function usePlayer(
         if (resume?.recorded && navigator.onLine) void cacheTrack(t, mode);
       } catch (e) {
         if (seq !== loadSeq.current) return;
+        if (
+          state.current.quality === "lossless" &&
+          e instanceof Error &&
+          e.name === "NotSupportedError"
+        ) {
+          stopUnsupported(playbackResume.autoplay);
+          return;
+        }
         if (e instanceof APIError && e.status === 401) {
           callbacks.current.onExpired();
           return;
@@ -181,7 +264,7 @@ export function usePlayer(
         setPlaying(false);
       }
     },
-    [modeFor, cacheTrack],
+    [cacheTrack, stopUnsupported],
   );
   const next = useCallback(
     (back = false) => {
@@ -268,6 +351,31 @@ export function usePlayer(
       : null;
   }, []);
   const generation = useCallback(() => loadSeq.current, []);
+  const seek = useCallback((n: number) => {
+    if (!Number.isFinite(n)) return;
+    const duration = active.current?.track.duration ?? 0;
+    const target = Math.max(
+      0,
+      Math.min(
+        n,
+        Number.isFinite(audio.current.duration)
+          ? audio.current.duration
+          : duration || n,
+      ),
+    );
+    if (blockedRef.current) {
+      blockedRef.current.resume.position = target;
+      if (active.current) active.current.restorePosition = target;
+    } else {
+      audio.current.currentTime = target;
+      if (active.current) {
+        active.current.last = target;
+        active.current.restorePosition = null;
+      }
+    }
+    setPosition(target);
+    setCheckpointVersion((v) => v + 1);
+  }, []);
   const toggle = useCallback(() => {
     if (!queueRef.current.current) {
       next();
@@ -294,6 +402,12 @@ export function usePlayer(
     setLength(0);
     setPlaying(false);
     active.current = null;
+    blockedRef.current = null;
+    setBlocked(null);
+    mp3Entry.current = null;
+    mp3Session.current = false;
+    setAllowMP3Session(false);
+    setSourceLabel(undefined);
     setCacheVersion((v) => v + 1);
   }, [updateQueue]);
   const refresh = useCallback(async () => {
@@ -343,6 +457,9 @@ export function usePlayer(
         audio.current.removeAttribute("src");
         audio.current.load();
         active.current = null;
+        blockedRef.current = null;
+        setBlocked(null);
+        setSourceLabel(undefined);
         setPlaying(false);
         setPosition(0);
         setLength(0);
@@ -360,6 +477,7 @@ export function usePlayer(
   useEffect(() => {
     const a = audio.current;
     const time = () => {
+      if (blockedRef.current) return;
       setPosition(a.currentTime);
       const v = active.current;
       if (!v) return;
@@ -396,7 +514,14 @@ export function usePlayer(
     };
     const error = () => {
       const v = active.current;
-      if (v && v.mode === "original" && !v.fallback && navigator.onLine) {
+      if (!v || blockedRef.current || !a.src) return;
+      if (
+        v &&
+        state.current.quality === "auto" &&
+        v.mode === "original" &&
+        !v.fallback &&
+        navigator.onLine
+      ) {
         void start(v.track, "high", {
           position: a.currentTime,
           autoplay: true,
@@ -406,9 +531,12 @@ export function usePlayer(
         });
         return;
       }
-      callbacks.current.onError(
-        "Audio could not be played. Check the connection or try another quality.",
-      );
+      if (state.current.quality === "lossless") {
+        stopUnsupported(!a.paused);
+      } else
+        callbacks.current.onError(
+          "Audio could not be played. Check the connection or try another quality.",
+        );
       setPlaying(false);
     };
     a.addEventListener("timeupdate", time);
@@ -425,7 +553,7 @@ export function usePlayer(
       a.removeEventListener("ended", ended);
       a.removeEventListener("error", error);
     };
-  }, [cacheTrack, start, next]);
+  }, [cacheTrack, start, next, stopUnsupported]);
   useEffect(() => {
     audio.current.volume = volumeGain(volume);
   }, [volume]);
@@ -468,10 +596,9 @@ export function usePlayer(
         ? [{ src: new URL(cover(current.id), location.origin).href }]
         : [],
     });
-    navigator.mediaSession.setActionHandler(
-      "play",
-      () => void audio.current.play(),
-    );
+    navigator.mediaSession.setActionHandler("play", () => {
+      if (audio.current.paused) toggle();
+    });
     navigator.mediaSession.setActionHandler("pause", () =>
       audio.current.pause(),
     );
@@ -481,15 +608,7 @@ export function usePlayer(
     );
     navigator.mediaSession.setActionHandler("previoustrack", () => next(true));
     navigator.mediaSession.setActionHandler("seekto", (d) => {
-      if (d.seekTime !== undefined && Number.isFinite(d.seekTime)) {
-        audio.current.currentTime = Math.max(
-          0,
-          Math.min(d.seekTime, length || d.seekTime),
-        );
-        if (active.current) active.current.restorePosition = null;
-        setPosition(audio.current.currentTime);
-        setCheckpointVersion((v) => v + 1);
-      }
+      if (d.seekTime !== undefined) seek(d.seekTime);
     });
     navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     return () => {
@@ -504,18 +623,80 @@ export function usePlayer(
       ] as MediaSessionAction[])
         navigator.mediaSession.setActionHandler(action, null);
     };
-  }, [current, next, playing, length, queue, repeat]);
+  }, [current, next, playing, length, queue, repeat, toggle, seek]);
+  function resumeState(): Resume | undefined {
+    const v = active.current;
+    if (!v) return undefined;
+    return (
+      blockedRef.current?.resume ?? {
+        position: v.restorePosition ?? audio.current.currentTime,
+        autoplay: !audio.current.paused,
+        event: v.event,
+        heard: v.heard,
+        recorded: v.recorded,
+      }
+    );
+  }
+  function resolveBlocked(
+    block: BlockedPlayback,
+    action: "track" | "session" | "skip",
+  ) {
+    if (
+      blockedRef.current !== block ||
+      block.sequence !== loadSeq.current ||
+      block.entryId !== queueRef.current.current?.id
+    )
+      return;
+    if (action === "skip") {
+      // Skip never wraps back to the blocked track, even under Repeat all.
+      const value = advanceQueue(
+        queueRef.current,
+        false,
+        state.current.shuffle,
+      );
+      blockedRef.current = null;
+      setBlocked(null);
+      if (value === queueRef.current) {
+        updateQueue({
+          ...value,
+          current: null,
+          history: value.current
+            ? [...value.history, value.current]
+            : value.history,
+        });
+        active.current = null;
+        setSourceLabel(undefined);
+        return;
+      }
+      updateQueue(value);
+      if (value.current) void start(value.current.track);
+      return;
+    }
+    if (block.reason !== "mp3") return;
+    if (action === "session") {
+      mp3Session.current = true;
+      setAllowMP3Session(true);
+    } else mp3Entry.current = block.entryId;
+    void start(queueRef.current.current!.track, undefined, block.resume);
+  }
+  function changeMP3Session(allowed: boolean) {
+    mp3Session.current = allowed;
+    setAllowMP3Session(allowed);
+    if (!allowed) mp3Entry.current = null;
+    const track = queueRef.current.current?.track;
+    if (
+      state.current.quality === "lossless" &&
+      track?.codec.toLowerCase() === "mp3"
+    )
+      void start(track, undefined, resumeState());
+  }
   function changeQuality(q: Quality) {
     state.current.quality = q;
     setQuality(q);
     const v = active.current;
     if (queueRef.current.current && v)
       void start(queueRef.current.current.track, undefined, {
-        position: audio.current.currentTime,
-        autoplay: !audio.current.paused,
-        event: v.event,
-        heard: v.heard,
-        recorded: v.recorded,
+        ...resumeState()!,
       });
   }
   function remove(section: QueueSection, id: string) {
@@ -551,6 +732,11 @@ export function usePlayer(
     setVolume,
     quality,
     changeQuality,
+    blocked,
+    resolveBlocked,
+    allowMP3Session,
+    changeMP3Session,
+    sourceLabel,
     shuffle,
     setShuffle,
     repeat,
@@ -570,14 +756,7 @@ export function usePlayer(
     move,
     reorder,
     jump,
-    seek: (n: number) => {
-      if (!Number.isFinite(n)) return;
-      const target = Math.max(0, Math.min(n, length || n));
-      audio.current.currentTime = target;
-      if (active.current) active.current.restorePosition = null;
-      setPosition(target);
-      setCheckpointVersion((v) => v + 1);
-    },
+    seek,
     enqueue: (t: Track) =>
       updateQueue({
         ...queueRef.current,

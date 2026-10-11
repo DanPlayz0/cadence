@@ -41,6 +41,8 @@ export function AccountMenu({
   miniPlayer,
   hasTrack,
   onQuality,
+  allowMP3Session,
+  onMP3Session,
   onVolume,
   onAdmin,
   onQueue,
@@ -55,6 +57,8 @@ export function AccountMenu({
   miniPlayer: ReturnType<typeof useMiniPlayer>;
   hasTrack: boolean;
   onQuality: (quality: Quality) => void;
+  allowMP3Session: boolean;
+  onMP3Session: (allowed: boolean) => void;
   onVolume: (volume: number) => void;
   onAdmin: () => void;
   onQueue: () => void;
@@ -198,6 +202,12 @@ export function AccountMenu({
                 <VolumeControl value={volume} onChange={onVolume} />
               </div>
               <Checkbox
+                label="Allow MP3 fallback this session"
+                description="In Lossless mode, play selected MP3 originals. Resets on reload or sign-out."
+                checked={allowMP3Session}
+                onChange={(event) => onMP3Session(event.target.checked)}
+              />
+              <Checkbox
                 label="Automatically open mini player"
                 description={
                   miniPlayer.supported
@@ -220,7 +230,9 @@ export function AccountMenu({
               {miniPlayer.error && <p role="alert">{miniPlayer.error}</p>}
               <p className="muted">
                 Changes apply immediately in this tab. High and Saver require a
-                server connection for conversion.
+                server connection for conversion. Lossless requires a supported
+                FLAC, ALAC, or PCM source and never converts to MP3
+                automatically.
               </p>
             </div>
           )}

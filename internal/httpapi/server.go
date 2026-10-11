@@ -862,8 +862,12 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		s.serveAudio(w, r, path, "audio/mpeg")
 		return
 	}
-	if quality != "original" {
-		write(w, 400, map[string]string{"error": "quality must be original, high, or saver"})
+	if quality == "lossless" && !domain.LosslessCodec(t.Codec) {
+		write(w, 409, map[string]string{"error": "Lossless requires a FLAC, ALAC, or uncompressed PCM source"})
+		return
+	}
+	if quality != "original" && quality != "lossless" {
+		write(w, 400, map[string]string{"error": "quality must be original, lossless, high, or saver"})
 		return
 	}
 	s.serveAudio(w, r, path, mime)

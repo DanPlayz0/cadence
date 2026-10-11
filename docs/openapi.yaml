@@ -2065,6 +2065,7 @@ paths:
             type: string
             enum:
               - original
+              - lossless
               - high
               - saver
             default: original
@@ -2112,7 +2113,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Conflict
+          description: Source codec is not lossless
           content:
             application/json:
               schema:
@@ -2140,6 +2141,7 @@ paths:
             type: string
             enum:
               - original
+              - lossless
               - high
               - saver
             default: original
@@ -2187,7 +2189,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Conflict
+          description: Source codec is not lossless
           content:
             application/json:
               schema:

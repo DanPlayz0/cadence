@@ -15,6 +15,7 @@ import type { Route } from "../../lib/navigation";
 import type { usePlayer } from "../../hooks/usePlayer";
 import type { usePanelResize } from "../../hooks/usePanelResize";
 import { NowPlaying } from "../library/MobileMusic";
+import { PlaybackStatus } from "./PlaybackStatus";
 import { QueuePanel } from "./QueuePanel";
 import { LyricsPanel } from "./LyricsPanel";
 import { Button } from "../ui/button";
@@ -162,6 +163,7 @@ export function PlaybackPanel({
           </Button>
         </div>
       </div>
+      <PlaybackStatus player={player} />
       {tab !== "now" && (
         <div
           className="playback-tabs"

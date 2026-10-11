@@ -6,6 +6,7 @@ import { cover, duration } from "../../services/api";
 import type { usePlayer } from "../../hooks/usePlayer";
 import { VolumeControl } from "./PlaybackControls";
 import { ArtistLinks } from "../artists/ArtistLinks";
+import { PlaybackStatus } from "./PlaybackStatus";
 
 type Player = ReturnType<typeof usePlayer>;
 type PiP = {
@@ -291,6 +292,7 @@ export function MiniPlayer({
         <span>{duration(player.length)}</span>
       </div>
       <VolumeControl value={player.volume} onChange={player.setVolume} />
+      <PlaybackStatus player={player} />
     </main>,
     target.document.body,
   );

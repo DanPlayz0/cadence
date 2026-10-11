@@ -7,6 +7,11 @@ import { usePopoverDismiss } from "../../hooks/usePopoverDismiss";
 
 const qualities: { value: Quality; label: string; detail: string }[] = [
   { value: "auto", label: "Auto", detail: "Original audio when supported" },
+  {
+    value: "lossless",
+    label: "Lossless",
+    detail: "FLAC · ALAC · PCM originals",
+  },
   { value: "high", label: "High", detail: "MP3 · 320 kbps" },
   { value: "saver", label: "Saver", detail: "MP3 · 128 kbps" },
 ];
