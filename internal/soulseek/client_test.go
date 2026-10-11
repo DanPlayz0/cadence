@@ -28,6 +28,9 @@ func TestClientContract(t *testing.T) {
 			if v["searchText"] != "artist song" || v["fileLimit"] != float64(5000) {
 				t.Error(v)
 			}
+			if v["searchTimeout"] != float64(15000) {
+				t.Errorf("searchTimeout = %v; want 15000 milliseconds", v["searchTimeout"])
+			}
 			json.NewEncoder(w).Encode(map[string]string{"id": "id"})
 		case "/api/v0/searches/id":
 			if r.URL.Query().Get("includeResponses") != "true" {

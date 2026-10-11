@@ -101,7 +101,8 @@ func (c *Client) call(ctx context.Context, method, p string, body, out any, toke
 	return nil
 }
 func (c *Client) StartSearch(ctx context.Context, id, q string) error {
-	return c.call(ctx, "POST", "/searches", map[string]any{"id": id, "searchText": q, "fileLimit": 5000, "responseLimit": 100, "searchTimeout": 15}, nil, "")
+	// slskd expects the search timeout in milliseconds.
+	return c.call(ctx, "POST", "/searches", map[string]any{"id": id, "searchText": q, "fileLimit": 5000, "responseLimit": 100, "searchTimeout": (15 * time.Second).Milliseconds()}, nil, "")
 }
 func Audio(name string) bool {
 	switch strings.ToLower(path.Ext(name)) {
