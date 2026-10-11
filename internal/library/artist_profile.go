@@ -53,8 +53,10 @@ type mbArtist struct {
 		Name string `json:"name"`
 	} `json:"genres"`
 	Relations []struct {
-		Type string `json:"type"`
-		URL  struct {
+		Type      string    `json:"type"`
+		Direction string    `json:"direction"`
+		Artist    *mbArtist `json:"artist"`
+		URL       struct {
 			Resource string `json:"resource"`
 		} `json:"url"`
 	} `json:"relations"`

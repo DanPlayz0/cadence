@@ -25,6 +25,7 @@ type Enricher struct {
 	mu                sync.Mutex
 	last              time.Time
 	cache             map[string]*release
+	artistSplitCache  map[string]artistSplit
 }
 type release struct {
 	ID     string `json:"id"`
@@ -68,7 +69,7 @@ func (e *Enricher) get(ctx context.Context, uri string) (*http.Response, error) 
 }
 func (e *Enricher) Suggest(ctx context.Context, t domain.Track, tags map[string]string) error {
 	t.NormalizeAlbum()
-	if t.Single {
+	if t.Single && !collaborationSeparator.MatchString(t.Artist) {
 		return nil
 	}
 	if e.UserAgent == "" {
@@ -76,6 +77,12 @@ func (e *Enricher) Suggest(ctx context.Context, t domain.Track, tags map[string]
 	}
 	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
+	if err := e.splitArtistCredit(ctx, t); err != nil {
+		return err
+	}
+	if t.Single {
+		return nil
+	}
 	key := t.AlbumID
 	e.mu.Lock()
 	if e.cache == nil {

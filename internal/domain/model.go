@@ -250,6 +250,7 @@ type LibraryRepository interface {
 	MarkSeen(context.Context, string, string) error
 	FinishRoot(context.Context, string, string) error
 	AddSuggestion(context.Context, Suggestion) error
+	ApplyConfirmedArtistSplit(context.Context, string, string, string, string) (bool, error)
 	ScanStart(context.Context, Scan) error
 	ScanFinish(context.Context, Scan) error
 	Scans(context.Context) ([]Scan, error)
