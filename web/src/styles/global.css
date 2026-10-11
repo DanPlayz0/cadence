@@ -4487,6 +4487,7 @@ input[type="range"] {
   .compact-player {
     height: 64px;
     display: flex;
+    justify-content: space-between;
     gap: 8px;
     padding: 6px 10px;
     margin: 0 8px;
@@ -4498,6 +4499,7 @@ input[type="range"] {
   .compact-track {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 10px;
     min-width: 0;
     flex: 1;
