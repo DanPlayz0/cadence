@@ -437,6 +437,7 @@ func Probe(ctx context.Context, path, mime string) (domain.Track, map[string]str
 	t.Number, _ = strconv.Atoi(strings.Split(tags["track"], "/")[0])
 	t.Disc, _ = strconv.Atoi(strings.Split(tags["disc"], "/")[0])
 	t.Duration, _ = strconv.ParseFloat(p.Format.Duration, 64)
+	readFolderAlbum(filepath.Dir(path)).apply(&t, tags)
 	t.AlbumID = Hash(filepath.ToSlash(filepath.Dir(path)) + "\x00" + t.AlbumArtist + "\x00" + t.Album)[:32]
 	t.NormalizeAlbum()
 	return t, tags, nil
@@ -446,11 +447,19 @@ func (s *Scanner) art(ctx context.Context, path string, _ map[string]string, mod
 		return ""
 	}
 	source := path
+	entries, _ := os.ReadDir(filepath.Dir(path))
 	for _, name := range []string{"cover.jpg", "cover.png", "folder.jpg", "folder.png", "front.jpg"} {
-		candidate := filepath.Join(filepath.Dir(path), name)
-		if info, err := os.Lstat(candidate); err == nil && info.Mode().IsRegular() {
-			source = candidate
-			modified = info.ModTime().UnixNano()
+		for _, entry := range entries {
+			if !strings.EqualFold(entry.Name(), name) || !entry.Type().IsRegular() {
+				continue
+			}
+			if info, err := entry.Info(); err == nil && info.Mode().IsRegular() {
+				source = filepath.Join(filepath.Dir(path), entry.Name())
+				modified = info.ModTime().UnixNano()
+				break
+			}
+		}
+		if source != path {
 			break
 		}
 	}
