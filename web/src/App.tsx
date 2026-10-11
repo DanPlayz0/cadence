@@ -35,10 +35,7 @@ import {
 import {
   api,
   APIError,
-  Album,
-  Artist,
   duration,
-  Page,
   Playlist,
   Session,
   setSession,
@@ -47,6 +44,8 @@ import {
 } from "./services/api";
 import { catalogLibrary, type LibrarySummary } from "./lib/libraries";
 import { PlaybackStatus } from "./components/playback/PlaybackStatus";
+import { useCollection } from "./hooks/useCollection";
+import { watchLibraries } from "./lib/collection";
 import { usePlayer } from "./hooks/usePlayer";
 import { Admin } from "./pages/Admin";
 import { FindMusic } from "./components/soulseek/SoulseekViews";
@@ -158,10 +157,6 @@ export function App() {
   useEffect(() => {
     if (!session) {
       player.clear();
-      setTracks([]);
-      setLoadedCollection("");
-      setAlbums([]);
-      setArtists([]);
       setPlaylists([]);
     }
   }, [session, player.clear]);
@@ -216,10 +211,7 @@ export function App() {
   const selectedAlbumId = route.albumId;
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [addingPlaylist, setAddingPlaylist] = useState(false);
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [artists, setArtists] = useState<Artist[]>([]);
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
-  const [tracks, setTracks] = useState<Track[]>([]);
   const collectionKey = JSON.stringify([
     view,
     selectedAlbumId,
@@ -227,12 +219,35 @@ export function App() {
     query,
     libraryId,
   ]);
-  const [loadedCollection, setLoadedCollection] = useState("");
-  const [collectionError, setCollectionError] = useState<{
-    key: string;
-    message: string;
-  } | null>(null);
-  const collectionReady = loadedCollection === collectionKey;
+  const [reload, setReload] = useState(0);
+  const {
+    albums,
+    artists,
+    tracks,
+    total,
+    more,
+    loading,
+    refreshing,
+    collectionReady,
+    collectionError,
+    refreshCollection,
+    invalidateCollection,
+    loadMore,
+    setTracks,
+  } = useCollection(
+    {
+      userId: session?.user.id,
+      key: collectionKey,
+      view,
+      query,
+      debounced,
+      libraryId,
+      albumId: selectedAlbumId,
+      artist: selectedArtist,
+      reload,
+    },
+    expire,
+  );
   const pendingLikes = useRef(new Set<string>());
   const [liking, setLiking] = useState<Set<string>>(new Set());
   const albumTrack = tracks.find((track) => track.albumId === selectedAlbumId);
@@ -245,10 +260,6 @@ export function App() {
         tracks: 0,
       }
     : null;
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [more, setMore] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const panelResize = usePanelResize(queueOpen);
   const [queueTab, setQueueTab] = useState<"queue" | "lyrics" | "now">("queue");
@@ -260,97 +271,35 @@ export function App() {
       setQueueTab("queue");
     }
   }, [mobilePlayback, queueTab]);
-  const [reload, setReload] = useState(0);
-  const request = useRef(0);
-  const collectionCache = useRef(
-    new Map<
-      string,
-      {
-        albums: Album[];
-        artists: Artist[];
-        tracks: Track[];
-        total: number;
-        offset: number;
-        more: boolean;
-      }
-    >(),
-  );
   useEffect(() => {
-    collectionCache.current.clear();
-  }, [session?.user.id, reload]);
-  useEffect(() => {
-    setLoadedCollection("");
-    setTracks([]);
-    setAlbums([]);
-    setArtists([]);
-    setTotal(0);
-    setOffset(0);
-    setMore(false);
-  }, [session?.user.id]);
-  useEffect(() => {
-    if (!collectionReady || loading) return;
-    collectionCache.current.set(collectionKey, {
-      albums,
-      artists,
-      tracks,
-      total,
-      offset,
-      more,
-    });
-    if (collectionCache.current.size > 20)
-      collectionCache.current.delete(
-        collectionCache.current.keys().next().value!,
-      );
-  }, [
-    collectionReady,
-    collectionKey,
-    albums,
-    artists,
-    tracks,
-    total,
-    offset,
-    more,
-    loading,
-  ]);
-  useEffect(() => {
-    const userId = session?.user.id;
-    if (!userId) {
+    if (!session?.user.id) {
       setLibraries([]);
       return;
     }
-    let live = true;
-    const refresh = async () => {
-      if (!navigator.onLine) return;
-      try {
-        const next = await api<LibrarySummary[]>("/libraries");
-        if (!live) return;
+    return watchLibraries(
+      (next) => {
         setLibraries(next);
         const selected = currentRoute.current.libraryId;
         if (selected && !next.some((item) => item.id === selected)) {
+          invalidateCollection(true);
           navigate({ ...currentRoute.current, libraryId: undefined }, true);
+          return;
         }
-        collectionCache.current.clear();
-        setLoadedCollection("");
-        setAlbums([]);
-        setArtists([]);
-        setTracks([]);
-        setReload((value) => value + 1);
-      } catch (e) {
-        if (live && e instanceof APIError && e.status === 401) expire();
-        else if (live) setError((e as Error).message);
-      }
-    };
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 60000);
-    window.addEventListener("focus", refresh);
-    window.addEventListener("online", refresh);
-    return () => {
-      live = false;
-      clearInterval(timer);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("online", refresh);
-    };
-  }, [session?.user.id, libraryRevision, navigate, expire]);
+        refreshCollection();
+      },
+      (error) => {
+        if (error instanceof APIError && error.status === 401) expire();
+        else setError(error.message);
+      },
+    );
+  }, [
+    session?.user.id,
+    libraryRevision,
+    navigate,
+    expire,
+    refreshCollection,
+    invalidateCollection,
+  ]);
   const mainElement = useRef<HTMLElement>(null);
   const focusRoute = `${view}:${selectedAlbumId || ""}:${selectedArtist}`;
   const previousView = useRef(focusRoute);
@@ -393,13 +342,11 @@ export function App() {
   const browse = useCallback(
     (v: string) => {
       navigate({ view: v, libraryId: route.libraryId });
-      setOffset(0);
     },
     [navigate, route.libraryId],
   );
   const browseArtist = (artist: string) => {
     navigate({ view: "artist", artist, libraryId: route.libraryId });
-    setOffset(0);
     setQueueOpen(false);
   };
   useEffect(() => {
@@ -408,131 +355,6 @@ export function App() {
   }, [session, view, navigate]);
   const albumView = view === "home" || view === "albums";
   const artistView = view === "artists";
-  useEffect(() => {
-    const id = ++request.current;
-    if (!session || view === "admin" || view === "find" || view === "library") {
-      setLoading(false);
-      return;
-    }
-    if (debounced !== query) {
-      setLoading(true);
-      return;
-    }
-    if (view === "search" && !debounced) {
-      setTracks([]);
-      setTotal(0);
-      setMore(false);
-      setLoading(false);
-      setLoadedCollection(collectionKey);
-      return;
-    }
-    const cached = collectionCache.current.get(collectionKey);
-    if (cached) {
-      setAlbums(cached.albums);
-      setArtists(cached.artists);
-      setTracks(cached.tracks);
-      setTotal(cached.total);
-      setOffset(cached.offset);
-      setMore(cached.more);
-      setLoading(false);
-      setLoadedCollection(collectionKey);
-      return;
-    }
-    setLoading(true);
-    setCollectionError(null);
-    setOffset(0);
-    const params = new URLSearchParams({
-      limit: "100",
-      offset: "0",
-      q: debounced,
-    });
-    if (libraryId) params.set("libraryId", libraryId);
-    if (selectedAlbumId) params.set("album", selectedAlbumId);
-    if (selectedArtist) params.set("artist", selectedArtist);
-    if (view === "likes" || view === "history") params.set("collection", view);
-    if (view.startsWith("playlist:")) params.set("playlist", view.slice(9));
-    const promise = albumView
-      ? api<Album[]>(`/albums?${params}`)
-      : artistView
-        ? api<Artist[]>(`/artists?${params}`)
-        : api<Page>(`/tracks?${params}`);
-    promise
-      .then((v) => {
-        if (id !== request.current) return;
-        setLoadedCollection(collectionKey);
-        if (albumView) {
-          setAlbums(v as Album[]);
-          setMore((v as Album[]).length === 100);
-        } else if (artistView) {
-          setArtists(v as Artist[]);
-          setMore((v as Artist[]).length === 100);
-        } else {
-          const p = v as Page;
-          setTracks(p.items);
-          setTotal(p.total);
-          setMore(p.items.length < p.total);
-        }
-      })
-      .catch((e) => {
-        if (id === request.current) {
-          if (e instanceof APIError && e.status === 401) expire();
-          else setCollectionError({ key: collectionKey, message: e.message });
-        }
-      })
-      .finally(() => {
-        if (id === request.current) setLoading(false);
-      });
-  }, [
-    session,
-    view,
-    albumView,
-    artistView,
-    selectedAlbumId,
-    selectedArtist,
-    debounced,
-    query,
-    reload,
-    collectionKey,
-    expire,
-  ]);
-  async function loadMore() {
-    const id = request.current;
-    setLoading(true);
-    const next = offset + 100;
-    const params = new URLSearchParams({
-      limit: "100",
-      offset: String(next),
-      q: debounced,
-    });
-    if (libraryId) params.set("libraryId", libraryId);
-    if (selectedAlbumId) params.set("album", selectedAlbumId);
-    if (selectedArtist) params.set("artist", selectedArtist);
-    if (view === "likes" || view === "history") params.set("collection", view);
-    if (view.startsWith("playlist:")) params.set("playlist", view.slice(9));
-    try {
-      if (albumView) {
-        const v = await api<Album[]>(`/albums?${params}`);
-        if (id !== request.current) return;
-        setAlbums((a) => [...a, ...v]);
-        setMore(v.length === 100);
-      } else if (artistView) {
-        const v = await api<Artist[]>(`/artists?${params}`);
-        if (id !== request.current) return;
-        setArtists((a) => [...a, ...v]);
-        setMore(v.length === 100);
-      } else {
-        const p = await api<Page>(`/tracks?${params}`);
-        if (id !== request.current) return;
-        setTracks((t) => [...t, ...p.items]);
-        setMore(next + p.items.length < p.total);
-      }
-      setOffset(next);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      if (id === request.current) setLoading(false);
-    }
-  }
   async function like(t: Track) {
     const userID = activeUser.current;
     if (!userID) return;
@@ -548,7 +370,6 @@ export function App() {
       setNotice(
         `${t.liked ? "Removed" : "Added"} “${t.title}” ${t.liked ? "from" : "to"} liked songs.`,
       );
-      collectionCache.current.clear();
       if (view === "likes") setReload((value) => value + 1);
     } catch (e) {
       if (activeUser.current === userID) setError((e as Error).message);
@@ -563,9 +384,7 @@ export function App() {
       player.clear();
       setSession(null);
       updateSession(null);
-      setTracks([]);
-      setAlbums([]);
-      setArtists([]);
+      invalidateCollection(true);
       setPlaylists([]);
       browse("home");
       setQueueOpen(false);
@@ -662,7 +481,6 @@ export function App() {
         value={route.libraryId || ""}
         onChange={(event) => {
           navigate({ ...route, libraryId: event.target.value || undefined });
-          setOffset(0);
         }}
       >
         <option value="">All accessible music</option>
@@ -931,7 +749,6 @@ export function App() {
                   },
                   view === "songs" || view === "find" || view === "search",
                 );
-                setOffset(0);
               }}
             />
             {!query && (
@@ -1188,7 +1005,6 @@ export function App() {
                     albumId,
                     libraryId: route.libraryId,
                   });
-                  setOffset(0);
                 }}
               />
             )}
@@ -1220,6 +1036,13 @@ export function App() {
                       : "Songs"}
               </h2>
               <div className="row">
+                <span
+                  className="collection-update"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {refreshing && collectionReady ? "Updating…" : ""}
+                </span>
                 {collectionReady &&
                   !albumView &&
                   !artistView &&
@@ -1249,7 +1072,7 @@ export function App() {
                         )
                           return;
                         await api(`/playlists/${playlist.id}`, "DELETE");
-                        collectionCache.current.clear();
+                        invalidateCollection();
                         await refreshPlaylists();
                         setNotice(
                           "Playlist deleted. Your songs are still in the library.",
@@ -1307,7 +1130,6 @@ export function App() {
                         albumId: a.id,
                         libraryId: route.libraryId,
                       });
-                      setOffset(0);
                     }}
                   >
                     <div className="album-cover">
@@ -1337,7 +1159,6 @@ export function App() {
                         artist: a.name,
                         libraryId: route.libraryId,
                       });
-                      setOffset(0);
                     }}
                   >
                     <ArtistAvatar name={a.name} image={a.image} />
@@ -1349,6 +1170,7 @@ export function App() {
             ) : (
               <>
                 <TrackList
+                  collectionKey={collectionKey}
                   libraryId={libraryId}
                   onArtist={browseArtist}
                   tracks={tracks}
@@ -1516,7 +1338,7 @@ export function App() {
             await api(`/playlists/${destination.id}/tracks`, "POST", {
               trackId: addingTrack.id,
             });
-            collectionCache.current.clear();
+            invalidateCollection();
             if (view === `playlist:${destination.id}`)
               setReload((value) => value + 1);
             setNotice(`Added “${addingTrack.title}” to ${destination.name}.`);
@@ -1538,7 +1360,7 @@ export function App() {
             icon,
           });
           await refreshPlaylists();
-          collectionCache.current.clear();
+          invalidateCollection();
           if (!playlistReturnTrack.current) browse(`playlist:${created.id}`);
           setNotice(`Created “${created.name}”.`);
         }}
@@ -1555,7 +1377,6 @@ export function App() {
         onArtist={browseArtist}
         onNavigate={(next) => {
           navigate(next);
-          setOffset(0);
           if (mobilePlayback) setQueueOpen(false);
         }}
         onAdded={(title) => setNotice(`Added “${title}” to the queue.`)}

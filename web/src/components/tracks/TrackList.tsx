@@ -7,6 +7,7 @@ import { ArtistLinks } from "../artists/ArtistLinks";
 import { TrackActions } from "./TrackActions";
 
 export function TrackList({
+  collectionKey,
   tracks,
   libraryId,
   currentId,
@@ -21,6 +22,7 @@ export function TrackList({
   onRemove,
   onEdit,
 }: {
+  collectionKey?: string;
   tracks: Track[];
   libraryId?: string;
   currentId?: string;
@@ -52,7 +54,7 @@ export function TrackList({
   useLayoutEffect(() => {
     if (ref.current) ref.current.scrollTop = 0;
     setScroll(0);
-  }, [tracks[0]?.id]);
+  }, [collectionKey]);
   const row = 66;
   const start = Math.max(0, Math.floor(scroll / row) - 6);
   const end = Math.min(tracks.length, Math.ceil((scroll + height) / row) + 6);

@@ -1030,6 +1030,14 @@ main {
   margin-bottom: 20px;
   gap: 20px;
 }
+.collection-update {
+  display: inline-block;
+  width: 6em;
+  min-height: 1.5em;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
 .section-heading h2 {
   margin: 0;
 }
