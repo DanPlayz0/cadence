@@ -16,11 +16,20 @@ services:
       METADATA_USER_AGENT: ${METADATA_USER_AGENT:-}
       LASTFM_API_KEY: ${LASTFM_API_KEY:-}
       LASTFM_API_SECRET: ${LASTFM_API_SECRET:-}
+      # Optional external slskd; the bundled override supplies its own connection.
+      SLSKD_URL: ${SLSKD_URL:-}
+      SLSKD_API_KEY: ${SLSKD_API_KEY:-}
+      SLSKD_USERNAME: ${SLSKD_USERNAME:-cadence}
+      SLSKD_PASSWORD: ${SLSKD_PASSWORD:-}
+      SOULSEEK_STAGING_DIR: /soulseek-staging
+      SOULSEEK_WRITABLE_ROOTS: ${SOULSEEK_WRITABLE_ROOTS:-}
     # Optional host mount; unset MUSIC_PATH starts with empty Docker-managed storage.
     # Choose library folders and sharing in the web UI after mounting storage.
     volumes:
       - "${MUSIC_PATH:-music_storage}:/music:ro"
       - app_data:/data
+      # External slskd: mount its completed-download directory here.
+      - "${SOULSEEK_STAGING_PATH:-soulseek_staging}:/soulseek-staging"
     depends_on:
       db:
         condition: service_healthy
@@ -48,3 +57,4 @@ volumes:
   music_storage:
   postgres_data:
   app_data:
+  soulseek_staging:

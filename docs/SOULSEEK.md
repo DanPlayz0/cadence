@@ -1,6 +1,34 @@
 # Soulseek downloads
 
-Cadence can use the optional [slskd](https://github.com/slskd/slskd) container to search Soulseek and download songs or complete audio folders. Existing installations and listening features work without it. Soulseek search is always an explicit action; typing in library search does not send queries to Soulseek.
+Cadence can use an external [slskd](https://github.com/slskd/slskd) instance or the optional bundled container to search Soulseek and download songs or complete audio folders. Existing installations and listening features work without it. Soulseek search is always an explicit action; typing in library search does not send queries to Soulseek.
+
+## Connect an external slskd
+
+The default `compose.yaml` supports an existing slskd instance. Set these values in `.env`, using credentials already configured on that instance:
+
+```dotenv
+SLSKD_URL=http://host.docker.internal:5030
+SLSKD_API_KEY=replace-with-your-existing-slskd-api-key
+SLSKD_USERNAME=your-slskd-administrator
+SLSKD_PASSWORD=replace-with-your-existing-slskd-administrator-password
+SOULSEEK_STAGING_PATH=/srv/slskd/downloads
+SOULSEEK_WRITABLE_ROOTS=/music/Downloads
+```
+
+Use the slskd base URL without `/api/v0`. It must be reachable from the app container; `localhost` refers to that container. `host.docker.internal` works for host services on Docker Desktop; otherwise use a reachable host address or a service name on a shared Docker network. Keep the URL blank to leave the connection unconfigured. Network account credentials (`SOULSEEK_USERNAME`/`SOULSEEK_PASSWORD`) remain managed by the external slskd.
+
+`SOULSEEK_STAGING_PATH` is the Docker host path to slskd's completed-download directory, mounted read-write at `/soulseek-staging` in Cadence. Windows hosts can use a path such as `D:/slskd/downloads`. If slskd is on another machine, mount its completed-download storage on the Docker host first. Both applications must see the same batch subfolders and files; an API connection alone cannot import audio. UID/GID 10001 needs permission to read downloads and remove staging when an administrator requests cleanup. Leave incomplete downloads outside this mount.
+
+Configure writable library destinations as described below. For example, when `MUSIC_PATH` mounts your music folder at `/music`, create `Downloads` inside that folder and use an app-only `compose.override.yaml` to make the mount writable:
+
+```yaml
+services:
+  app:
+    volumes:
+      - "${MUSIC_PATH}:/music:rw"
+```
+
+Run `docker compose up -d --build app`, then open **Instance settings → Soulseek** to enable the integration and configure access, routing, and review. Do not include `compose.soulseek.yaml` for an external instance: that override selects the bundled service and its staging volume. Use an slskd version supporting the batch API used by Cadence (the bundled version is 0.26.0). Sharing additionally requires the slskd administrator credentials, remote configuration enabled on slskd, and shared library folders visible at the same paths in both applications.
 
 ## Start the container
 
@@ -11,11 +39,11 @@ Cadence can use the optional [slskd](https://github.com/slskd/slskd) container t
 
 The slskd image is pinned to 0.26.0. Its HTTP API stays on the internal Docker network; no public web UI is published. Cadence uses an API key for transfers and a server-side administrator login for sharing configuration. Remote configuration is enabled for that purpose. Credentials and raw slskd configuration are never sent to the Cadence browser.
 
-Use the same Compose file list for later `up`, `logs`, and `down` commands. Omitting the Soulseek override from a new app deployment removes its connection configuration without deleting persisted settings or download volumes. Do not use `down -v` if you want to keep data.
+Use the same Compose file list for later `up`, `logs`, and `down` commands. Omitting the Soulseek override from a new app deployment reverts to the default Compose connection settings (disabled when `SLSKD_URL` is blank) without deleting persisted settings or download volumes. Do not use `down -v` if you want to keep data.
 
 ## Writable import folders
 
-slskd writes incomplete files and completed staging files into separate Docker volumes. Staging is excluded from Cadence scans, including scans of an ancestor folder. Cadence copies approved audio into existing library folders; it does not alter existing music or overwrite files.
+The bundled slskd writes incomplete files and completed staging files into separate Docker volumes; an external instance uses its configured storage. Staging is excluded from Cadence scans, including scans of an ancestor folder. Cadence copies approved audio into existing library folders; it does not alter existing music or overwrite files.
 
 Import destinations must exist inside a configured library, be within `MUSIC_ROOTS` and `SOULSEEK_WRITABLE_ROOTS`, and be writable by UID/GID 10001. The existing Compose music mount is read-only until you explicitly change it.
 

@@ -34,7 +34,7 @@ Provider outages do not interrupt playback. A PostgreSQL delivery queue survives
 
 Saved application credentials, session keys, and personal tokens are encrypted in PostgreSQL with the generated `DATA_DIR/sync.key` (the Docker app data volume). Back up this key with the database and keep it private. Losing the key requires re-entering application credentials and reconnecting external accounts; do not replace it during an upgrade. API responses and logs never include the saved credentials.
 
-Optional Soulseek search and downloads are available through a companion slskd container. See [Soulseek setup, permissions, review, import, and sharing](docs/SOULSEEK.md). Configure **Instance settings → Soulseek** after enabling the optional Compose deployment.
+Optional Soulseek search and downloads are available through an external slskd instance with the default Compose file or a companion slskd container. See [Soulseek setup, permissions, review, import, and sharing](docs/SOULSEEK.md). Configure **Instance settings → Soulseek** after configuring the connection.
 
 - **Instance settings → Metadata review → Edit song metadata → Attribute filter / bulk edit** matches an attribute’s current catalog value exactly, ignoring case, and previews matching songs. Enter a replacement and save suggestions for every match, including songs on other pages. Leave Album empty to turn incorrectly tagged albums (such as `music`) into singles after accepting the suggestions. Other optional fields can also be cleared; title and artist must stay nonblank, and track/disc numbers must be 0–9999. Library exclusions are respected, files are untouched, and a changed match count requires refreshing the preview.
 
