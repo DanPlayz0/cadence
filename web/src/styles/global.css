@@ -641,9 +641,7 @@ main {
   padding: 12px 0;
 }
 .metadata-chooser.ui-dialog-content {
-  width: min(900px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
+  --dialog-width: 900px;
 }
 .metadata-chooser h2,
 .metadata-chooser p {
@@ -866,7 +864,7 @@ main {
   background: #493121;
 }
 .user-editor-dialog {
-  width: min(490px, calc(100vw - 32px));
+  --dialog-width: 490px;
 }
 .user-select {
   display: flex;
@@ -1842,7 +1840,7 @@ main,
 }
 .admin-form {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   align-items: end;
 }
@@ -2363,10 +2361,28 @@ main,
   border: 1px solid #444b3b;
   border-radius: 14px;
   padding: 26px;
-  width: min(440px, calc(100vw - 32px));
+  width: min(var(--dialog-width, 440px), calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
   box-shadow: 0 20px 60px #0006;
+}
+.account-dialog :where(input, select, textarea, button) {
+  max-width: 100%;
+}
+.account-dialog:not(.playback-sheet) .row {
+  flex-wrap: wrap;
+}
+.account-dialog:not(.playback-sheet) .row > *,
+.account-dialog
+  :where(form, label, .checkbox-copy, .playlist-options > button > span) {
+  min-width: 0;
+}
+.account-dialog .dialog-heading > button,
+.account-dialog .playlist-options svg,
+.account-dialog .picker-search > svg {
+  flex-shrink: 0;
 }
 .account-dialog::backdrop {
   background: #0009;
@@ -2423,9 +2439,15 @@ main,
   font-size: 12px;
   line-height: 1.7;
 }
-.account-dialog form {
+/* Only simple footer forms use a row; editor forms keep their own layout. */
+.account-dialog > form:where(:not(.admin-form)) {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  margin-top: 24px;
+}
+.account-dialog .add-user-form {
+  grid-template-columns: minmax(0, 1fr);
   margin-top: 24px;
 }
 .listening-settings {
@@ -4388,7 +4410,8 @@ input[type="range"] {
     min-height: 44px;
     flex-shrink: 0;
   }
-  .ui-dialog-content:not(.playback-sheet) {
+  .ui-dialog-content:not(.playback-sheet),
+  .user-editor-dialog {
     inset: 0;
     transform: none;
     width: 100%;
@@ -4405,7 +4428,7 @@ input[type="range"] {
   body:has(.ui-dialog-content) .mobile-chrome {
     visibility: hidden;
   }
-  .ui-dialog-content:not(.playback-sheet) .dialog-heading {
+  .account-dialog:not(.playback-sheet) .dialog-heading {
     position: sticky;
     top: 0;
     z-index: 1;

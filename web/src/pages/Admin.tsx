@@ -707,7 +707,7 @@ export function Admin({
                     Create an account for a new listener.
                   </DialogDescription>
                   <form
-                    className="admin-form"
+                    className="admin-form add-user-form"
                     onSubmit={(e) => {
                       e.preventDefault();
                       const form = e.currentTarget;

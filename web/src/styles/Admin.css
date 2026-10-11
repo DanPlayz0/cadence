@@ -28,9 +28,7 @@
   white-space: normal;
 }
 .library-editor.ui-dialog-content {
-  width: min(720px, calc(100vw - 2rem));
-  max-height: 90dvh;
-  overflow-y: auto;
+  --dialog-width: 720px;
 }
 .library-editor fieldset {
   border: 0;
@@ -67,7 +65,7 @@
 }
 .library-recipients {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 1rem;
 }
 .library-recipients > div {
