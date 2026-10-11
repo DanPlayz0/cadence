@@ -162,6 +162,54 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("Persistent queues", () => {
+  it("switches playlist and clears manual songs without touching active audio", async () => {
+    player.play([track("a"), track("b")]);
+    await settle();
+    audio.currentTime = 35;
+    player.enqueue(track("manual"));
+    render();
+    const pause = vi.spyOn(audio, "pause");
+    const load = vi.spyOn(audio, "load");
+    player.replaceUpcoming([track("c"), track("d")], {
+      name: "Next",
+      route: { view: "playlist:p" },
+    });
+    render();
+    expect(audio.currentTime).toBe(35);
+    expect(audio.paused).toBe(false);
+    expect(player.queue.current?.track.id).toBe("a");
+    expect(player.queue.manual[0].track.id).toBe("manual");
+    player.clearManual();
+    render();
+    expect(player.queue.manual).toEqual([]);
+    expect(player.queue.remaining.map((e) => e.track.id)).toEqual(["c", "d"]);
+    expect(pause).not.toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
+  });
+  it("restores a full queue and settings paused at the saved position", async () => {
+    player.play([track("a"), track("b")]);
+    await settle();
+    player.enqueue(track("manual"));
+    render();
+    const queue = player.queue;
+    player.restore(track("a"), 42, queue, { shuffle: true, repeat: "all" });
+    await settle();
+    audio.onloadedmetadata?.();
+    render();
+    expect(audio.paused).toBe(true);
+    expect(audio.currentTime).toBe(42);
+    expect(player.queue).toEqual(queue);
+    expect(player.shuffle).toBe(true);
+    expect(player.repeat).toBe("all");
+  });
+  it("counts manual edits as actions so delayed restoration cannot overwrite them", () => {
+    const before = player.generation();
+    player.enqueue(track("manual"));
+    expect(player.generation()).not.toBe(before);
+  });
+});
+
 describe("Lossless playback integration", () => {
   it("separates local play counts from qualified scrobbles and preserves identity across quality changes", async () => {
     let wall = 0;

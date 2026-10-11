@@ -17,6 +17,7 @@ type playbackRepo struct {
 	denied   bool
 	conflict bool
 	calls    int
+	missing  map[string]bool
 }
 
 func (r *playbackRepo) Session(context.Context, string) (domain.Session, error) {
@@ -28,11 +29,11 @@ func (r *playbackRepo) Playback(_ context.Context, user string) (domain.Playback
 	}
 	return r.saved, nil
 }
-func (r *playbackRepo) Track(context.Context, string, string) (domain.Track, error) {
-	if r.denied {
+func (r *playbackRepo) Track(_ context.Context, _ string, id string) (domain.Track, error) {
+	if r.denied || r.missing[id] {
 		return domain.Track{}, domain.ErrNotFound
 	}
-	return domain.Track{ID: "song", Title: "Song", Duration: 100}, nil
+	return domain.Track{ID: id, Title: "Song", Duration: 100}, nil
 }
 func (r *playbackRepo) SavePlayback(_ context.Context, user string, v domain.Playback) (domain.Playback, error) {
 	if user != "listener" {
@@ -111,3 +112,52 @@ func TestPlaybackAuthenticationValidationAndHiddenTracks(t *testing.T) {
 }
 
 func (r *playbackRepo) RecordDevice(context.Context, string, string, string) error { return nil }
+
+func TestPlaybackQueueValidationHydrationAndMissingCurrent(t *testing.T) {
+	q := &domain.PlaybackQueue{Version: 1, Repeat: "all", Shuffle: true,
+		Current:   &domain.PlaybackEntry{ID: "current", TrackID: "song"},
+		Manual:    []domain.PlaybackEntry{{ID: "manual", TrackID: "next"}, {ID: "gone", TrackID: "gone"}},
+		Remaining: []domain.PlaybackEntry{{ID: "playlist", TrackID: "next"}},
+		Cycle:     []domain.PlaybackEntry{{ID: "current", TrackID: "song"}, {ID: "playlist", TrackID: "next"}},
+	}
+	if !validPlaybackQueue(q, "song") {
+		t.Fatal("valid queue rejected")
+	}
+	if validPlaybackQueue(q, "other") {
+		t.Fatal("mismatched current accepted")
+	}
+	bad := *q
+	bad.Version = 2
+	if validPlaybackQueue(&bad, "song") {
+		t.Fatal("unknown version accepted")
+	}
+	bad = *q
+	bad.Manual = []domain.PlaybackEntry{{ID: "current", TrackID: "other"}}
+	if validPlaybackQueue(&bad, "song") {
+		t.Fatal("colliding identity accepted")
+	}
+	repo := &playbackRepo{saved: domain.Playback{TrackID: "song", Position: 42, Queue: q}, missing: map[string]bool{"song": true, "gone": true}}
+	r := httptest.NewRequest("GET", "/api/v1/me/playback", nil)
+	r.AddCookie(&http.Cookie{Name: "cadence_session", Value: "session"})
+	w := httptest.NewRecorder()
+	(&Server{Repo: repo}).Handler().ServeHTTP(w, r)
+	var result struct {
+		domain.Playback
+		Tracks map[string]domain.Track
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	if result.Queue == nil || result.Queue.Current != nil || result.TrackID != "" || result.Position != 0 {
+		t.Fatal("missing current not filtered", w.Body.String())
+	}
+	if len(result.Queue.Manual) != 1 || len(result.Queue.Remaining) != 1 || len(result.Queue.Cycle) != 1 || result.Tracks["next"].ID != "next" {
+		t.Fatal("upcoming songs lost", w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), `"gone"`) || strings.Contains(w.Body.String(), `"song"`) {
+		t.Fatal("inaccessible references leaked", w.Body.String())
+	}
+	if len(repo.saved.Queue.Manual) != 2 {
+		t.Fatal("GET mutated saved snapshot")
+	}
+}

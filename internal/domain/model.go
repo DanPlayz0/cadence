@@ -59,11 +59,36 @@ type Session struct {
 }
 
 type Playback struct {
-	TrackID  string  `json:"trackId"`
-	Position float64 `json:"position"`
-	Revision int64   `json:"revision"`
-	Writer   string  `json:"writer"`
-	Sequence int64   `json:"sequence"`
+	TrackID  string         `json:"trackId"`
+	Position float64        `json:"position"`
+	Revision int64          `json:"revision"`
+	Writer   string         `json:"writer"`
+	Sequence int64          `json:"sequence"`
+	Queue    *PlaybackQueue `json:"queue,omitempty"`
+}
+
+// Playback snapshots contain references, never client-supplied track metadata.
+type PlaybackSource struct {
+	Name  string            `json:"name"`
+	Route map[string]string `json:"route"`
+}
+type PlaybackEntry struct {
+	ID      string          `json:"id"`
+	TrackID string          `json:"trackId"`
+	Order   int             `json:"order"`
+	Source  *PlaybackSource `json:"source,omitempty"`
+}
+type PlaybackQueue struct {
+	Version   int             `json:"version"`
+	Current   *PlaybackEntry  `json:"current"`
+	History   []PlaybackEntry `json:"history"`
+	Forward   []PlaybackEntry `json:"forward"`
+	Manual    []PlaybackEntry `json:"manual"`
+	Remaining []PlaybackEntry `json:"remaining"`
+	Cycle     []PlaybackEntry `json:"cycle"`
+	Source    *PlaybackSource `json:"source,omitempty"`
+	Shuffle   bool            `json:"shuffle"`
+	Repeat    string          `json:"repeat"`
 }
 type Track struct {
 	FeaturedArtists string  `json:"featuredArtists,omitempty"`

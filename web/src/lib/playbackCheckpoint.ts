@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import type { Track } from "../services/api";
+import { validQueueSnapshot, type QueueSnapshot } from "./queueSnapshot";
 
 export type Checkpoint = {
   trackId: string;
@@ -7,16 +8,26 @@ export type Checkpoint = {
   revision: number;
   writer: string;
   sequence: number;
+  queue?: QueueSnapshot;
 };
-export type SavedPlayback = Checkpoint & { track: Track | null };
-export type LocalCheckpoint = Checkpoint & { dirty: boolean };
+export type SavedPlayback = Checkpoint & {
+  track: Track | null;
+  tracks?: Record<string, Track>;
+};
+export type LocalCheckpoint = Checkpoint & {
+  dirty: boolean;
+  tracks?: Record<string, Track>;
+};
 
 export function validCheckpoint(value: unknown): value is LocalCheckpoint {
   if (!value || typeof value !== "object") return false;
   const v = value as LocalCheckpoint;
   return (
     typeof v.trackId === "string" &&
-    !!v.trackId &&
+    (!!v.trackId || !!v.queue) &&
+    (v.queue === undefined ||
+      (validQueueSnapshot(v.queue) &&
+        (v.queue.current?.trackId ?? "") === v.trackId)) &&
     typeof v.writer === "string" &&
     /^[a-f0-9-]{16,64}$/.test(v.writer) &&
     Number.isFinite(v.position) &&

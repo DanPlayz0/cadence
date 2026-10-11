@@ -29,10 +29,12 @@ import {
   retainQueue,
   shuffleRemaining,
   startQueue,
+  replaceUpcomingSource,
   type PlaybackQueue,
   type PlaybackSource,
   type QueueSection,
 } from "../lib/queue";
+import { saveQueue } from "../lib/queueSnapshot";
 type Resume = {
   sync?: SyncPlayback;
   position: number;
@@ -64,7 +66,9 @@ export function usePlayer(
   const cache = useRef(sessionCache);
   const [queue, setQueue] = useState(emptyQueue);
   const queueRef = useRef(queue);
+  const queueGeneration = useRef(0);
   const updateQueue = useCallback((value: PlaybackQueue) => {
+    queueGeneration.current++;
     queueRef.current = value;
     setQueue(value);
     return value;
@@ -81,12 +85,29 @@ export function usePlayer(
   const blockedRef = useRef<BlockedPlayback | null>(null);
   const [sourceLabel, setSourceLabel] = useState<string | undefined>();
   const [shuffle, storeShuffle] = useState(false);
-  const [repeat, setRepeat] = useState<"off" | "all" | "one">("off");
+  const [repeat, setRepeatState] = useState<"off" | "all" | "one">("off");
   const [offline, setOffline] = useState(!navigator.onLine);
   const [cacheVersion, setCacheVersion] = useState(0);
   const [checkpointVersion, setCheckpointVersion] = useState(0);
   const state = useRef({ quality, shuffle, repeat });
   state.current = { quality, shuffle, repeat };
+  const setRepeat = useCallback(
+    (
+      value:
+        | "off"
+        | "all"
+        | "one"
+        | ((previous: "off" | "all" | "one") => "off" | "all" | "one"),
+    ) => {
+      const next =
+        typeof value === "function" ? value(state.current.repeat) : value;
+      if (next === state.current.repeat) return;
+      queueGeneration.current++;
+      state.current.repeat = next;
+      setRepeatState(next);
+    },
+    [],
+  );
   const loadSeq = useRef(0);
   const sessionGeneration = useRef(0);
   const active = useRef<{
@@ -332,19 +353,33 @@ export function usePlayer(
     [start, updateQueue],
   );
   const restore = useCallback(
-    (track: Track, position: number) => {
-      updateQueue({
-        ...emptyQueue(),
-        manual: queueRef.current.manual,
-        current: queueEntry(track),
-      });
-      void start(track, undefined, {
-        position,
-        autoplay: false,
-        event: eventID(),
-        heard: 0,
-        recorded: false,
-      });
+    (
+      track: Track | null,
+      position: number,
+      restored?: PlaybackQueue,
+      settings?: { shuffle: boolean; repeat: "off" | "all" | "one" },
+    ) => {
+      if (settings) {
+        state.current.shuffle = settings.shuffle;
+        state.current.repeat = settings.repeat;
+        storeShuffle(settings.shuffle);
+        setRepeatState(settings.repeat);
+      }
+      updateQueue(
+        restored ?? {
+          ...emptyQueue(),
+          manual: queueRef.current.manual,
+          current: track ? queueEntry(track) : null,
+        },
+      );
+      if (track)
+        void start(track, undefined, {
+          position,
+          autoplay: false,
+          event: eventID(),
+          heard: 0,
+          recorded: false,
+        });
     },
     [start, updateQueue],
   );
@@ -359,15 +394,31 @@ export function usePlayer(
   );
   const snapshot = useCallback(() => {
     const v = active.current;
-    return v
-      ? {
-          trackId: v.track.id,
-          position: Math.max(0, v.restorePosition ?? audio.current.currentTime),
-          playing: !audio.current.paused,
-        }
-      : null;
+    const current = queueRef.current.current;
+    return {
+      trackId: current?.track.id ?? "",
+      position:
+        current && v
+          ? Math.max(0, v.restorePosition ?? audio.current.currentTime)
+          : 0,
+      playing: !audio.current.paused,
+      queue: saveQueue(
+        queueRef.current,
+        state.current.shuffle,
+        state.current.repeat,
+      ),
+      tracks: Object.fromEntries(
+        queueEntries(queueRef.current).map((entry) => [
+          entry.track.id,
+          entry.track,
+        ]),
+      ),
+    };
   }, []);
-  const generation = useCallback(() => loadSeq.current, []);
+  const generation = useCallback(
+    () => `${loadSeq.current}:${queueGeneration.current}`,
+    [],
+  );
   const seek = useCallback((n: number) => {
     if (!Number.isFinite(n)) return;
     const duration = active.current?.track.duration ?? 0;
@@ -845,6 +896,19 @@ export function usePlayer(
         ...queueRef.current,
         manual: [...queueRef.current.manual, queueEntry(t)],
       }),
+    clearManual: () => updateQueue({ ...queueRef.current, manual: [] }),
+    replaceUpcoming: (tracks: Track[], source: PlaybackSource) => {
+      const hadCurrent = !!queueRef.current.current;
+      const value = replaceUpcomingSource(
+        queueRef.current,
+        tracks,
+        source,
+        state.current.shuffle,
+      );
+      if (value === queueRef.current) return;
+      updateQueue(value);
+      if (!hadCurrent && value.current) void start(value.current.track);
+    },
     cached: (id: string) => cache.current.has(id),
     cacheBytes: cache.current.size,
   };

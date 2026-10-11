@@ -70,6 +70,7 @@ import { ArtistProfile } from "./pages/ArtistProfile";
 import { ArtistLinks } from "./components/artists/ArtistLinks";
 import { TrackMetadataEditor } from "./components/metadata/TrackMetadataEditor";
 import { PlaylistPicker } from "./components/playlists/PlaylistPicker";
+import { playlistTracks } from "./lib/playlistPlayback";
 import { usePanelResize } from "./hooks/usePanelResize";
 import { Button } from "./components/ui/button";
 import {
@@ -457,6 +458,34 @@ export function App() {
     return () => window.removeEventListener("keydown", key);
   }, [player.toggle, session, mobilePlayback, navigate, route.libraryId]);
   const playlist = playlists.find((p) => p.id === view.slice(9));
+  const [playlistPending, setPlaylistPending] = useState(false);
+  const playlistRequest = useRef(0);
+  useEffect(() => {
+    playlistRequest.current++;
+    setPlaylistPending(false);
+  }, [view, session?.user.id]);
+  async function playPlaylistNext() {
+    if (!playlist || !session) return;
+    const request = ++playlistRequest.current;
+    const user = session.user.id;
+    const source = { name: playlist.name, route: { view: `playlist:${playlist.id}` } };
+    const valid = () => request === playlistRequest.current && activeUser.current === user;
+    setPlaylistPending(true);
+    try {
+      const songs = await playlistTracks(playlist.id, valid);
+      if (!songs || !valid()) return;
+      if (!songs.length) { setNotice("This playlist has no playable songs."); return; }
+      player.replaceUpcoming(songs, source);
+      setNotice(`Loaded “${playlist.name}” after the current song and manual queue.`);
+    } catch (error) {
+      if (valid()) {
+        if (error instanceof APIError && error.status === 401) expire();
+        else setError((error as Error).message);
+      }
+    } finally {
+      if (valid()) setPlaylistPending(false);
+    }
+  }
   const heading =
     selectedAlbum?.title ||
     selectedArtist ||
@@ -1060,6 +1089,15 @@ export function App() {
                       <Play size={16} fill="currentColor" /> Play loaded songs
                     </button>
                   )}
+                {playlist && (
+                  <button
+                    className="subtle"
+                    disabled={playlistPending || !collectionReady || total === 0}
+                    onClick={() => void playPlaylistNext()}
+                  >
+                    {playlistPending ? "Loading playlist…" : "Play after current song"}
+                  </button>
+                )}
                 {playlist && (
                   <button
                     className="subtle"

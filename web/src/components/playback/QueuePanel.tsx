@@ -89,7 +89,7 @@ export function QueuePanel({
   };
   function section(key: QueueSection, heading: string) {
     const entries = q[key];
-    if (!entries.length) return null;
+    if (!entries.length && key !== "manual") return null;
     return (
       <section
         className="queue-section"
@@ -97,10 +97,25 @@ export function QueuePanel({
       >
         <h3>
           {heading}
+          {key === "manual" && (
+            <button
+              className="subtle small"
+              disabled={!entries.length}
+              onClick={() => {
+                player.clearManual();
+                setAnnouncement("Manual queue cleared.");
+              }}
+            >
+              Clear manual queue
+            </button>
+          )}
           {key === "remaining" && q.source && (
             <SourceLink source={q.source} onNavigate={onNavigate} />
           )}
         </h3>
+        {key === "manual" && !entries.length && (
+          <p className="muted">No manually queued songs.</p>
+        )}
         <ol className="queue-entries">
           {entries.map((entry, index) => (
             <li
@@ -252,7 +267,7 @@ export function QueuePanel({
         )}
       </section>
       {section("forward", "Returning next")}
-      {section("manual", "Next in queue")}
+      {section("manual", "Manual queue")}
       {section("remaining", q.source ? "Loaded songs from " : "Upcoming songs")}
       {!q.forward.length && !q.manual.length && !q.remaining.length && (
         <p className="muted queue-empty">
@@ -290,7 +305,7 @@ export function QueuePanel({
           </ol>
         ) : (
           <p className="muted">
-            Your listening history will appear here during this session.
+            Your listening history will appear here as you play songs.
           </p>
         )}
       </details>

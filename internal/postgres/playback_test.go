@@ -5,6 +5,7 @@ import (
 	"cadence/internal/domain"
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 	"testing"
 )
@@ -117,5 +118,60 @@ func TestPlaybackOrderingIsolationAccessAndMigration(t *testing.T) {
 	}
 	if v, err = r.Playback(ctx, user.ID); err != nil || v.TrackID != "" {
 		t.Fatal("deleted track", v, err)
+	}
+}
+
+func TestPlaybackQueuePersistenceProgressAndDeletedCurrent(t *testing.T) {
+	r, c := fixture(t)
+	ctx := context.Background()
+	user, err := r.CreateUser(ctx, domain.User{Username: "queue-listener", Password: "hash"}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := r.UpsertTrack(ctx, domain.Track{Path: "/music/current.mp3", Root: "/music", Title: "Current", Duration: 100}, "scan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	next, err := r.UpsertTrack(ctx, domain.Track{Path: "/music/next.mp3", Root: "/music", Title: "Next", Duration: 100}, "scan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	queue := &domain.PlaybackQueue{Version: 1, Repeat: "all", Shuffle: true,
+		Current:   &domain.PlaybackEntry{ID: "current", TrackID: id},
+		Manual:    []domain.PlaybackEntry{{ID: "manual", TrackID: next}},
+		Remaining: []domain.PlaybackEntry{{ID: "duplicate", TrackID: next}},
+		Cycle:     []domain.PlaybackEntry{{ID: "current", TrackID: id}, {ID: "duplicate", TrackID: next}},
+	}
+	v := domain.Playback{TrackID: id, Position: 42, Writer: "0123456789abcdef", Sequence: 1, Queue: queue}
+	saved, err := r.SavePlayback(ctx, user.ID, v)
+	if err != nil || !reflect.DeepEqual(saved.Queue, queue) {
+		t.Fatal(saved, err)
+	}
+	v.Queue = nil
+	v.Sequence++
+	v.Position = 50
+	saved, err = r.SavePlayback(ctx, user.ID, v)
+	if err != nil || !reflect.DeepEqual(saved.Queue, queue) {
+		t.Fatal("progress lost queue", saved, err)
+	}
+	if _, err = c.Exec(ctx, "DELETE FROM tracks WHERE id=$1", id); err != nil {
+		t.Fatal(err)
+	}
+	saved, err = r.Playback(ctx, user.ID)
+	if err != nil || saved.TrackID != "" || !reflect.DeepEqual(saved.Queue, queue) {
+		t.Fatal("deleted current lost queue", saved, err)
+	}
+	queue.Current = nil
+	v.TrackID = ""
+	v.Position = 0
+	v.Queue = queue
+	v.Sequence++
+	saved, err = r.SavePlayback(ctx, user.ID, v)
+	if err != nil || saved.TrackID != "" || !reflect.DeepEqual(saved.Queue, queue) {
+		t.Fatal("queue without current failed", saved, err)
+	}
+	var migrated bool
+	if err = c.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=16)").Scan(&migrated); err != nil || !migrated {
+		t.Fatal("migration", err)
 	}
 }

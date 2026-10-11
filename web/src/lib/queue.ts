@@ -19,13 +19,32 @@ export type PlaybackQueue = {
   cycle: QueueEntry[];
   source?: PlaybackSource;
 };
-let entrySequence = 0;
 export function queueEntry(
   track: Track,
   source?: PlaybackSource,
   order = 0,
 ): QueueEntry {
-  return { id: `entry-${++entrySequence}`, track, source, order };
+  const id =
+    crypto.randomUUID?.() ??
+    [...crypto.getRandomValues(new Uint8Array(16))]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  return { id, track, source, order };
+}
+
+export function replaceUpcomingSource(
+  q: PlaybackQueue,
+  tracks: Track[],
+  source: PlaybackSource,
+  shuffle = false,
+): PlaybackQueue {
+  if (!tracks.length) return q;
+  if (!q.current) return startQueue(q, tracks, 0, source, shuffle);
+  const cycle = tracks.map((track, order) => queueEntry(track, source, order));
+  return shuffleRemaining(
+    { ...q, forward: [], remaining: cycle, cycle, source },
+    shuffle,
+  );
 }
 export function emptyQueue(): PlaybackQueue {
   return {

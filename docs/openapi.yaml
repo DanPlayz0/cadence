@@ -800,8 +800,8 @@ paths:
         "500": *a4
   /me/playback:
     get:
-      summary: Restore this account's last song and playback position
-      description: Returns a null track when no checkpoint exists or the saved song is unavailable or excluded. Revision remains available for subsequent writes.
+      summary: Restore this account's playback queue and position
+      description: Returns a null track when no checkpoint exists or the saved song is unavailable or excluded. Queue entries are filtered by current access and tracks contains their hydrated metadata. Revision remains available for subsequent writes.
       security:
         - session: []
       responses:
@@ -818,13 +818,17 @@ paths:
                         nullable: true
                         allOf:
                           - $ref: "#/components/schemas/Track"
+                      tracks:
+                        type: object
+                        additionalProperties:
+                          $ref: "#/components/schemas/Track"
         "401":
           description: Sign in required
         "500":
           description: Server failure
     put:
       summary: Save this account's playback progress
-      description: Requires X-CSRF-Token. Use a random writer ID per tab lifetime and increasing sequence numbers. Same-writer saves accept only newer sequences. A different writer must supply the current revision. Position is clamped to known song duration. Checkpoints do not record listening-history plays.
+      description: Requires X-CSRF-Token. Use a random writer ID per tab lifetime and increasing sequence numbers. Same-writer saves accept only newer sequences. A different writer must supply the current revision. Position is clamped to known song duration. An empty trackId is allowed with a queue whose current entry is null. Omit queue for a progress-only update; the existing queue is preserved when the current track is unchanged. Checkpoints do not record listening-history plays.
       security:
         - session: []
       parameters:
@@ -844,7 +848,6 @@ paths:
                   properties:
                     trackId:
                       type: string
-                      minLength: 1
                     writer:
                       type: string
                       minLength: 16
@@ -5048,6 +5051,83 @@ components:
           minimum: 0
           maximum: 9007199254740991
           description: Positive and increasing for saves; zero for an empty saved state
+        queue:
+          $ref: "#/components/schemas/PlaybackQueue"
+    PlaybackQueue:
+      type: object
+      required: [version, current, history, forward, manual, remaining, cycle, shuffle, repeat]
+      description: Versioned queue of track references and entry identities. Repeated songs have separate identities; cycle may reuse an identity from an active section. At most 10000 entry references in total; requests retain the API's 1 MiB body limit.
+      properties:
+        version:
+          type: integer
+          enum: [1]
+        current:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PlaybackQueueEntry"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaybackQueueEntry"
+        forward:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaybackQueueEntry"
+        manual:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaybackQueueEntry"
+        remaining:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaybackQueueEntry"
+        cycle:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaybackQueueEntry"
+        source:
+          $ref: "#/components/schemas/PlaybackQueueSource"
+        shuffle:
+          type: boolean
+        repeat:
+          type: string
+          enum: [off, all, one]
+    PlaybackQueueEntry:
+      type: object
+      required: [id, trackId, order]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 120
+        trackId:
+          type: string
+          minLength: 1
+          maxLength: 120
+        order:
+          type: integer
+          minimum: 0
+          maximum: 10000000
+        source:
+          $ref: "#/components/schemas/PlaybackQueueSource"
+    PlaybackQueueSource:
+      type: object
+      required: [name, route]
+      properties:
+        name:
+          type: string
+          maxLength: 1000
+        route:
+          type: object
+          required: [view]
+          additionalProperties: false
+          properties:
+            view: { type: string, minLength: 1, maxLength: 1000 }
+            libraryId: { type: string, maxLength: 1000 }
+            albumId: { type: string, maxLength: 1000 }
+            artist: { type: string, maxLength: 1000 }
+            adminTab: { type: string, maxLength: 1000 }
+            query: { type: string, maxLength: 1000 }
     OK:
       type: object
       properties:

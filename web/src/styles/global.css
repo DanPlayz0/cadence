@@ -1594,6 +1594,15 @@ main,
 .queue-section {
   margin-bottom: 24px;
 }
+.queue-section h3 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.queue-section h3 > button {
+  margin-left: auto;
+}
 .queue-entries {
   list-style: none;
   padding: 0;
