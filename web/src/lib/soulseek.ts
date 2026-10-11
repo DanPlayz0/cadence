@@ -1,5 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-export type SoulseekCapabilities = {
+export const soulseekAudioFormats = [
+  "flac",
+  "wav",
+  "m4a",
+  "mp3",
+  "aac",
+  "ogg",
+  "opus",
+] as const;
+export type SoulseekDownloadPolicy = {
+  losslessOnly: boolean;
+  allowedFormats: string[];
+};
+export type SoulseekCapabilities = SoulseekDownloadPolicy & {
   configured: boolean;
   enabled: boolean;
   allowed: boolean;
@@ -11,7 +24,7 @@ export type SoulseekRule = {
   libraryId: string;
   folder: string;
 };
-export type SoulseekSettings = {
+export type SoulseekSettings = SoulseekDownloadPolicy & {
   enabled: boolean;
   users: string[];
   groups: string[];
@@ -45,6 +58,7 @@ export type SoulseekSearch = {
   results: SoulseekResult[];
 };
 export type SoulseekRequest = {
+  downloadPolicy?: SoulseekDownloadPolicy;
   id: string;
   userId: string;
   username: string;

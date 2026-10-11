@@ -39,6 +39,16 @@ Downloads use an isolated staging folder per batch. Imported files retain their 
 
 **Find music** shows search progress and peer results. Album downloads fetch the full peer folder listing, not just matching search results. Requests have progress, failure, cancel, and retry controls; administrators also approve, reject, and explicitly delete staging for terminal requests. Rejection retains staging. Staging is not automatically cleaned up; monitor disk usage and delete terminal batches through the administrator controls.
 
+## Download quality
+
+**Instance settings → Soulseek → Download quality** defaults to **Lossless audio only**, with all supported formats selected: FLAC, WAV, M4A, MP3, AAC, OGG, and Opus. Administrators can turn off lossless-only or restrict the format checklist; at least one format is required. M4A can contain ALAC or AAC.
+
+Lossless eligibility matches the [slskd 0.26.0 `islossless` filter](https://github.com/slskd/slskd/blob/0.26.0/src/web/src/lib/searches.js): peers must report both sample rate and bit depth. A FLAC extension alone does not qualify. Format restrictions and lossless eligibility both apply to search results, folder listings, and server-validated requests. Album requests omit ineligible tracks and fail if no eligible audio remains.
+
+Each new request captures its quality policy. Settings changes do not affect existing requests, approvals, retries, or resumed jobs. Requests predating this feature retain unrestricted audio behavior; older settings default to lossless-only and all supported formats.
+
+Before import, Cadence verifies the actual codec and accepts FLAC, ALAC, or uncompressed PCM under lossless-only. Incorrect peer metadata can allow lossy content into staging, but it is blocked before publication into the library. Choose another source or change the administrator policy and create a new request. This checks the encoding, not whether a lossless file was previously converted from a lossy source. These controls govern Cadence requests; they do not modify slskd's independent web UI or API downloads.
+
 ## Soulseek sharing
 
 Sharing defaults to **Disabled**. Administrators can select mounted folders or share only successfully imported request folders. slskd must see these folders at the same container paths as Cadence; the storage example mounts them read-only into slskd. Sharing is independent of Cadence's library listening grants: selecting a folder makes its contents available to Soulseek peers.

@@ -248,7 +248,8 @@ paths:
               $ref: "#/components/schemas/SoulseekSelection"
   /soulseek/requests/{id}/actions:
     post:
-      summary: Manage a request; approval, rejection, and staging deletion require
+      summary:
+        Manage a request; approval, rejection, and staging deletion require
         administrator access
       security:
         - session: []
@@ -428,7 +429,8 @@ paths:
   /admin/libraries/{id}:
     put:
       summary: Replace library folders and sharing
-      description: Requires administrator and CSRF. Access changes immediately. Folder
+      description:
+        Requires administrator and CSRF. Access changes immediately. Folder
         and grant changes are atomic and request an incremental scan. Does not
         modify source files.
       security: *a1
@@ -456,7 +458,8 @@ paths:
         "500": *a4
     delete:
       summary: Remove a library and its sharing
-      description: Source music, catalog records, overrides, playlists and history are
+      description:
+        Source music, catalog records, overrides, playlists and history are
         retained. Tracks remain accessible if another library grants access.
       security: *a1
       parameters:
@@ -479,7 +482,8 @@ paths:
   /admin/folders:
     get:
       summary: Browse immediate mounted directories before indexing
-      description: Administrator only. Empty path lists configured MUSIC_ROOTS. Paths
+      description:
+        Administrator only. Empty path lists configured MUSIC_ROOTS. Paths
         must be absolute directories within those roots. Parent traversal and
         escaping symlinks are rejected. Music files are omitted; no recursive walk
         is performed.
@@ -4852,6 +4856,18 @@ components:
     SoulseekCapabilities:
       type: object
       properties:
+        losslessOnly:
+          type: boolean
+          default: true
+          description: Require reported sample rate and bit depth; verify actual lossless codec before import.
+        allowedFormats:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          default: [flac, wav, m4a, mp3, aac, ogg, opus]
+          items:
+            type: string
+            enum: [flac, wav, m4a, mp3, aac, ogg, opus]
         configured:
           type: boolean
         enabled:
@@ -4886,6 +4902,18 @@ components:
         - default
         - sharing
       properties:
+        losslessOnly:
+          type: boolean
+          default: true
+          description: Require reported sample rate and bit depth; verify actual lossless codec before import.
+        allowedFormats:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          default: [flac, wav, m4a, mp3, aac, ogg, opus]
+          items:
+            type: string
+            enum: [flac, wav, m4a, mp3, aac, ogg, opus]
         enabled:
           type: boolean
         users: &a2
@@ -4922,6 +4950,22 @@ components:
         sharingError:
           type: string
           readOnly: true
+    SoulseekDownloadPolicy:
+      type: object
+      description: Immutable policy captured when requesting audio. Missing on legacy requests, which retain unrestricted audio behavior.
+      properties:
+        losslessOnly:
+          type: boolean
+          default: true
+          description: Require reported sample rate and bit depth; verify actual lossless codec before import.
+        allowedFormats:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          default: [flac, wav, m4a, mp3, aac, ogg, opus]
+          items:
+            type: string
+            enum: [flac, wav, m4a, mp3, aac, ogg, opus]
     SoulseekAdminSettings:
       type: object
       properties:
@@ -4986,6 +5030,8 @@ components:
     SoulseekRequest:
       type: object
       properties:
+        downloadPolicy:
+          $ref: "#/components/schemas/SoulseekDownloadPolicy"
         id:
           type: string
           format: uuid

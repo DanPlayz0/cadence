@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
-import type { SoulseekCapabilities } from "../lib/soulseek";
+import {
+  soulseekAudioFormats,
+  type SoulseekCapabilities,
+} from "../lib/soulseek";
 
 const unavailable: SoulseekCapabilities = {
   configured: false,
   enabled: false,
   allowed: false,
   presentation: "separate",
+  losslessOnly: true,
+  allowedFormats: [...soulseekAudioFormats],
 };
 export function useSoulseekCapabilities(userId?: string) {
   const [value, setValue] = useState(unavailable);

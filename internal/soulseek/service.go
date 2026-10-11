@@ -133,6 +133,9 @@ func (s *Service) Destination(ctx context.Context, r domain.SoulseekRule, probe 
 	return p, nil
 }
 func (s *Service) ValidateSettings(ctx context.Context, v domain.SoulseekSettings) error {
+	if err := ValidateDownloadPolicy(v.DownloadPolicy()); err != nil {
+		return err
+	}
 	if v.Enabled && !s.Configured {
 		return errors.New("Configure the optional Soulseek container first")
 	}
@@ -264,9 +267,13 @@ func validRemoteFile(f domain.SoulseekFile) bool {
 	return base != "" && !strings.ContainsAny(base, `:*?"<>|`) && !strings.HasSuffix(base, ".") && !strings.HasSuffix(base, " ")
 }
 func (s *Service) Create(ctx context.Context, u domain.User, id, peer, folder string, files []domain.SoulseekFile) (domain.SoulseekRequest, error) {
+	return s.CreateSelection(ctx, u, id, peer, folder, files, false)
+}
+
+func (s *Service) CreateSelection(ctx context.Context, u domain.User, id, peer, folder string, files []domain.SoulseekFile, album bool) (domain.SoulseekRequest, error) {
 	unlock := s.requestLock(id)
 	defer unlock()
-	if !ValidID(id) || len(files) == 0 || len(files) > 500 || strings.TrimSpace(peer) == "" || len(peer) > 500 {
+	if !ValidID(id) || strings.TrimSpace(peer) == "" || len(peer) > 500 {
 		return domain.SoulseekRequest{}, errors.New("Choose one to 500 audio files and a valid request ID")
 	}
 	if old, e := s.Repo.SoulseekRequest(ctx, id); e == nil {
@@ -284,9 +291,22 @@ func (s *Service) Create(ctx context.Context, u domain.User, id, peer, folder st
 	if !cfg.Allows(u) {
 		return domain.SoulseekRequest{}, errors.New("Soulseek access is disabled")
 	}
-	r := domain.SoulseekRequest{ID: id, UserID: u.ID, Username: peer, Folder: folder, Rule: cfg.Rule(u), ReviewTiming: cfg.ReviewTiming, State: "queued", BatchID: ID(), Created: time.Now().UTC(), Files: []domain.SoulseekRequestFile{}}
+	policy := cfg.DownloadPolicy()
+	if album {
+		files = FilterFiles(files, policy)
+	}
+	if len(files) == 0 {
+		return domain.SoulseekRequest{}, errors.New("No audio files match the download quality policy")
+	}
+	if len(files) > 500 {
+		return domain.SoulseekRequest{}, errors.New("Choose at most 500 eligible audio files")
+	}
+	r := domain.SoulseekRequest{DownloadPolicy: policy, ID: id, UserID: u.ID, Username: peer, Folder: folder, Rule: cfg.Rule(u), ReviewTiming: cfg.ReviewTiming, State: "queued", BatchID: ID(), Created: time.Now().UTC(), Files: []domain.SoulseekRequestFile{}}
 	seen := map[string]bool{}
 	for _, f := range files {
+		if !EligibleFile(f, r.DownloadPolicy) {
+			return r, errors.New("Selected audio does not match the download quality policy")
+		}
 		base := strings.ToLower(path.Base(strings.ReplaceAll(f.Filename, `\`, "/")))
 		if !validRemoteFile(f) || RemoteFolder(f.Filename) != folder || seen[base] {
 			return r, errors.New("Invalid audio selection or duplicate filenames")
@@ -581,7 +601,7 @@ func (s *Service) reconcile(ctx context.Context, r *domain.SoulseekRequest) erro
 				if f.ImportedPath != "" {
 					continue
 				}
-				p, digest, e := s.importFile(ctx, r.ID, r.BatchID, destination, *f)
+				p, digest, e := s.importFile(ctx, r.ID, r.BatchID, destination, *f, r.DownloadPolicy)
 				if e != nil {
 					r.State = "blocked"
 					r.Error = e.Error()
@@ -611,10 +631,10 @@ func (s *Service) reconcile(ctx context.Context, r *domain.SoulseekRequest) erro
 	}
 	return nil
 }
-func probeAudio(ctx context.Context, f *os.File) error {
+func probeAudioPolicy(ctx context.Context, f *os.File, policy *domain.SoulseekDownloadPolicy) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-protocol_whitelist", "pipe", "-show_entries", "stream=codec_type", "-of", "json", "-i", "pipe:0")
+	cmd := exec.CommandContext(ctx, "ffprobe", "-v", "error", "-protocol_whitelist", "pipe", "-show_entries", "stream=codec_type,codec_name", "-of", "json", "-i", "pipe:0")
 	cmd.Stdin = f
 	data, e := cmd.Output()
 	if e != nil {
@@ -623,19 +643,28 @@ func probeAudio(ctx context.Context, f *os.File) error {
 	var out struct {
 		Streams []struct {
 			CodecType string `json:"codec_type"`
+			CodecName string `json:"codec_name"`
 		}
 	}
 	if json.Unmarshal(data, &out) != nil {
 		return errors.New("Downloaded file failed audio validation")
 	}
+	found := false
 	for _, v := range out.Streams {
-		if v.CodecType == "audio" {
-			return nil
+		if v.CodecType != "audio" {
+			continue
 		}
+		found = true
+		if policy != nil && policy.LosslessOnly && !domain.LosslessCodec(v.CodecName) {
+			return errors.New("Downloaded audio is not lossless; choose another source or ask an administrator to change the policy for a new request")
+		}
+	}
+	if found {
+		return nil
 	}
 	return errors.New("Downloaded file contains no audio")
 }
-func (s *Service) importFile(ctx context.Context, id, batch, dest string, f domain.SoulseekRequestFile) (string, string, error) {
+func (s *Service) importFile(ctx context.Context, id, batch, dest string, f domain.SoulseekRequestFile, policies ...*domain.SoulseekDownloadPolicy) (string, string, error) {
 	if !ValidID(id) || !ValidID(batch) || !validRemoteFile(f.SoulseekFile) {
 		return "", "", errors.New("Invalid import path")
 	}
@@ -657,7 +686,11 @@ func (s *Service) importFile(ctx context.Context, id, batch, dest string, f doma
 	defer in.Close()
 	validate := s.ValidateAudio
 	if validate == nil {
-		validate = probeAudio
+		var policy *domain.SoulseekDownloadPolicy
+		if len(policies) > 0 {
+			policy = policies[0]
+		}
+		validate = func(ctx context.Context, f *os.File) error { return probeAudioPolicy(ctx, f, policy) }
 	}
 	if e = validate(ctx, in); e != nil {
 		return "", "", e

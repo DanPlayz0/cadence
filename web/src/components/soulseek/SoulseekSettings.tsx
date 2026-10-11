@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type User } from "../../services/api";
 import type { MusicLibrary } from "../../lib/libraries";
 import {
+  soulseekAudioFormats,
   type SoulseekAdminSettings,
   type SoulseekRule,
   type SoulseekSettings as Settings,
@@ -331,6 +332,58 @@ export function SoulseekSettings() {
             </p>
           </section>
           <section className="soulseek-card">
+            <h3>Download quality</h3>
+            <label className="soulseek-row">
+              <strong>Lossless audio only</strong>
+              <input
+                type="checkbox"
+                checked={draft.losslessOnly}
+                onChange={(e) =>
+                  setDraft({ ...draft, losslessOnly: e.target.checked })
+                }
+              />
+            </label>
+            <p className="soulseek-help">
+              Matches slskd's islossless filter: peers must report both sample
+              rate and bit depth. Actual codecs are verified before import.
+              Applies only to new requests.
+            </p>
+            <fieldset>
+              <legend>Allowed audio formats</legend>
+              <div className="soulseek-checks">
+                {soulseekAudioFormats.map((format) => (
+                  <label key={format}>
+                    <input
+                      type="checkbox"
+                      checked={draft.allowedFormats.includes(format)}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          allowedFormats: e.target.checked
+                            ? [...draft.allowedFormats, format]
+                            : draft.allowedFormats.filter((f) => f !== format),
+                        })
+                      }
+                    />
+                    {format === "m4a"
+                      ? "M4A (ALAC or AAC)"
+                      : format.toUpperCase()}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {!draft.allowedFormats.length && (
+              <p role="alert">
+                Choose at least one allowed audio format before saving.
+              </p>
+            )}
+            <p className="soulseek-help">
+              Selected formats must also satisfy the lossless filter when
+              enabled. Incorrectly advertised files may download to staging, but
+              lossy audio will not be imported.
+            </p>
+          </section>
+          <section className="soulseek-card">
             <h3>Who can search and download</h3>
             <p>
               Administrators always have access when enabled. Select individual
@@ -496,7 +549,7 @@ export function SoulseekSettings() {
               </>
             )}
           </section>
-          <button disabled={busy} type="submit">
+          <button disabled={busy || !draft.allowedFormats.length} type="submit">
             {busy ? "Saving…" : "Save Soulseek settings"}
           </button>
         </fieldset>

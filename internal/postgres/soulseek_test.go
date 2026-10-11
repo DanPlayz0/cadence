@@ -12,29 +12,38 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestSoulseekPersistence(t *testing.T) {
-	r, _ := fixture(t)
+	r, conn := fixture(t)
 	ctx := context.Background()
 	u, e := r.CreateUser(ctx, domain.User{Username: "owner", Password: "hash"}, true)
 	if e != nil {
 		t.Fatal(e)
 	}
 	cfg, e := r.SoulseekSettings(ctx)
-	if e != nil || cfg.Enabled || cfg.ReviewTiming != "before" {
+	if e != nil || cfg.Enabled || cfg.ReviewTiming != "before" || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, domain.SoulseekAudioFormats()) {
 		t.Fatal(cfg, e)
 	}
+	if _, e = conn.Exec(ctx, "INSERT INTO soulseek_settings(id,payload) VALUES(true,$1)", []byte(`{"enabled":false,"presentation":"separate","reviewTiming":"before","default":{"mode":"review"},"sharing":"disabled"}`)); e != nil {
+		t.Fatal(e)
+	}
+	cfg, e = r.SoulseekSettings(ctx)
+	if e != nil || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, domain.SoulseekAudioFormats()) {
+		t.Fatal("legacy settings defaults", cfg, e)
+	}
 	cfg.Enabled = true
+	cfg.AllowedFormats = []string{"flac", "m4a"}
 	cfg.ManagedShares = []string{"/music/approved"}
 	if e = r.SaveSoulseekSettings(ctx, cfg); e != nil {
 		t.Fatal(e)
 	}
 	cfg, e = r.SoulseekSettings(ctx)
-	if e != nil || len(cfg.ManagedShares) != 1 {
+	if e != nil || len(cfg.ManagedShares) != 1 || !cfg.LosslessOnly || !reflect.DeepEqual(cfg.AllowedFormats, []string{"flac", "m4a"}) {
 		t.Fatal(cfg, e)
 	}
 	b, _ := json.Marshal(cfg)
@@ -51,7 +60,7 @@ func TestSoulseekPersistence(t *testing.T) {
 	if ok, _ := r.OwnsSoulseekSearch(ctx, searchID, "other"); ok {
 		t.Fatal("search leaked")
 	}
-	job := domain.SoulseekRequest{ID: soulseek.ID(), UserID: u.ID, Created: time.Now().UTC(), State: "importing", Files: []domain.SoulseekRequestFile{{SoulseekFile: domain.SoulseekFile{Filename: "song.mp3", Size: 3}, ImportedPath: "/music/import/song.mp3", Digest: "digest"}}}
+	job := domain.SoulseekRequest{DownloadPolicy: cfg.DownloadPolicy(), ID: soulseek.ID(), UserID: u.ID, Created: time.Now().UTC(), State: "importing", Files: []domain.SoulseekRequestFile{{SoulseekFile: domain.SoulseekFile{Filename: "song.mp3", Size: 3}, ImportedPath: "/music/import/song.mp3", Digest: "digest"}}}
 	if e = r.SaveSoulseekRequest(ctx, &job); e != nil {
 		t.Fatal(e)
 	}
@@ -63,7 +72,7 @@ func TestSoulseekPersistence(t *testing.T) {
 		t.Fatal("stale write allowed", e)
 	}
 	saved, e := r.SoulseekRequest(ctx, job.ID)
-	if e != nil || saved.Files[0].ImportedPath == "" || saved.Files[0].Digest != "digest" {
+	if e != nil || saved.Files[0].ImportedPath == "" || saved.Files[0].Digest != "digest" || !reflect.DeepEqual(saved.DownloadPolicy, job.DownloadPolicy) {
 		t.Fatal(saved, e)
 	}
 	b, _ = json.Marshal(saved)

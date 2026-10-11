@@ -13,23 +13,38 @@ type SoulseekRule struct {
 	LibraryID string `json:"libraryId"`
 	Folder    string `json:"folder"`
 }
+type SoulseekDownloadPolicy struct {
+	LosslessOnly   bool     `json:"losslessOnly"`
+	AllowedFormats []string `json:"allowedFormats"`
+}
+
+func SoulseekAudioFormats() []string {
+	return []string{"flac", "wav", "m4a", "mp3", "aac", "ogg", "opus"}
+}
+
+func (s SoulseekSettings) DownloadPolicy() *SoulseekDownloadPolicy {
+	return &SoulseekDownloadPolicy{LosslessOnly: s.LosslessOnly, AllowedFormats: slices.Clone(s.AllowedFormats)}
+}
+
 type SoulseekSettings struct {
-	Enabled       bool           `json:"enabled"`
-	Users         []string       `json:"users"`
-	Groups        []string       `json:"groups"`
-	Presentation  string         `json:"presentation"`
-	ReviewTiming  string         `json:"reviewTiming"`
-	Default       SoulseekRule   `json:"default"`
-	UserRules     []SoulseekRule `json:"userRules"`
-	GroupRules    []SoulseekRule `json:"groupRules"`
-	Sharing       string         `json:"sharing"`
-	ShareFolders  []string       `json:"shareFolders"`
-	ManagedShares []string       `json:"-"`
-	SharingError  string         `json:"sharingError"`
+	LosslessOnly   bool           `json:"losslessOnly"`
+	AllowedFormats []string       `json:"allowedFormats"`
+	Enabled        bool           `json:"enabled"`
+	Users          []string       `json:"users"`
+	Groups         []string       `json:"groups"`
+	Presentation   string         `json:"presentation"`
+	ReviewTiming   string         `json:"reviewTiming"`
+	Default        SoulseekRule   `json:"default"`
+	UserRules      []SoulseekRule `json:"userRules"`
+	GroupRules     []SoulseekRule `json:"groupRules"`
+	Sharing        string         `json:"sharing"`
+	ShareFolders   []string       `json:"shareFolders"`
+	ManagedShares  []string       `json:"-"`
+	SharingError   string         `json:"sharingError"`
 }
 
 func DefaultSoulseekSettings() SoulseekSettings {
-	return SoulseekSettings{Users: []string{}, Groups: []string{}, Presentation: "separate", ReviewTiming: "before", Default: SoulseekRule{Mode: "review"}, UserRules: []SoulseekRule{}, GroupRules: []SoulseekRule{}, Sharing: "disabled", ShareFolders: []string{}}
+	return SoulseekSettings{LosslessOnly: true, AllowedFormats: SoulseekAudioFormats(), Users: []string{}, Groups: []string{}, Presentation: "separate", ReviewTiming: "before", Default: SoulseekRule{Mode: "review"}, UserRules: []SoulseekRule{}, GroupRules: []SoulseekRule{}, Sharing: "disabled", ShareFolders: []string{}}
 }
 func (s SoulseekSettings) Allows(u User) bool {
 	if !s.Enabled {
@@ -90,20 +105,21 @@ type SoulseekRequestFile struct {
 	Digest           string `json:"-"`
 }
 type SoulseekRequest struct {
-	ID              string                `json:"id"`
-	UserID          string                `json:"userId"`
-	Username        string                `json:"username"`
-	Folder          string                `json:"folder"`
-	Files           []SoulseekRequestFile `json:"files"`
-	Rule            SoulseekRule          `json:"rule"`
-	ReviewTiming    string                `json:"reviewTiming"`
-	Approved        bool                  `json:"approved"`
-	State           string                `json:"state"`
-	Error           string                `json:"error"`
-	BatchID         string                `json:"batchId"`
-	PreviousBatches []string              `json:"-"`
-	Created         time.Time             `json:"created"`
-	Revision        int64                 `json:"revision"`
+	DownloadPolicy  *SoulseekDownloadPolicy `json:"downloadPolicy,omitempty"`
+	ID              string                  `json:"id"`
+	UserID          string                  `json:"userId"`
+	Username        string                  `json:"username"`
+	Folder          string                  `json:"folder"`
+	Files           []SoulseekRequestFile   `json:"files"`
+	Rule            SoulseekRule            `json:"rule"`
+	ReviewTiming    string                  `json:"reviewTiming"`
+	Approved        bool                    `json:"approved"`
+	State           string                  `json:"state"`
+	Error           string                  `json:"error"`
+	BatchID         string                  `json:"batchId"`
+	PreviousBatches []string                `json:"-"`
+	Created         time.Time               `json:"created"`
+	Revision        int64                   `json:"revision"`
 }
 
 // Storage JSON must include private importer fields without exposing them over HTTP.

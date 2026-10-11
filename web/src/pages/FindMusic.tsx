@@ -176,6 +176,14 @@ export function FindMusic({
         </div>
         {onLibrary && <button onClick={onLibrary}>Your library</button>}
       </div>
+      <p className="soulseek-help">
+        Download policy:{" "}
+        {capabilities.losslessOnly
+          ? "Lossless audio only"
+          : "Any audio quality"}{" "}
+        · Formats: {capabilities.allowedFormats.join(", ").toUpperCase()}. Album
+        requests omit tracks that do not match this policy.
+      </p>
       <form onSubmit={(e) => void start(e)} className="soulseek-search">
         <label
           className="sr-only"
@@ -243,7 +251,10 @@ export function FindMusic({
             ))}
           </div>
           {!search.results.length && /Completed/.test(search.state) && (
-            <p>No audio results. Try a different artist or title.</p>
+            <p>
+              No audio results match the download quality policy. Try a
+              different artist or title.
+            </p>
           )}
           <div className="soulseek-actions">
             {offset > 0 && (
@@ -265,7 +276,19 @@ export function FindMusic({
             <h2>{fileName(folder.result.folder)}</h2>
             <button onClick={() => setFolder(null)}>Close folder</button>
           </div>
-          <p>{folder.result.username} · Complete audio folder listing</p>
+          <p>
+            {folder.result.username} · Audio files matching the download quality
+            policy
+          </p>
+          {!folder.files.length && (
+            <p>
+              No audio files in this folder match the download quality policy.
+            </p>
+          )}
+          <p className="soulseek-help">
+            Album requests include only eligible audio; excluded tracks are
+            omitted.
+          </p>
           <div className="soulseek-folder">
             {folder.files.map((f) => (
               <label key={f.filename}>
@@ -295,7 +318,7 @@ export function FindMusic({
               disabled={busy || !folder.files.length}
               onClick={() => void download(folder.result, [], true)}
             >
-              Request complete album folder
+              Request eligible album songs
             </button>
           </div>
         </section>

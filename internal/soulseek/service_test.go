@@ -106,6 +106,7 @@ func setup(t *testing.T) (*Service, *memory, *fakeRemote, domain.User, domain.So
 	dest := t.TempDir()
 	stage := t.TempDir()
 	m := &memory{settings: domain.DefaultSoulseekSettings(), requests: map[string]domain.SoulseekRequest{}, libraries: []domain.MusicLibrary{{ID: "library", Folders: []string{dest}}}}
+	m.settings.LosslessOnly = false
 	m.settings.Enabled = true
 	m.settings.Users = []string{"listener"}
 	f := &fakeRemote{batches: map[string]Batch{}}

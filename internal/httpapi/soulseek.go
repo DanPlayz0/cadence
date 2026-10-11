@@ -48,7 +48,7 @@ func soulseekError(w http.ResponseWriter, e error) {
 }
 func (s *Server) soulseekCapabilities(w http.ResponseWriter, r *http.Request) {
 	if s.Soulseek == nil {
-		write(w, 200, map[string]any{"configured": false, "enabled": false, "allowed": false, "presentation": "separate"})
+		write(w, 200, map[string]any{"configured": false, "enabled": false, "allowed": false, "presentation": "separate", "losslessOnly": true, "allowedFormats": domain.SoulseekAudioFormats()})
 		return
 	}
 	cfg, e := s.Soulseek.Repo.SoulseekSettings(r.Context())
@@ -56,7 +56,7 @@ func (s *Server) soulseekCapabilities(w http.ResponseWriter, r *http.Request) {
 		failure(w, e)
 		return
 	}
-	write(w, 200, map[string]any{"configured": s.Soulseek.Configured, "enabled": cfg.Enabled, "allowed": s.Soulseek.Configured && cfg.Allows(current(r).User), "presentation": cfg.Presentation})
+	write(w, 200, map[string]any{"configured": s.Soulseek.Configured, "enabled": cfg.Enabled, "allowed": s.Soulseek.Configured && cfg.Allows(current(r).User), "presentation": cfg.Presentation, "losslessOnly": cfg.LosslessOnly, "allowedFormats": cfg.AllowedFormats})
 }
 func (s *Server) soulseekSettings(w http.ResponseWriter, r *http.Request) {
 	if s.Soulseek == nil {
@@ -64,7 +64,7 @@ func (s *Server) soulseekSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "PUT" {
-		var cfg domain.SoulseekSettings
+		cfg := domain.DefaultSoulseekSettings()
 		if !decode(w, r, &cfg) {
 			return
 		}
@@ -124,7 +124,8 @@ func (s *Server) soulseekSettings(w http.ResponseWriter, r *http.Request) {
 	write(w, 200, map[string]any{"settings": cfg, "configured": s.Soulseek.Configured, "writableRoots": s.Soulseek.WritableRoots, "staging": s.Soulseek.Stage})
 }
 func (s *Server) soulseekSearch(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.soulseekAccess(w, r); !ok {
+	cfg, ok := s.soulseekAccess(w, r)
+	if !ok {
 		return
 	}
 	if r.Method == "POST" {
@@ -164,6 +165,14 @@ func (s *Server) soulseekSearch(w http.ResponseWriter, r *http.Request) {
 		soulseekError(w, e)
 		return
 	}
+	policy := cfg.DownloadPolicy()
+	results := []domain.SoulseekResult{}
+	for _, result := range out.Results {
+		if soulseek.EligibleFile(result.SoulseekFile, policy) {
+			results = append(results, result)
+		}
+	}
+	out.Results = results
 	write(w, 200, out)
 }
 func (s *Server) ownsSoulseekSearch(w http.ResponseWriter, r *http.Request, id string) bool {
@@ -182,7 +191,8 @@ func (s *Server) ownsSoulseekSearch(w http.ResponseWriter, r *http.Request, id s
 	return ok
 }
 func (s *Server) soulseekFolder(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.soulseekAccess(w, r); !ok {
+	cfg, ok := s.soulseekAccess(w, r)
+	if !ok {
 		return
 	}
 	var input struct {
@@ -201,7 +211,7 @@ func (s *Server) soulseekFolder(w http.ResponseWriter, r *http.Request) {
 		soulseekError(w, e)
 		return
 	}
-	write(w, 200, out)
+	write(w, 200, soulseek.FilterFiles(out, cfg.DownloadPolicy()))
 }
 func (s *Server) soulseekPeer(w http.ResponseWriter, r *http.Request, id, user, folder string) bool {
 	search, e := s.Soulseek.Remote.Search(r.Context(), id)
@@ -279,7 +289,7 @@ func (s *Server) soulseekRequests(w http.ResponseWriter, r *http.Request) {
 			write(w, 400, map[string]string{"error": "Selected files are no longer available"})
 			return
 		}
-		out, e := s.Soulseek.Create(r.Context(), u, input.ID, input.Username, input.Folder, files)
+		out, e := s.Soulseek.CreateSelection(r.Context(), u, input.ID, input.Username, input.Folder, files, input.Album)
 		if e != nil {
 			soulseekError(w, e)
 			return
