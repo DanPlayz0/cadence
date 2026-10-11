@@ -1,5 +1,10 @@
 # Validation record
 
+## Grouped administrator navigation (2026-10-10)
+
+- Grouped Instance settings into Instance, Music library, Integrations, Access, and Monitoring. Metadata, Last.fm, and Soulseek share Integrations. Existing page routes remain intact; category headings label accessible groups. Desktop navigation scrolls when needed, and narrow layouts retain categories with two-column buttons.
+- TypeScript/production build, formatting, and diff checks passed. Chromium API fixtures at widths 1280, 900, 390, and 320 verified category order, all 12 navigation buttons, integration navigation, browser Back, selected states, and no horizontal overflow or runtime errors. Desktop and phone screenshots were visually inspected. Live service connections, other browsers, and physical devices were not tested.
+
 ## Last.fm and ListenBrainz sync (2026-10-10)
 
 - `go test ./...` and `go vet ./...` passed with a real disposable PostgreSQL 17 container. Sync tests cover account-bound, expiring, single-use authorization; session/CSRF/origin/access checks; catalog duration and metadata precedence; credential redaction/encryption/restart recovery; transactional listen deduplication; coalesced likes and stale acknowledgements; cancellation; paused authorization and reconnection; ListenBrainz identifier-dependent feedback; history previews/exports/account isolation; and upgrade from schema 14 without changing local play records.

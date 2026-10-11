@@ -3763,6 +3763,8 @@ input[type="range"] {
 .admin-navigation {
   position: sticky;
   top: 24px;
+  max-height: calc(100dvh - 180px);
+  overflow-y: auto;
   display: grid;
   gap: 4px;
   padding: 16px 10px;
@@ -3774,8 +3776,27 @@ input[type="range"] {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px 20px;
+  padding: 8px 10px 12px;
   font-weight: 600;
+}
+.admin-navigation-group {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.admin-navigation-group + .admin-navigation-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.admin-navigation-group h2 {
+  margin: 0;
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .admin-navigation button {
   justify-content: flex-start;
@@ -3829,7 +3850,14 @@ input[type="range"] {
   }
   .admin-navigation {
     position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+  .admin-navigation-group {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-navigation-group h2 {
+    grid-column: 1 / -1;
   }
   .admin-navigation-title {
     grid-column: 1 / -1;

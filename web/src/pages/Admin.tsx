@@ -63,13 +63,6 @@ type Scan = {
 };
 const sections = [
   {
-    id: "soulseek",
-    label: "Soulseek",
-    icon: Search,
-    description:
-      "Find music, manage downloads, and configure review and sharing.",
-  },
-  {
     id: "dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
@@ -112,6 +105,13 @@ const sections = [
     description: "Configure Last.fm application credentials for this instance.",
   },
   {
+    id: "soulseek",
+    label: "Soulseek",
+    icon: Search,
+    description:
+      "Find music, manage downloads, and configure review and sharing.",
+  },
+  {
     id: "suggestions",
     label: "Metadata review",
     icon: Tags,
@@ -136,6 +136,30 @@ const sections = [
     description: "View scans and reported issues.",
   },
 ];
+const sectionGroups = [
+  { id: "instance", label: "Instance", sections: ["dashboard", "branding"] },
+  {
+    id: "library",
+    label: "Music library",
+    sections: ["library", "suggestions"],
+  },
+  {
+    id: "integrations",
+    label: "Integrations",
+    sections: ["metadata", "sync", "soulseek"],
+  },
+  {
+    id: "access",
+    label: "Access",
+    sections: ["people", "permissions", "devices"],
+  },
+  { id: "monitoring", label: "Monitoring", sections: ["activity", "scans"] },
+].map((group) => ({
+  ...group,
+  sections: group.sections.map((id) =>
+    sections.find((section) => section.id === id)!,
+  ),
+}));
 const reviewFields = {
   title: "Titles",
   artist: "Artists",
@@ -301,20 +325,30 @@ export function Admin({
           <div className="admin-navigation-title">
             <Shield size={20} /> Administration
           </div>
-          {sections.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              aria-current={tab === id ? "page" : undefined}
-              className={tab === id ? "selected" : ""}
-              onClick={() => {
-                setSelectedUser(null);
-                onTab(id);
-                if (id === "suggestions") void loadSuggestions();
-              }}
+          {sectionGroups.map((group) => (
+            <div
+              className="admin-navigation-group"
+              key={group.id}
+              role="group"
+              aria-labelledby={`admin-group-${group.id}`}
             >
-              <Icon size={18} />
-              <span>{label}</span>
-            </button>
+              <h2 id={`admin-group-${group.id}`}>{group.label}</h2>
+              {group.sections.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  aria-current={tab === id ? "page" : undefined}
+                  className={tab === id ? "selected" : ""}
+                  onClick={() => {
+                    setSelectedUser(null);
+                    onTab(id);
+                    if (id === "suggestions") void loadSuggestions();
+                  }}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="admin-main">
