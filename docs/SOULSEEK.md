@@ -12,7 +12,7 @@ SLSKD_API_KEY=replace-with-your-existing-slskd-api-key
 SLSKD_USERNAME=your-slskd-administrator
 SLSKD_PASSWORD=replace-with-your-existing-slskd-administrator-password
 SOULSEEK_STAGING_PATH=/srv/slskd/downloads
-SOULSEEK_WRITABLE_ROOTS=/music/Downloads
+SOULSEEK_WRITABLE_ROOTS=
 ```
 
 Use the slskd base URL without `/api/v0`. It must be reachable from the app container; `localhost` refers to that container. `host.docker.internal` works for host services on Docker Desktop; otherwise use a reachable host address or a service name on a shared Docker network. Keep the URL blank to leave the connection unconfigured. Network account credentials (`SOULSEEK_USERNAME`/`SOULSEEK_PASSWORD`) remain managed by the external slskd.
@@ -45,7 +45,7 @@ Use the same Compose file list for later `up`, `logs`, and `down` commands. Omit
 
 The bundled slskd writes incomplete files and completed staging files into separate Docker volumes; an external instance uses its configured storage. Staging is excluded from Cadence scans, including scans of an ancestor folder. Cadence copies approved audio into existing library folders; it does not alter existing music or overwrite files.
 
-Import destinations must exist inside a configured library, be within `MUSIC_ROOTS` and `SOULSEEK_WRITABLE_ROOTS`, and be writable by UID/GID 10001. The existing Compose music mount is read-only until you explicitly change it.
+When `SOULSEEK_WRITABLE_ROOTS` is blank or unset, all current library folders are allowed by default, including folders added later. Set it to semicolon-separated container paths (for example `/music/Downloads;/music/Albums`) to restrict import destinations. Destinations must still exist inside the selected library, be within `MUSIC_ROOTS`, and be writable by UID/GID 10001. The existing Compose music mount is read-only until you explicitly change it.
 
 Copy [compose.soulseek.storage.example.yaml](../compose.soulseek.storage.example.yaml) to the ignored `compose.override.yaml`, replace the host path, and create the destination subfolder on the host. Linux paths work the same way, for example `/srv/music`. Then run:
 
@@ -53,7 +53,7 @@ Copy [compose.soulseek.storage.example.yaml](../compose.soulseek.storage.example
 docker compose -f compose.yaml -f compose.soulseek.yaml -f compose.override.yaml up -d --build
 ```
 
-When you specify `-f`, include `compose.override.yaml` explicitly. Choose the library and its destination folder in Soulseek settings. Multiple destination folders are allowed through semicolon-separated writable roots and additional mounts. Mount changes require container recreation; routing changes do not.
+When you specify `-f`, include `compose.override.yaml` explicitly. Choose the library and its destination folder in Soulseek settings. Additional mounts can expose more library folders; leave writable roots blank to allow them all, or list the paths to restrict them. Mount or environment changes require container recreation; routing changes do not.
 
 ## Access, routing, and review
 

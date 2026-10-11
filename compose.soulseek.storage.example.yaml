@@ -4,7 +4,6 @@ services:
   app:
     environment:
       MUSIC_ROOTS: /music
-      SOULSEEK_WRITABLE_ROOTS: /music/Downloads
     volumes:
       - type: bind
         source: C:/Users/YourName/Music

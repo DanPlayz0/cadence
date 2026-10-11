@@ -98,7 +98,9 @@ func (s *Service) Destination(ctx context.Context, r domain.SoulseekRule, probe 
 	if !found {
 		return "", errors.New("Destination no longer belongs to the selected library")
 	}
-	allowed := false
+	// With no explicit allowlist, every current library folder is eligible.
+	// Library membership and mounted-root containment were checked above.
+	allowed := len(s.WritableRoots) == 0
 	for _, root := range s.WritableRoots {
 		canon, e := library.Canonical(root)
 		if e == nil && library.Within(canon, p) {

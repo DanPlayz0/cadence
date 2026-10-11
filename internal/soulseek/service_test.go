@@ -133,6 +133,49 @@ func setup(t *testing.T) (*Service, *memory, *fakeRemote, domain.User, domain.So
 func files() []domain.SoulseekFile {
 	return []domain.SoulseekFile{{Filename: `Music\Album\song.mp3`, Size: 5}}
 }
+func TestDestinationDefaultsToCurrentLibraryFolders(t *testing.T) {
+	s, m, _, _, rule := setup(t)
+	s.WritableRoots = nil
+	ctx := context.Background()
+	if _, err := s.Destination(ctx, rule, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// A newly configured folder is eligible without restarting the service.
+	added := filepath.Join(s.Roots[0], "added")
+	if err := os.Mkdir(added, 0750); err != nil {
+		t.Fatal(err)
+	}
+	m.libraries = append(m.libraries, domain.MusicLibrary{ID: "added", Folders: []string{added}})
+	addedRule := domain.SoulseekRule{LibraryID: "added", Folder: added}
+	if _, err := s.Destination(ctx, addedRule, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// Explicit roots still restrict destinations, even within a library.
+	s.WritableRoots = []string{added}
+	if _, err := s.Destination(ctx, rule, false); err == nil || err.Error() != "Destination is not in SOULSEEK_WRITABLE_ROOTS" {
+		t.Fatalf("destination outside explicit roots: %v", err)
+	}
+	if _, err := s.Destination(ctx, addedRule, true); err != nil {
+		t.Fatal(err)
+	}
+
+	s.WritableRoots = nil
+	m.libraries = m.libraries[:1]
+	if _, err := s.Destination(ctx, addedRule, false); err == nil {
+		t.Fatal("removed library was allowed")
+	}
+	outside := t.TempDir()
+	m.libraries = append(m.libraries, domain.MusicLibrary{ID: "outside", Folders: []string{outside}})
+	if _, err := s.Destination(ctx, domain.SoulseekRule{LibraryID: "outside", Folder: outside}, false); err == nil {
+		t.Fatal("library outside mounted roots was allowed")
+	}
+	s.Stage = added
+	if _, err := s.Destination(ctx, rule, false); err == nil || err.Error() != "Staging cannot be an import destination" {
+		t.Fatalf("destination containing staging: %v", err)
+	}
+}
 func complete(t *testing.T, s *Service, f *fakeRemote, r domain.SoulseekRequest) {
 	t.Helper()
 	dir := filepath.Join(s.Stage, r.BatchID)
@@ -287,7 +330,7 @@ func TestDestinationChangesAndRetryApproval(t *testing.T) {
 		t.Fatal("deleted library accepted")
 	}
 	m.libraries = []domain.MusicLibrary{{ID: rule.LibraryID, Folders: []string{rule.Folder}}}
-	s.WritableRoots = nil
+	s.WritableRoots = []string{s.Stage}
 	if _, e := s.Destination(context.Background(), rule, true); e == nil {
 		t.Fatal("unallowed root accepted")
 	}
