@@ -3,7 +3,7 @@ export function artistNames(credit: string): string[] {
   const names = [
     ...new Set(
       credit
-        .split(",")
+        .split(/,|\s+(?:feat\.?|ft\.?|featuring)\s+/i)
         .map((name) => name.trim())
         .filter(Boolean),
     ),

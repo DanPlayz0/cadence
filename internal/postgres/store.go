@@ -69,6 +69,9 @@ var playbackQueueMigration string
 //go:embed 017_playlist_icon_catalog.sql
 var playlistIconCatalogMigration string
 
+//go:embed 018_featured_artist_credits.sql
+var featuredArtistCreditsMigration string
+
 type Store struct{ pool *pgxpool.Pool }
 
 var _ domain.Repository = (*Store)(nil)
@@ -299,6 +302,17 @@ func (s *Store) migrate(ctx context.Context) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(17)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=18)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, featuredArtistCreditsMigration); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO schema_migrations VALUES(18)"); err != nil {
 			return err
 		}
 	}

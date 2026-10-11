@@ -35,12 +35,12 @@ func TestIndividualArtistCredits(t *testing.T) {
 		for _, artist := range artists {
 			counts[artist.Name] = artist.Tracks
 		}
-		for name, want := range map[string]int{"A": 1, "B": 2, "C": 1, "AC/DC": 1, "音楽 & Friends": 1, "Anna": 1, "Unknown artist": 1, "Earth & Wind feat. Guest": 1} {
+		for name, want := range map[string]int{"A": 1, "B": 2, "C": 1, "AC/DC": 1, "音楽 & Friends": 1, "Anna": 1, "Unknown artist": 1, "Earth & Wind": 1, "Guest": 1} {
 			if counts[name] != want {
 				t.Fatal(name, want, counts)
 			}
 		}
-		if len(counts) != 8 {
+		if len(counts) != 9 {
 			t.Fatal(counts)
 		}
 	}
@@ -59,7 +59,7 @@ func TestIndividualArtistCredits(t *testing.T) {
 		t.Fatal("artist pagination", page, e)
 	}
 	// Existing catalogs gain individual membership through the migration, without a scan.
-	if _, err = c.Exec(ctx, "DROP INDEX tracks_artist_names; DROP FUNCTION artist_names(text); DELETE FROM schema_migrations WHERE version=7"); err != nil {
+	if _, err = c.Exec(ctx, "DROP INDEX tracks_artist_names; DROP FUNCTION artist_names(text); DELETE FROM schema_migrations WHERE version IN (7,18)"); err != nil {
 		t.Fatal(err)
 	}
 	var schema string
