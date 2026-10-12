@@ -26,7 +26,7 @@ services:
     # Optional host mount; unset MUSIC_PATH starts with empty Docker-managed storage.
     # Choose library folders and sharing in the web UI after mounting storage.
     volumes:
-      - "${MUSIC_PATH:-music_storage}:/music:ro"
+      - "${MUSIC_PATH:-music_storage}:/music"
       - app_data:/data
       # External slskd: mount its completed-download directory here.
       - "${SOULSEEK_STAGING_PATH:-soulseek_staging}:/soulseek-staging"
